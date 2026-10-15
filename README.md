@@ -39,6 +39,14 @@ happens. This repository is the first milestone: **the record itself.**
   path or symlink, are serialised by a lock on the log itself.
 - **Python package** over the Rust core through `ctypes` (standard library
   only).
+- **Ingestion that the computer does exactly** (M2): transcripts and
+  documents are parsed by plain code, sentences classified by named rules,
+  and anything uncertain is set aside rather than guessed. Every extracted
+  claim quotes its source word for word, and the core refuses any quote that
+  is not really there.
+- **Native checkers as verifiers:** arithmetic is checked with exact
+  fractions and dates against the real calendar. Checkers are their own
+  parties, so their verdicts pass through the same rules as anyone else's.
 
 ## How it was tested
 
@@ -53,7 +61,7 @@ mutation checks confirm the tests fail when the rules they guard are removed.
 Requires Rust (stable) and Python 3.10+. Nothing else.
 
 ```bash
-cargo test --release            # Rust: 109 tests
+cargo test --release            # Rust: 123 tests
 ./scripts/build.sh              # builds the core into the Python package
 python3 -m unittest discover -s python/tests -v
 ```
@@ -70,7 +78,7 @@ m.register("alex", "alex", party="alex", kind="human",
 m.register("alex", "claude-c1", party="anthropic", kind="model",
            capabilities=["write", "verify"], compartments=["lab"])
 
-cid = m.remember("claude-c1", claim(
+cid = m.remember("alex", claim(
     "Core is written in Rust with Python on top",
     speaker="alex", frame="gnomon stack", compartment="lab",
     stance="decided", truth="true", confidence=9500, origin="manual"))
@@ -90,6 +98,8 @@ crates/gnomon-core/       Rust core: json, sha256, schema, ledger, store, ffi
   tests/review1-6.rs      every confirmed finding from independent review
   tests/vectors.rs        shared vectors every implementation must match
 python/gnomon/            Python package (ctypes binding)
+  ingest.py               exact parsing and rule-based extraction
+  checkers.py             arithmetic and calendar verifiers
 python/tests/             oracle, end-to-end and multi-process tests
 spec/                     claim protocol v0.1
 tests/vectors/            shared canonical-JSON vectors
@@ -98,9 +108,8 @@ scripts/                  build and vector generation
 
 ## Status and what's next
 
-Milestones M0–M1 of the v1 plan: the record. Next are ingestion (turning
-conversations and documents into claims with soundness checks), views and a
-query engine (Datalog with provenance), an MCP server so any model can use
+Milestones M0–M2 of the v1 plan: the record, and ingestion. Next are views
+and a query engine (Datalog with provenance), an MCP server so any model can use
 it, and a benchmark against the best existing memory systems. Open design
 questions are listed in the [spec](spec/claim-protocol-v0.1.md).
 

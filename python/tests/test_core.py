@@ -117,7 +117,7 @@ class EndToEnd(unittest.TestCase):
                        compartment="lab", participants=["alex", "claude-c1"], record_time=t(3))
         decided = m.remember("claude-c1", claim(
             "Core is written in Rust with Python on top", speaker="alex", frame="substrate stack",
-            compartment="lab", stance="decided", truth="true", confidence=9500,
+            compartment="lab", stance="decided", truth="true", confidence=7000,
             origin="manual", source_episode=ep["event_id"]), record_time=t(4))
         suggested = m.remember("claude-c1", claim(
             "Use Datalog for queries", speaker="claude-c1", frame="substrate stack",
