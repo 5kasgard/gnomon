@@ -40,5 +40,7 @@ for text in INPUTS:
         "canonical": canon,
         "sha256": hashlib.sha256(canon.encode("utf-8")).hexdigest(),
     })
-json.dump(vectors, sys.stdout, ensure_ascii=False, indent=2)
-sys.stdout.write("\n")
+# Write UTF-8 bytes with \n line endings on every platform (Windows would
+# otherwise use its legacy code page and \r\n).
+text = json.dumps(vectors, ensure_ascii=False, indent=2) + "\n"
+sys.stdout.buffer.write(text.encode("utf-8"))

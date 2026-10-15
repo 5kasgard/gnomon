@@ -1,0 +1,2 @@
+# The log format and test vectors are byte-exact: never convert line endings.
+* text=auto eol=lf

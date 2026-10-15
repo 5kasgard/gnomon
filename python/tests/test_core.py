@@ -217,8 +217,9 @@ class EndToEnd(unittest.TestCase):
             m.verify(budget=1)
         self.assertEqual(e.exception.code, "E_EXHAUSTED")
         m.check_checkpoint(count, head)
-        lines = self.path.read_text(encoding="utf-8").splitlines(keepends=True)
-        self.path.write_text("".join(lines[:-1]), encoding="utf-8")
+        # Bytes, not text: text mode would turn \n into \r\n on Windows.
+        lines = self.path.read_bytes().splitlines(keepends=True)
+        self.path.write_bytes(b"".join(lines[:-1]))
         with self.assertRaises(GateError) as e:
             m.check_checkpoint(count, head)
         self.assertEqual(e.exception.code, "E_CHECKPOINT")
