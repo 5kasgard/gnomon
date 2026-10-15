@@ -62,7 +62,7 @@ class Parsing(unittest.TestCase):
         # own line and timestamps all misattributed the next speaker.
         for text in [
             "Alex: Let's use Rust for core.\rClaude: We will use Python for it.\r",
-            "Alex: Let's use Rust for core. Claude: We will use Python for it.",
+            f"Alex: Let's use Rust for core.{chr(0x2028)}Claude: We will use Python for it.",
             "Alex: Let's use Rust for core.\x85Claude: We will use Python for it.",
             "**Alex:** Let's use Rust for core.\n**Claude:** We will use Python for it.",
             "Alex:\nLet's use Rust for core.\nClaude:\nWe will use Python for it.",
@@ -83,11 +83,11 @@ class Parsing(unittest.TestCase):
 
     def test_names_that_look_alike_are_refused(self):
         # Review M2 round 2, findings 6 and 7.
-        for people in [["Alex", "ALEX"], ["Zoë", "Zoë"], ["Zoë"], ["Alex\nClaude"]]:
+        for people in [["Alex", "ALEX"], [f"Zo{chr(0x00eb)}", f"Zoe{chr(0x0308)}"], [f"Zoe{chr(0x0308)}"], ["Alex\nClaude"]]:
             with self.assertRaises(ValueError, msg=repr(people)):
                 parse_transcript("Alex: hi there", people)
         with self.assertRaises(ValueError):
-            parse_transcript("Alex: hi there", ["Straße", "STRASSE"])
+            parse_transcript("Alex: hi there", [f"Stra{chr(0x00df)}e", "STRASSE"])
 
     def test_sentence_splitting_stays_linear(self):
         # Review M2 round 2, finding 5: 64 s and 74 s.
@@ -169,7 +169,7 @@ class Rules(unittest.TestCase):
         self.check("That works well.", residue="refers to something said earlier")
         self.check("Maybe let's use Rust for the core.", residue="mixed signals")
         self.check("I think it definitely works here.", residue="mixed signals")
-        self.check("normal​text with more words", residue="hidden")
+        self.check(f"normal{chr(0x200b)}text with more words", residue="hidden")
         r = classify(Sentence("", "Some words with no speaker.", 0))
         self.assertEqual(r.reason, "no known speaker")
 
@@ -343,7 +343,7 @@ class EndToEnd(unittest.TestCase):
         # and claims in compartments the checker can't see aborted the run.
         self.m.remember("alex", claim("2 + 2 = 9", speaker="a", frame="f", compartment="private",
                                       truth="true"), record_time=t(3))
-        self.m.remember("extractor", claim("14 Auguſt 2026 is a Friday", speaker="a", frame="f",
+        self.m.remember("extractor", claim(f"14 Augu{chr(0x017f)}t 2026 is a Friday", speaker="a", frame="f",
                                            compartment="lab", truth="true"), record_time=t(3))
         self.m.remember("extractor", claim("2 + 2 = 5", speaker="a", frame="f", compartment="lab",
                                            truth="true"), record_time=t(3))
@@ -402,10 +402,10 @@ class Checkers(unittest.TestCase):
 
     def test_calendar_edge_cases(self):
         # Review M2, findings 6 and 9.
-        self.assertIsNone(checkers.judge("14 Auguſt 2026 is a Friday"))  # no crash, no lookalike match
-        self.assertIsNone(checkers.judge("2026-10-14 is a Wedneſday"))
+        self.assertIsNone(checkers.judge(f"14 Augu{chr(0x017f)}t 2026 is a Friday"))  # no crash, no lookalike match
+        self.assertIsNone(checkers.judge(f"2026-10-14 is a Wedne{chr(0x017f)}day"))
         self.assertIsNone(checkers.judge("October 4, 1582 was a Thursday"))  # Julian era: not checked
-        self.assertIsNone(checkers.judge("٢٠٢٦-١٠-١٤ is a Wednesday"))
+        self.assertIsNone(checkers.judge(f"{chr(0x0662)}{chr(0x0660)}{chr(0x0662)}{chr(0x0666)}-{chr(0x0661)}{chr(0x0660)}-{chr(0x0661)}{chr(0x0664)} is a Wednesday"))
 
     def test_nothing_can_exhaust_the_machine(self):
         self.assertIsNone(checkers.judge("9^9^9 = 1"))

@@ -270,7 +270,7 @@ _ANAPHORIC = re.compile(
 )
 
 BASE_CONFIDENCE = {"asserted": 7000, "decided": 9000, "suggested": 5000, "hypothetical": 5000, "asked": 5000}
-_ODD = set("͏ᅟᅠㅤﾠ⠀￼")
+_ODD = set(f"{chr(0x034f)}{chr(0x115f)}{chr(0x1160)}{chr(0x3164)}{chr(0xffa0)}{chr(0x2800)}{chr(0xfffc)}")
 
 
 def _hidden(s: str) -> bool:
