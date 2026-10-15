@@ -63,6 +63,9 @@ pub struct EpisodeInfo {
     pub record_time: String,
     pub hidden_chars: bool,
     pub body: Value,
+    pub participants: Vec<String>,
+    /// (speaker, start, end) in code points; empty if not recorded.
+    pub turns: Vec<(String, usize, usize)>,
 }
 
 #[derive(Clone, Debug)]
@@ -779,6 +782,8 @@ fn check(
                     record_time: record_time.to_string(),
                     hidden_chars: schema::has_hidden_chars(e.content),
                     body: body.clone(),
+                    participants: e.participants.iter().map(|p| p.to_string()).collect(),
+                    turns: e.turns.iter().map(|(sp, a, b)| (sp.to_string(), *a, *b)).collect(),
                 },
             })
         }
@@ -799,6 +804,47 @@ fn check(
                         "a claim cannot cite an episode from another compartment",
                     ));
                 }
+                // The quote must be exactly what the episode says at that
+                // position: an extractor cannot put words in anyone's mouth.
+                if let Some((quote, start)) = c.quote {
+                    let content = e.body.get("content").and_then(|v| v.as_str()).unwrap_or("");
+                    let found: String = content.chars().skip(start as usize).take(quote.chars().count()).collect();
+                    if found != quote {
+                        return Err(err(
+                            "E_QUOTE",
+                            "the quote does not match the source episode at quote_start",
+                        ));
+                    }
+                    // And it must be the claimed speaker's words: inside one
+                    // of their turns, or, for an episode without turns, an
+                    // episode with that one participant.
+                    let (a, b) = (start as usize, start as usize + quote.chars().count());
+                    let theirs = if e.turns.is_empty() {
+                        e.participants.len() == 1 && e.participants[0] == c.speaker
+                    } else {
+                        e.turns.iter().any(|(sp, ts, te)| *ts <= a && b <= *te && sp == c.speaker)
+                    };
+                    if !theirs {
+                        return Err(err(
+                            "E_QUOTE",
+                            "the quote must lie within one turn spoken by the claim's speaker",
+                        ));
+                    }
+                }
+            }
+            // Hearsay: a claim that someone else said something, without
+            // quoting them, is the writer's interpretation, however it is
+            // labelled. It cannot be stated with near-certainty.
+            let own = c.speaker.to_lowercase() == writer.to_lowercase() || c.speaker.to_lowercase() == w.party.to_lowercase();
+            if c.origin != "direct" && !own && c.confidence > schema::PARAPHRASE_MAX_CONFIDENCE {
+                return Err(err(
+                    "E_ATTRIBUTION",
+                    format!(
+                        "a claim about what '{}' said, recorded by someone else without quoting them, cannot carry confidence above {}",
+                        c.speaker,
+                        schema::PARAPHRASE_MAX_CONFIDENCE
+                    ),
+                ));
             }
             let id = claim_id(body);
             match st.claims.get(&id) {
@@ -1358,6 +1404,17 @@ impl State {
                         ("author", Value::str(c.author.clone())),
                         ("first_event", Value::str(c.first_event.clone())),
                         ("record_time", Value::str(c.record_time.clone())),
+                        // Who recorded the source the claim quotes: turns are
+                        // that writer's attribution, so readers see it.
+                        (
+                            "source_recorded_by",
+                            c.body
+                                .get("source_episode")
+                                .and_then(|v| v.as_str())
+                                .and_then(|e| self.episodes.get(e))
+                                .map(|e| Value::str(e.writer.clone()))
+                                .unwrap_or(Value::Null),
+                        ),
                         ("effective_truth", Value::str(c.effective_truth(id, self))),
                         ("disputed", Value::Bool(is_disputed(self, id))),
                         ("defeated", Value::Bool(is_defeated(self, id))),
