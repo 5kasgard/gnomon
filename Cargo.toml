@@ -1,0 +1,12 @@
+[workspace]
+resolver = "2"
+members = ["crates/gnomon-core"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "UNLICENSED"
+
+[profile.release]
+opt-level = 3
+lto = true
