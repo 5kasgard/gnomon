@@ -1,0 +1,13 @@
+[package]
+name = "gnomon-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Zero-dependency core of Gnomon: canonical JSON, SHA-256, claim schema, hash-chained log and write gate."
+
+[lib]
+name = "gnomon_core"
+crate-type = ["rlib", "cdylib"]
+
+# No dependencies by design: the offline core must build anywhere.
+[dependencies]
