@@ -62,7 +62,7 @@ Requires Rust (stable) and Python 3.10+. Nothing else.
 
 ```bash
 cargo test --release            # Rust: 123 tests
-./scripts/build.sh              # builds the core into the Python package
+bash scripts/build.sh           # builds the core into the Python package
 python3 -m unittest discover -s python/tests -v
 ```
 
