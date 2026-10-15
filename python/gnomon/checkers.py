@@ -7,13 +7,16 @@ check claims its own party made, and it gives one verdict per claim.
 
 What a checker says is deliberately narrow:
 
-* **refutes** if anything it can check in the statement is false (one false
-  part makes the whole statement false);
-* **supports** only if the checkable part *is* the whole statement;
-* **abstain** if what it checked holds but the statement says more than it
-  can check (the note says exactly what was checked).
+* **supports** or **refutes** only if what it checked *is* the whole
+  statement;
+* **abstain** if the statement says more than it checked ("it is not true
+  that ...", "... if 2 + 2 = 5"), since the other words could reverse it
+  (the note says exactly what was checked);
+* nothing at all if the notation reads two ways and another reading makes
+  the statement true.
 
-Questions and hypotheticals are skipped: there is nothing to verify.
+Only claims asserted true or false are checked; questions, suggestions and
+hypotheticals are skipped.
 """
 
 from __future__ import annotations

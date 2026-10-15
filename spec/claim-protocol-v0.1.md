@@ -69,6 +69,7 @@ id is the content.
 | `validity_domain` | no | where the claim holds |
 | `valid_from`, `valid_to` | no | timestamps: when the claim is true in the world |
 | `source_episode` | no | an episode in the same compartment |
+| `quote`, `quote_start` | no, together, only with `source_episode` | the exact passage of the episode the claim came from, and where it starts (in Unicode code points); the gate checks it (`E_QUOTE`) |
 | `intended`, `delivered`, `observed` | no | kept separate, never collapsed |
 
 Rules: a guessed claim cannot carry full confidence; a question (`asked`)
@@ -243,6 +244,69 @@ These are trade-offs between finality and liveness, not bugs:
   "a neutral resolver exists" check must be re-run, or the owner given an
   override.
 
+### Episodes and turns
+
+An episode may record its **turns**: a list of `{speaker, start, end}` (code
+points, end exclusive) saying who said which part of the content. Turns must
+be non-empty, in order, not overlapping, within the content, and every
+speaker must be one of the episode's `participants`. The content itself is
+always kept whole; turns only index it.
+
+Participant names must be told apart at a glance: no line breaks or tabs, no
+two names that differ only in letter case (including full case folds such as
+"Straße"/"STRASSE"), no combining marks (write "Zoë", not "Zoe" + U+0308), and
+no mixing of Latin, Greek and Cyrillic letters in one name ("Аlex" with a
+Cyrillic А), and no leading or trailing spaces. The Python binding also
+requires NFC. Known limit: the core has no Unicode tables (it has no
+dependencies), so rarer look-alikes (kana or Hangul written in decomposed
+form, fullwidth or Cherokee letters) pass the core's check. Every quoted claim
+must still name the exact turn speaker, so this can confuse a reader, never
+the gate.
+
+Turns are the recorder's attribution, made once, when the episode is
+recorded; every later claim is held to them. The state view shows, for every
+claim that cites a source, who recorded that source (`source_recorded_by`),
+so a reader can always see whose attribution a quote rests on.
+
+### Quotes
+
+A claim that carries a `quote` is held to its source episode on three
+counts, each refused with `E_QUOTE`:
+
+1. **The words.** The episode's text, starting at `quote_start` code points
+   in, must be the quote, character for character.
+2. **The speaker.** The quote must lie wholly inside one turn whose speaker
+   is the claim's `speaker`. An episode without turns can only be quoted if
+   it has exactly one participant, who is then the speaker (a document and
+   its author). Text outside every turn (speaker labels, preambles) is
+   nobody's words.
+3. **The statement.** Origin `direct` means the speaker's own words,
+   verbatim: a direct claim must carry a quote, and must state exactly its
+   quote. Paraphrase is allowed under another origin (`inferred`, `derived`),
+   so a reader always knows when words are not the speaker's own, and a
+   paraphrase can never carry confidence above 7000: it is an
+   interpretation.
+
+So whatever produced the claim (a rule, a model, a person), it cannot record
+words that are not in the source, or put one speaker's words in another's
+mouth. A quote may not contain hidden characters even when the episode does
+(episodes keep them; claims never carry them). A hidden or missing episode
+gives `E_REF` whatever the quote says.
+
+### Hearsay
+
+A claim whose `speaker` is someone other than its writer or the writer's own
+party, and that does not quote them (origin anything but `direct`), is the
+writer's account of what someone else said. However it is labelled, it cannot
+carry confidence above 7000 (`E_ATTRIBUTION`). Quoting is the only way to put
+someone's words on record with certainty, and the gate checks the quote.
+
+### Verdict methods
+
+`test`, `cross_model_review`, `external_source`, `scored_prediction`,
+`human`, and `computed` (worked out exactly by a native tool: arithmetic,
+calendar, and later solvers and proof checkers).
+
 ## 5. Compartments
 
 Every episode and claim lives in one compartment. Writers can only write,
@@ -298,7 +362,85 @@ verified from; every operation re-reads the file and compares it byte for
 byte before reusing the cache, so any change forces full re-verification.
 The cache is bounded (16 logs, 256 MB).
 
-## 8. Not yet in v0.1
+## 8. Ingestion (M2)
+
+The computer does what it can do exactly; a model is the last resort.
+
+1. **Record who said what, once.** Structured messages (chat exports, APIs)
+   are recorded with their turns straight from the source, with no parsing.
+   A plain-text transcript is split into turns at labelled lines ("Alex:",
+   "**Alex:**", "[10:31] Alex:", or the name on its own line), on every
+   Unicode line break. Only participants become speakers; any other label
+   ("Bob:", "Step 1:") ends the turn before it and starts text with no known
+   speaker, so it is never absorbed into someone else's turn. A document has one author and needs no turns. The turns
+   are stored in the episode, and extraction always reads them from there.
+   Plain text has one unavoidable ambiguity: a quoted "Alex: …" line inside
+   someone else's message looks like Alex speaking, so structured input is
+   preferred whenever it exists.
+2. **Split sentences exactly.** Abbreviations, initials and decimals do not
+   end sentences; every offset is kept. The same input always gives the same
+   output.
+3. **Classify by named rules.** Each sentence's stance (decided, suggested,
+   hypothetical, asked, asserted), kind (describe, promise, imagine, ask),
+   truth and confidence come from visible language cues, and the rule that
+   fired is reported. A sentence opening with a condition is hypothetical as
+   a whole.
+4. **Residue, not guesses.** Text between recorded turns is reported too
+   (unless it is only a speaker label). A sentence goes back unrecorded, with
+   its reason, if it: has no known speaker; holds hidden characters or a speaker
+   label; is too short or only makes sense with what came before (opens with
+   a pronoun, "all three", "I agree", "…then"); reports someone else's words
+   ("Bob claims…"); has a condition after its start ("…only if…", and for
+   decisions and promises also "…when…"); reads as
+   a question without a question mark; mixes decision and hedge cues; or is
+   a decision that is negated or undecided ("we haven't decided whether…")
+   or not a decision at all ("let's see", "let us know"). A contrast after a
+   decision ("we will use Rust, not Go") is not a negation.
+5. **A judge for the residue only.** An optional judge (a model or a person)
+   may classify residue. It only chooses the classification of the sentence
+   it was asked about; the words, speaker and quote stay the original. Its
+   claims are recorded with origin `inferred` and confidence capped at 7000.
+6. **Only what the writer may see.** Extraction reads the episode through
+   the extracting writer's compartments.
+7. **Everything quoted.** Every extracted claim is the speaker's sentence,
+   verbatim, with `quote` and `quote_start`, origin `direct`, so the core
+   checks it against the episode.
+
+### Native checkers
+
+Checkers run as their own registered writers and parties (kind `tool`) and
+give `computed` verdicts through the same gate as anyone else.
+
+* **Arithmetic:** `<expression> = <number>` (or `≠`) with + − × ÷ ^ and
+  brackets, evaluated exactly with fractions (so 0.1 + 0.2 = 0.3 holds).
+  Expressions with letters are not arithmetic claims, and a hyphen between
+  digits with no spaces ("2026-10-14", "10-12") is a date, range or score as
+  often as a minus, so it is not checked. Division by zero, huge exponents
+  or results, over-long expressions and more than 50 equations in one
+  statement are skipped, never guessed. So are notations that read two ways:
+  "-2^2" and "2^3^2" (conventions differ). A statement that is wrong as
+  written is left alone only if another common reading makes it true: "4!"
+  as a factorial, "1.000" as one thousand, or an answer rounded half up or
+  half even ("1/8 = 0.13"), or cut off at three or more decimals
+  ("2/3 = 0.666"). Wrong under every reading, it is refuted. The scan is linear, so no input can make it
+  slow.
+* **Calendar:** "<date> is/was a <weekday>" in ISO, "14 October 2026" and
+  "October 14, 2026" forms (ASCII letters and digits only), checked against
+  the real calendar; a date that does not exist refutes the claim. Dates
+  before 1923 are not checked, since their weekday depends on which calendar
+  (Julian or Gregorian) was meant.
+
+A checker **supports** or **refutes** only if what it checked is the whole
+statement; if the statement says more ("it is not true that…", "…if 2 + 2 =
+5"), the surrounding words could reverse it, so it **abstains**, with a note
+saying exactly what it computed. Only claims asserted `true` or `false` are
+checked, and the result is judged against what the claim asserts: a claim
+that "2 + 2 = 5" is false is supported. Questions, suggestions,
+hypotheticals and claims of unknown or contested truth are skipped. A checker reads only its own
+compartments, and one claim that fails to check is reported and never stops
+the rest.
+
+## 9. Not yet in v0.1
 
 Signatures (writer identity is by registration only), multi-writer merge of
 independently written logs, views beyond the derived state, the query
