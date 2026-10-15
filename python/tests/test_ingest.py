@@ -62,7 +62,7 @@ class Parsing(unittest.TestCase):
         # own line and timestamps all misattributed the next speaker.
         for text in [
             "Alex: Let's use Rust for core.\rClaude: We will use Python for it.\r",
-            "Alex: Let's use Rust for core. Claude: We will use Python for it.",
+            "Alex: Let's use Rust for core. Claude: We will use Python for it.",
             "Alex: Let's use Rust for core.\x85Claude: We will use Python for it.",
             "**Alex:** Let's use Rust for core.\n**Claude:** We will use Python for it.",
             "Alex:\nLet's use Rust for core.\nClaude:\nWe will use Python for it.",
