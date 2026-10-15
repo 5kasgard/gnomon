@@ -1,0 +1,67 @@
+[
+  {
+    "input": "null",
+    "canonical": "null",
+    "sha256": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+  },
+  {
+    "input": "true",
+    "canonical": "true",
+    "sha256": "b5bea41b6c623f7c09f1bf24dcae58ebab3c0cdd90ad966bc43a45b44867e12b"
+  },
+  {
+    "input": "0",
+    "canonical": "0",
+    "sha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9"
+  },
+  {
+    "input": "-9007199254740991",
+    "canonical": "-9007199254740991",
+    "sha256": "4c933a456bb8f2e9894b2d0b26480439cd72d52fb8a27cbf8fd7f323f22c7815"
+  },
+  {
+    "input": "\"plain\"",
+    "canonical": "\"plain\"",
+    "sha256": "945603a8f587786b463c3f94fce115c0fae88fac2728cc96ddf5981cf7f61741"
+  },
+  {
+    "input": "\"esc \\\" \\\\ \\/ \\b \\f \\n \\r \\t \\u0001 \\u001f\"",
+    "canonical": "\"esc \\\" \\\\ / \\b \\f \\n \\r \\t \\u0001 \\u001f\"",
+    "sha256": "22220db0d49e0efa95e9d3b8851fffc3a06c6886f3f8768e8f7522f3f50b71a2"
+  },
+  {
+    "input": "\"\\u00e9 \\u20ac \\ud83d\\ude00\"",
+    "canonical": "\"é € 😀\"",
+    "sha256": "44632e655288c5e4cc7ea9087a9daed6489f0e372193807628ca579f0273767c"
+  },
+  {
+    "input": "[]",
+    "canonical": "[]",
+    "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+  },
+  {
+    "input": "{}",
+    "canonical": "{}",
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  {
+    "input": "[1,[2,[3,{}]]]",
+    "canonical": "[1,[2,[3,{}]]]",
+    "sha256": "bda4e7fa405a74549cb4cec5be1e3bda61437695e68635a891749899807b19f6"
+  },
+  {
+    "input": "{ \"b\" : 2 , \"a\" : 1 }",
+    "canonical": "{\"a\":1,\"b\":2}",
+    "sha256": "43258cff783fe7036d8a43033f830adfc60ec037382473548ac742b888292777"
+  },
+  {
+    "input": "{\"\\u20ac\":\"Euro Sign\",\"\\r\":\"Carriage Return\",\"\\ufb33\":\"Hebrew Letter Dalet With Dagesh\",\"1\":\"One\",\"\\ud83d\\ude00\":\"Emoji: Grinning Face\",\"\\u0080\":\"Control\",\"\\u00f6\":\"Latin Small Letter O With Diaeresis\"}",
+    "canonical": "{\"\\r\":\"Carriage Return\",\"1\":\"One\",\"\":\"Control\",\"ö\":\"Latin Small Letter O With Diaeresis\",\"€\":\"Euro Sign\",\"😀\":\"Emoji: Grinning Face\",\"דּ\":\"Hebrew Letter Dalet With Dagesh\"}",
+    "sha256": "5e321556d22018a9656991a9e94f77ec175fa193e52a2429d312f8419ec8b08c"
+  },
+  {
+    "input": "{\"statement\":\"F = ma\",\"confidence\":8000,\"truth\":\"true\",\"frame\":\"mechanics\",\"nested\":{\"z\":[null,false],\"a\":\"x\"}}",
+    "canonical": "{\"confidence\":8000,\"frame\":\"mechanics\",\"nested\":{\"a\":\"x\",\"z\":[null,false]},\"statement\":\"F = ma\",\"truth\":\"true\"}",
+    "sha256": "7696db13dd302873874568990035e27292bde6c6e4465de9348a469be4c23f32"
+  }
+]
