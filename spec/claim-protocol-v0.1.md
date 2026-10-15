@@ -1,7 +1,7 @@
 # Claim protocol v0.1
 
 Status: **specified and implemented** in `crates/gnomon-core` (Rust) with
-Python bindings. Working name; the project name is not yet chosen.
+Python bindings. Part of Gnomon.
 
 ## 1. The log
 
