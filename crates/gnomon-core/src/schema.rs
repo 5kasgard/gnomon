@@ -23,6 +23,8 @@ pub const VERDICT_METHODS: &[&str] = &[
     "external_source",
     "scored_prediction",
     "human",
+    // Worked out exactly by a native tool (arithmetic, calendar, solver).
+    "computed",
 ];
 pub const WRITER_KINDS: &[&str] = &["human", "model", "tool"];
 pub const CAPABILITIES: &[&str] = &["owner", "write", "verify", "govern"];
@@ -42,6 +44,8 @@ pub const RESOLVE_OUTCOMES: &[&str] = &["old", "new", "both", "reinstated", "uph
 
 pub const MAX_TEXT: usize = 100_000;
 pub const MAX_SHORT: usize = 2_000;
+/// Highest confidence for a claim whose statement paraphrases its quote.
+pub const PARAPHRASE_MAX_CONFIDENCE: i64 = 7_000;
 /// Confidence is an integer in basis points, never a float.
 pub const MAX_CONFIDENCE: i64 = 10_000;
 
@@ -332,25 +336,108 @@ pub fn register(body: &Value) -> GateResult<Register<'_>> {
 pub struct Episode<'a> {
     pub compartment: &'a str,
     pub content: &'a str,
+    pub participants: Vec<&'a str>,
+    /// Who said which part: (speaker, start, end) in code points, in order,
+    /// not overlapping. Empty if the episode records no turn structure.
+    pub turns: Vec<(&'a str, usize, usize)>,
 }
 
 /// Episodes are kept whole and losslessly: hidden characters are allowed in
 /// `content` (they are flagged in state, never stripped or rejected).
+/// Combining marks: a name written with them ("Zoe" + U+0308) renders like
+/// its composed form ("Zoë"), so two such names could not be told apart.
+fn is_combining_mark(c: char) -> bool {
+    matches!(c as u32, 0x0300..=0x036F | 0x1AB0..=0x1AFF | 0x1DC0..=0x1DFF | 0x20D0..=0x20FF | 0xFE20..=0xFE2F)
+}
+
+/// A name using letters from more than one of Latin, Greek and Cyrillic is
+/// the classic look-alike ("Аlex" with a Cyrillic А).
+fn mixes_scripts(name: &str) -> bool {
+    let (mut latin, mut greek, mut cyrillic) = (false, false, false);
+    for c in name.chars().filter(|c| c.is_alphabetic()) {
+        match c as u32 {
+            0x0041..=0x024F | 0x1E00..=0x1EFF => latin = true,
+            0x0370..=0x03FF | 0x1F00..=0x1FFF => greek = true,
+            0x0400..=0x052F => cyrillic = true,
+            _ => {}
+        }
+    }
+    (latin as u8 + greek as u8 + cyrillic as u8) > 1
+}
+
+/// Case-insensitive comparison key, including the common full case folds
+/// that lowercase alone misses ("Straße" and "STRASSE").
+fn fold(name: &str) -> String {
+    name.to_lowercase().replace('ß', "ss").replace('ς', "σ")
+}
+
 pub fn episode(body: &Value) -> GateResult<Episode<'_>> {
     let f = Fields::of(body, "episode")?;
-    f.only(&["compartment", "content", "medium", "participants"])?;
+    f.only(&["compartment", "content", "medium", "participants", "turns"])?;
     f.text("medium", MAX_SHORT, false)?;
-    f.str_list("participants", None, 0)?;
+    let participants = f.str_list("participants", None, 0)?;
+    // Speakers must be told apart by more than letter case, and a name is a
+    // name: no line breaks or tabs smuggling a second one in.
+    for (i, p) in participants.iter().enumerate() {
+        if p.is_empty() || p.chars().any(|c| c == '\n' || c == '\t' || c == '\r') {
+            return Err(body_err(format!("episode: participant name {p:?} is empty or has a line break or tab")));
+        }
+        if p.trim() != *p {
+            return Err(body_err(format!("episode: participant name {p:?} has leading or trailing spaces")));
+        }
+        if p.chars().any(is_combining_mark) {
+            return Err(body_err(format!("episode: participant name {p:?} has combining marks (use the composed form)")));
+        }
+        if mixes_scripts(p) {
+            return Err(body_err(format!("episode: participant name {p:?} mixes Latin, Greek and Cyrillic letters")));
+        }
+        if participants[..i].iter().any(|q| fold(q) == fold(p)) {
+            return Err(body_err(format!("episode: participants '{p}' differ only in letter case")));
+        }
+    }
+    let content = f.text("content", MAX_TEXT, true)?;
+    let mut turns = Vec::new();
+    if let Some(raw) = f.raw("turns") {
+        let items = raw
+            .as_array()
+            .ok_or_else(|| body_err("episode: 'turns' must be an array"))?;
+        let len = content.chars().count();
+        let mut prev_end = 0usize;
+        for item in items {
+            let t = Fields::of(item, "episode turn")?;
+            t.only(&["speaker", "start", "end"])?;
+            let speaker = t.text("speaker", MAX_SHORT, false)?;
+            let start = t.int_in("start", 0, MAX_TEXT as i64)? as usize;
+            let end = t.int_in("end", 0, MAX_TEXT as i64)? as usize;
+            if !participants.contains(&speaker) {
+                return Err(body_err(format!("episode: turn speaker '{speaker}' is not a participant")));
+            }
+            if start >= end || end > len || start < prev_end {
+                return Err(body_err("episode: turns must be non-empty, in order, not overlapping, and within the content"));
+            }
+            prev_end = end;
+            turns.push((speaker, start, end));
+        }
+    }
     Ok(Episode {
         compartment: f.ident("compartment")?,
-        content: f.text("content", MAX_TEXT, true)?,
+        content,
+        participants,
+        turns,
     })
 }
 
 pub struct Claim<'a> {
     pub compartment: &'a str,
+    pub statement: &'a str,
+    pub speaker: &'a str,
+    pub origin: &'a str,
+    pub confidence: i64,
     pub truth: &'a str,
     pub source_episode: Option<&'a str>,
+    /// Exact passage of the source episode the claim was taken from, and
+    /// where it starts (in Unicode code points). The gate checks it.
+    pub quote: Option<(&'a str, i64)>,
 }
 
 pub const CLAIM_FIELDS: &[&str] = &[
@@ -366,6 +453,8 @@ pub const CLAIM_FIELDS: &[&str] = &[
     "valid_from",
     "valid_to",
     "source_episode",
+    "quote",
+    "quote_start",
     "compartment",
     "intended",
     "delivered",
@@ -375,11 +464,11 @@ pub const CLAIM_FIELDS: &[&str] = &[
 pub fn claim(body: &Value) -> GateResult<Claim<'_>> {
     let f = Fields::of(body, "claim")?;
     f.only(CLAIM_FIELDS)?;
-    f.text("statement", MAX_TEXT, false)?;
+    let statement = f.text("statement", MAX_TEXT, false)?;
     f.one_of("statement_kind", STATEMENT_KINDS)?;
     let origin = f.one_of("origin", ORIGINS)?;
     let stance = f.one_of("stance", STANCES)?;
-    f.text("speaker", MAX_SHORT, false)?;
+    let speaker = f.text("speaker", MAX_SHORT, false)?;
     let truth = f.one_of("truth", TRUTH_VALUES)?;
     let confidence = f.int_in("confidence", 0, MAX_CONFIDENCE)?;
     f.text("frame", MAX_SHORT, false)?;
@@ -395,6 +484,35 @@ pub fn claim(body: &Value) -> GateResult<Claim<'_>> {
         }
     }
     let source_episode = f.opt_text("source_episode", 64)?;
+    // A quote and its position come together, and only with their source.
+    let quote = match (f.has("quote"), f.has("quote_start")) {
+        (false, false) => None,
+        (true, true) => {
+            if source_episode.is_none() {
+                return Err(body_err("claim: a quote needs its source_episode"));
+            }
+            Some((f.text("quote", MAX_TEXT, false)?, f.int_in("quote_start", 0, MAX_TEXT as i64)?))
+        }
+        _ => return Err(body_err("claim: 'quote' and 'quote_start' go together")),
+    };
+    // "Direct" means the speaker's own words, verbatim: always quoted, and
+    // the statement is the quote. Anything else attributed to a quote is an
+    // interpretation, and cannot be stated with near-certainty.
+    match quote {
+        None if origin == "direct" => {
+            return Err(GateError::new("E_QUOTE", "claim: a direct claim must quote its source"));
+        }
+        Some((q, _)) if origin == "direct" && q != statement => {
+            return Err(GateError::new("E_QUOTE", "claim: a direct claim must state exactly its quote"));
+        }
+        Some((q, _)) if q != statement && confidence > PARAPHRASE_MAX_CONFIDENCE => {
+            return Err(GateError::new(
+                "E_QUOTE",
+                format!("claim: a paraphrase of a quote cannot carry confidence above {PARAPHRASE_MAX_CONFIDENCE}"),
+            ));
+        }
+        _ => {}
+    }
     // A guess cannot be stated as certain, and a question has no truth yet.
     if origin == "guessed" && confidence == MAX_CONFIDENCE {
         return Err(body_err("claim: a guessed claim cannot carry full confidence"));
@@ -404,8 +522,13 @@ pub fn claim(body: &Value) -> GateResult<Claim<'_>> {
     }
     Ok(Claim {
         compartment: f.ident("compartment")?,
+        statement,
+        speaker,
+        origin,
+        confidence,
         truth,
         source_episode,
+        quote,
     })
 }
 
