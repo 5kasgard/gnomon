@@ -81,7 +81,7 @@ pub fn claim_body(statement: &str, stance: &str, truth: &str) -> Value {
         ("stance", Value::str(stance)),
         ("speaker", Value::str("claude-c1")),
         ("truth", Value::str(truth)),
-        ("confidence", Value::Int(8000)),
+        ("confidence", Value::Int(7000)),
         ("frame", Value::str("substrate design")),
         ("compartment", Value::str("lab")),
     ])
