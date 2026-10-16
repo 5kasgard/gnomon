@@ -490,6 +490,10 @@ def _event_says(fact: list, ev: dict) -> bool:
     if rel == "episode":
         e, w, medium = args
         return kind == "episode" and eid == e and ev["writer"] == w and body.get("medium") == medium
+    if rel == "handoff":
+        c, frame, w, t = args
+        return kind == "handoff" and eid == c and body.get("frame") == frame and ev["writer"] == w \
+            and ev["record_time"] == t
     if rel == "participant":
         return kind == "episode" and eid == args[0] and args[1] in body.get("participants", [])
     if rel == "writer":
@@ -706,7 +710,7 @@ def _visible(events: list[dict], compartments: set) -> list[bool]:
         kind, b, eid = ev["kind"], ev["body"], ev["event_id"]
         if kind == "claim":
             c = claim_c.setdefault(_claim_id(b), b.get("compartment"))
-        elif kind == "episode":
+        elif kind in ("episode", "handoff"):
             c = item_c.setdefault(eid, b.get("compartment"))
         elif kind == "verdict":
             c = claim_c.get(b.get("claim"))
