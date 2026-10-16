@@ -938,6 +938,18 @@ fn check(
             need(w, "write")?;
             let c = schema::claim(body)?;
             need_compartment(w, c.compartment)?;
+            // References point at claims the writer can see, in the same
+            // compartment (a thread never crosses one); "answers" points at
+            // a question. Missing and elsewhere are refused alike.
+            for (target, relation) in &c.about {
+                let t = visible_claim(st, w, target)?;
+                if t.compartment != c.compartment {
+                    return Err(not_found("claim", target));
+                }
+                if *relation == "answers" && t.body.get("stance").and_then(|v| v.as_str()) != Some("asked") {
+                    return Err(err("E_REFERENCE", format!("claim '{target}' is not a question, so nothing answers it")));
+                }
+            }
             // Did the writer's own party record the episode it quotes?
             let mut self_recorded = false;
             // Who the speaker is. Quoting an episode: whoever the recorder

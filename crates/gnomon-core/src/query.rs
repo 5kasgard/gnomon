@@ -36,6 +36,7 @@ pub fn schema() -> Schema {
         ("author", 2),
         ("asserted_by", 2),
         ("source", 2),
+        ("reference", 3),
         ("quote_start", 2),
         ("validity_domain", 2),
         ("valid_from", 2),
@@ -86,6 +87,23 @@ asserted_group(C, G) :- asserted_by(C, W), group(W, G).
 independently_asserted(C) :- asserted_group(C, G1), asserted_group(C, G2), G1 != G2.
 % Two writers that are instances of the same model.
 same_model(W1, W2) :- identity(W1, "model", M), identity(W2, "model", M), writer(W1, _, "model"), writer(W2, _, "model"), W1 != W2.
+% --- the record as a forum (M7) ---
+% A question, and the claims that answer it.
+question(Q) :- stance(Q, "asked").
+answer(A, Q) :- reference(A, Q, "answers").
+% Settled: some answer stands and someone verified it.
+settled(Q) :- answer(A, Q), believed(A), supported(A).
+% Open: neither settled nor itself rejected (a question can rest on a
+% false premise, and be refuted like any claim).
+open_question(Q) :- question(Q), not settled(Q), not rejected(Q).
+% An argument about a claim (not a verdict: it changes no truth).
+critique(K, C) :- reference(K, C, "critiques").
+% A critique of C that C's author has replied to; one critique may name
+% several claims, and each author answers for their own.
+answered_critique(K, C) :- critique(K, C), author(C, W), reference(R, K, "replies"), author(R, W).
+unanswered_critique(K, C) :- critique(K, C), not answered_critique(K, C).
+% Submitted and not yet judged by anyone.
+awaiting_verification(C) :- truth(C, "unknown"), not question(C), not supported(C), not challenged(C).
 % Who a model or tool acts for.
 acts_for(W, H) :- identity(W, "operator", H).
 "#;
@@ -225,6 +243,13 @@ impl<'a> Builder<'a> {
             }
             self.add(eng, "recorded", vec![cid.clone(), s(&c.record_time)], first)?;
             self.add(eng, "author", vec![cid.clone(), s(&c.author)], first)?;
+            if let Some(refs) = c.body.get("about").and_then(|v| v.as_array()) {
+                for r in refs {
+                    let target = r.get("claim").and_then(|v| v.as_str()).unwrap_or("");
+                    let rel = r.get("relation").and_then(|v| v.as_str()).unwrap_or("");
+                    self.add(eng, "reference", vec![cid.clone(), s(target), s(rel)], first)?;
+                }
+            }
 
             // The dispute folds cost work: only when the query can use them.
             if self.needed.contains("truth") {
