@@ -113,12 +113,12 @@ fn arp001_schema_change_needs_govern_capability() {
         10,
         "schema_change",
         Value::obj(vec![
-            ("version", Value::Int(2)),
+            ("version", Value::Int(3)),
             ("description", Value::str("drop the Reliability field")),
         ]),
     ));
     assert_eq!(code(r), "E_CAPABILITY");
-    assert_eq!(l.state.schema_version, 1);
+    assert_eq!(l.state.schema_version, 2);
 }
 
 /// ARP-001 (d): a model closed its own challenge unilaterally. A party to a

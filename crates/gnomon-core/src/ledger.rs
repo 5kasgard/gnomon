@@ -45,6 +45,28 @@ pub struct WriterInfo {
     pub capabilities: Vec<String>,
     pub compartments: Vec<String>,
     pub last_seq: i64,
+    pub name: Option<String>,
+    pub model: Option<String>,
+    pub operator: Option<String>,
+    pub surface: Option<String>,
+    pub session: Option<String>,
+    /// The writer that started this instance, when it was not an owner.
+    pub instance_of: Option<String>,
+}
+
+impl WriterInfo {
+    /// What its mistakes are shared with: every instance of one model is in
+    /// one group (same weights, correlated errors); each person, and each
+    /// tool without a version, is a group of its own. Agreement counts as
+    /// independent only across groups.
+    /// (An instance is in its parent's group; see State::group.)
+    fn own_group(&self, id: &str) -> String {
+        match (self.kind.as_str(), &self.model) {
+            ("model", Some(m)) => format!("model:{}", m.to_ascii_lowercase()),
+            ("tool", Some(m)) => format!("tool:{}", m.to_ascii_lowercase()),
+            (k, _) => format!("{k}:{id}"),
+        }
+    }
 }
 
 impl WriterInfo {
@@ -66,6 +88,14 @@ pub struct EpisodeInfo {
     pub participants: Vec<String>,
     /// (speaker, start, end) in code points; empty if not recorded.
     pub turns: Vec<(String, usize, usize)>,
+    /// Name -> registered writer, as the recorder said.
+    pub bindings: Vec<(String, String)>,
+}
+
+impl EpisodeInfo {
+    pub fn bound(&self, label: &str) -> Option<&str> {
+        self.bindings.iter().find(|(l, _)| l == label).map(|(_, w)| w.as_str())
+    }
 }
 
 #[derive(Clone, Debug)]
@@ -74,6 +104,9 @@ pub struct ClaimInfo {
     pub compartment: String,
     pub asserted_truth: String,
     pub author: String,
+    /// The writer the speaker is, settled when it was first recorded (see
+    /// State::speaker_of); None if the speaker is only a name.
+    pub speaker_is: Option<String>,
     pub first_event: String,
     pub record_time: String,
     pub corroborated_by: Vec<String>,
@@ -215,10 +248,8 @@ impl Ledger {
     pub fn new() -> Self {
         Ledger {
             events: Vec::new(),
-            state: State {
-                schema_version: schema::SCHEMA_VERSION,
-                ..State::default()
-            },
+            // A log is at version 1 unless its genesis says otherwise.
+            state: State { schema_version: 1, ..State::default() },
         }
     }
 
@@ -312,7 +343,7 @@ impl Ledger {
 
 /// The single state change an accepted event makes.
 pub enum Change {
-    Register { writer: String, info: WriterInfo },
+    Register { writer: String, info: WriterInfo, version: Option<i64> },
     Episode { id: String, info: EpisodeInfo },
     NewClaim { id: String, info: ClaimInfo },
     Corroborate { id: String, writer: String, party: String },
@@ -432,8 +463,11 @@ fn visible_item_compartment<'a>(st: &'a State, w: &WriterInfo, id: &str) -> Gate
 
 fn commit(st: &mut State, checked: Checked, seq: usize) {
     match checked.change {
-        Change::Register { writer, info } => {
+        Change::Register { writer, info, version } => {
             st.writers.insert(writer, info);
+            if let Some(v) = version {
+                st.schema_version = v;
+            }
         }
         Change::Episode { id, info } => {
             st.episodes.insert(id, info);
@@ -758,7 +792,7 @@ fn check(
         if kind != "register" {
             return Err(err("E_GENESIS", "the first event must register the owner"));
         }
-        let r = schema::register(body)?;
+        let r = schema::register(body, false)?;
         if r.writer != writer || !r.capabilities.contains(&"owner") {
             return Err(err("E_GENESIS", "genesis must be an owner registering itself"));
         }
@@ -768,6 +802,7 @@ fn check(
         return done(Change::Register {
             writer: writer.to_string(),
             info: writer_info(&r),
+            version: r.schema_version,
         });
     }
 
@@ -787,21 +822,103 @@ fn check(
 
     match kind {
         "register" => {
-            need(w, "owner")?;
-            let r = schema::register(body)?;
+            // Owners register anyone. A writer with 'spawn' may start new
+            // instances of itself (a session, an agent): same kind, model,
+            // party and operator, within its own compartments, with no more
+            // than its own capabilities and never owner, govern or spawn.
+            let by_owner = w.capabilities.iter().any(|c| c == "owner");
+            if !by_owner {
+                need(w, "spawn")?;
+            }
+            let strict = st.schema_version >= 2;
+            let r = schema::register(body, strict)?;
+            if r.schema_version.is_some() {
+                return Err(err("E_BODY", "register: 'schema_version' belongs to the genesis registration only"));
+            }
+            if !by_owner {
+                // Everything that says who it is comes from its parent: an
+                // instance cannot take another name, model or principal.
+                let same = r.kind == w.kind
+                    && r.model == w.model.as_deref()
+                    && r.party == w.party
+                    && r.operator == w.operator.as_deref()
+                    && r.name == w.name.as_deref()
+                    && (w.surface.is_none() || r.surface == w.surface.as_deref());
+                if !same {
+                    return Err(err(
+                        "E_SPAWN",
+                        "an instance has the kind, model, party, operator, name and surface of the writer that starts it",
+                    ));
+                }
+                // Its id is its parent's, extended: an instance can never
+                // take, or probe for, an id outside its parent's namespace.
+                if !r.writer.starts_with(&format!("{writer}-")) {
+                    return Err(err("E_SPAWN", format!("an instance's id starts with '{writer}-'")));
+                }
+                if r.compartments.iter().any(|c| !w.in_compartment(c)) {
+                    return Err(err("E_SPAWN", "an instance cannot enter a compartment its parent is not in"));
+                }
+                if r.capabilities.iter().any(|c| matches!(*c, "owner" | "govern" | "spawn") || !w.capabilities.iter().any(|x| x == c)) {
+                    return Err(err("E_SPAWN", "an instance gets a subset of its parent's capabilities, never owner, govern or spawn"));
+                }
+            }
             if st.writers.contains_key(r.writer) {
                 return Err(err("E_DUPLICATE", format!("writer '{}' already registered", r.writer)));
             }
-            done(Change::Register {
-                writer: r.writer.to_string(),
-                info: writer_info(&r),
-            })
+            // An instance acts for a person who is already on record.
+            if let Some(op) = r.operator {
+                match st.writers.get(op) {
+                    Some(o) if o.kind == "human" => {}
+                    Some(_) => return Err(err("E_IDENTITY", format!("operator '{op}' is not a human"))),
+                    None => return Err(err("E_IDENTITY", format!("operator '{op}' is not registered"))),
+                }
+            }
+            // One session, one writer: otherwise its words could be split
+            // between names, or two sessions' words merged under one.
+            // (Checked within the party: a session id is the party's.)
+            if let Some(sess) = r.session {
+                if st.writers.values().any(|x| {
+                    x.party == r.party && x.session.as_deref() == Some(sess) && x.surface.as_deref() == r.surface
+                }) {
+                    return Err(err("E_IDENTITY", format!("session '{sess}' is already registered")));
+                }
+            }
+            // A name says who someone is: no party may take a name another
+            // party's writer already has.
+            if let Some(n) = r.name {
+                if st.writers.values().any(|x| x.name.as_deref() == Some(n) && x.party != r.party) {
+                    return Err(err("E_IDENTITY", format!("the name '{n}' belongs to another party's writer")));
+                }
+            }
+            let mut info = writer_info(&r);
+            if !by_owner {
+                info.instance_of = Some(writer.to_string());
+            }
+            done(Change::Register { writer: r.writer.to_string(), info, version: None })
         }
 
         "episode" => {
             need(w, "write")?;
             let e = schema::episode(body)?;
             need_compartment(w, e.compartment)?;
+            for (label, x) in &e.bindings {
+                // Only to writers in this compartment, with one answer for
+                // "no such writer" and "not here", so nothing is learnt.
+                if !st.writers.get(*x).map(|o| o.in_compartment(e.compartment)).unwrap_or(false) {
+                    return Err(err(
+                        "E_IDENTITY",
+                        format!("'{label}' is bound to '{x}', who is not a writer in this compartment"),
+                    ));
+                }
+                // To bind a name to yourself is to claim those words as your
+                // own: only your id or your registered name will do.
+                if *x == writer && *label != writer && Some(*label) != w.name.as_deref() {
+                    return Err(err(
+                        "E_IDENTITY",
+                        format!("'{label}' is not your id or registered name, so it cannot be bound to you"),
+                    ));
+                }
+            }
             done(Change::Episode {
                 id: event_id.to_string(),
                 info: EpisodeInfo {
@@ -812,6 +929,7 @@ fn check(
                     body: body.clone(),
                     participants: e.participants.iter().map(|p| p.to_string()).collect(),
                     turns: e.turns.iter().map(|(sp, a, b)| (sp.to_string(), *a, *b)).collect(),
+                    bindings: e.bindings.iter().map(|(l, x)| (l.to_string(), x.to_string())).collect(),
                 },
             })
         }
@@ -822,6 +940,15 @@ fn check(
             need_compartment(w, c.compartment)?;
             // Did the writer's own party record the episode it quotes?
             let mut self_recorded = false;
+            // Who the speaker is. Quoting an episode: whoever the recorder
+            // bound that name to, and nobody otherwise (a name in a
+            // recording is only a name). Not quoting: a writer id given as
+            // the speaker, or the writer's own registered name.
+            let mut speaker_is: Option<String> = if c.source_episode.is_none() {
+                st.writers.contains_key(c.speaker).then(|| c.speaker.to_string())
+            } else {
+                None
+            };
             if let Some(ep) = c.source_episode {
                 let e = st
                     .episodes
@@ -835,6 +962,9 @@ fn check(
                     ));
                 }
                 self_recorded = st.writers.get(&e.writer).map(|x| x.party == w.party).unwrap_or(false);
+                if let Some(b) = e.bound(c.speaker) {
+                    speaker_is = Some(b.to_string());
+                }
                 // The quote must be exactly what the episode says at that
                 // position: an extractor cannot put words in anyone's mouth.
                 if let Some((quote, start)) = c.quote {
@@ -866,12 +996,28 @@ fn check(
             // Hearsay: a claim that someone else said something, without
             // quoting them, is the writer's interpretation, however it is
             // labelled. It cannot be stated with near-certainty.
-            let own = c.speaker.to_lowercase() == writer.to_lowercase() || c.speaker.to_lowercase() == w.party.to_lowercase();
+            if speaker_is.is_none() && c.source_episode.is_none() && w.name.as_deref() == Some(c.speaker) {
+                speaker_is = Some(writer.to_string());
+            }
+            let id = claim_id(body);
+            // Who the speaker is was settled when the claim was first
+            // recorded; another writer repeating it cannot change that.
+            if let Some(existing) = st.claims.get(&id) {
+                speaker_is = existing.speaker_is.clone();
+            }
+            // Only the writer itself is "own": not another session of the
+            // same model, not its party speaking in general, and not a name
+            // that merely looks like it. (Version 1 logs keep their rule:
+            // the writer's id or party, in any letter case.)
+            let own = speaker_is.as_deref() == Some(writer)
+                || (st.schema_version < 2
+                    && (c.speaker.to_lowercase() == writer.to_lowercase()
+                        || c.speaker.to_lowercase() == w.party.to_lowercase()));
             if c.origin != "direct" && !own && c.confidence > schema::PARAPHRASE_MAX_CONFIDENCE {
                 return Err(err(
                     "E_ATTRIBUTION",
                     format!(
-                        "a claim about what '{}' said, recorded by someone else without quoting them, cannot carry confidence above {}",
+                        "a claim about what '{}' said, by a writer who is not them and without quoting them, cannot carry confidence above {}",
                         c.speaker,
                         schema::PARAPHRASE_MAX_CONFIDENCE
                     ),
@@ -890,7 +1036,6 @@ fn check(
                     ),
                 ));
             }
-            let id = claim_id(body);
             match st.claims.get(&id) {
                 // Identical content from another writer corroborates; it never overwrites.
                 Some(existing) => {
@@ -928,6 +1073,7 @@ fn check(
                         compartment: c.compartment.to_string(),
                         asserted_truth: c.truth.to_string(),
                         author: writer.to_string(),
+                        speaker_is,
                         first_event: event_id.to_string(),
                         record_time: record_time.to_string(),
                         corroborated_by: Vec::new(),
@@ -1359,18 +1505,63 @@ fn check(
 }
 
 fn writer_info(r: &schema::Register) -> WriterInfo {
+    let own = |x: Option<&str>| x.map(|s| s.to_string());
     WriterInfo {
         party: r.party.to_string(),
         kind: r.kind.to_string(),
         capabilities: r.capabilities.iter().map(|c| c.to_string()).collect(),
         compartments: r.compartments.iter().map(|c| c.to_string()).collect(),
         last_seq: 0,
+        name: own(r.name),
+        model: own(r.model),
+        operator: own(r.operator),
+        surface: own(r.surface),
+        session: own(r.session),
+        instance_of: None,
     }
 }
 
 // ------------------------------------------------------- derived views
 
+impl State {
+    /// A writer's independence group (see WriterInfo::own_group); an
+    /// instance is always in its parent's group, so starting instances
+    /// never makes agreement look independent.
+    pub fn group(&self, id: &str) -> String {
+        match self.writers.get(id) {
+            Some(w) => match &w.instance_of {
+                Some(p) if p != id => self.group(p),
+                _ => w.own_group(id),
+            },
+            None => format!("unknown:{id}"),
+        }
+    }
+
+    /// Who a claim's speaker is, as the record says (as the gate decides
+    /// it for the author): quoting an episode, the writer the name is bound
+    /// to there; otherwise a writer id given as the speaker, or the author
+    /// if the speaker is the author's registered name. None: only a name.
+    pub fn speaker_of(&self, c: &ClaimInfo) -> Option<String> {
+        c.speaker_is.clone()
+    }
+}
+
 impl ClaimInfo {
+    /// The distinct groups (see WriterInfo::group) of everyone who asserted
+    /// it, in order: two sessions of one model asserting it are one group.
+    pub fn groups(&self, st: &State) -> Vec<String> {
+        let mut out: Vec<String> = Vec::new();
+        for w in std::iter::once(&self.author).chain(self.corroborated_by.iter()) {
+            if st.writers.contains_key(w) {
+                let g = st.group(w);
+                if !out.contains(&g) {
+                    out.push(g);
+                }
+            }
+        }
+        out
+    }
+
     /// Current truth, folded in log order over every supersession and
     /// resolution touching this claim (later events win):
     /// * refuted as the old claim: false
@@ -1481,6 +1672,7 @@ impl State {
                             ]),
                         ),
                         ("corroborated_by", strs(&c.corroborated_by)),
+                        ("independent_groups", strs(&c.groups(self))),
                         ("supports", strs(&c.supports)),
                         ("refutes", strs(&c.refutes)),
                         ("abstains", strs(&c.abstains)),
@@ -1578,7 +1770,13 @@ impl State {
                     ("kind", Value::str(w.kind.clone())),
                     ("capabilities", strs(&w.capabilities)),
                     ("compartments", strs(&shown)),
+                    ("group", Value::str(self.group(id))),
                 ];
+                for (k, v) in [("name", &w.name), ("model", &w.model), ("operator", &w.operator), ("surface", &w.surface), ("session", &w.session), ("instance_of", &w.instance_of)] {
+                    if let Some(v) = v {
+                        fields.push((k, Value::str(v.clone())));
+                    }
+                }
                 // last_seq counts hidden events too, so only the full view shows it.
                 if compartments.is_none() {
                     fields.push(("last_seq", Value::Int(w.last_seq)));

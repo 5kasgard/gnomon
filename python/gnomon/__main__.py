@@ -2,7 +2,8 @@
 
     python -m gnomon init     --log memory.jsonl --owner alex --compartments lab,private
     python -m gnomon register --log memory.jsonl --by alex --writer claude-c1 \\
-                              --party anthropic --kind model --capabilities write,verify --compartments lab
+                              --party anthropic --kind model --model claude-opus-5-5 \\
+                              --capabilities write,verify --compartments lab
     python -m gnomon verify   --log memory.jsonl
     python -m gnomon query    --log memory.jsonl --reader alex "?- decision(C), statement(C, S)."
 
@@ -40,6 +41,11 @@ def main(argv=None) -> int:
     r.add_argument("--kind", required=True, choices=["human", "model", "tool"])
     r.add_argument("--capabilities", required=True, help="comma-separated: write, verify, govern, owner")
     r.add_argument("--compartments", required=True, help="comma-separated")
+    r.add_argument("--name", help="how to address it, e.g. 'Claude' or 'Alex Duff'")
+    r.add_argument("--model", help="models: the model it runs, as its runtime reports it (e.g. claude-opus-5-5)")
+    r.add_argument("--operator", help="models and tools: the human it acts for (default: --by)")
+    r.add_argument("--surface", help="where it runs, e.g. claude-code, claude-app, api")
+    r.add_argument("--session", help="the runtime's id for this session or agent")
 
     v = sub.add_parser("verify", help="replay the log through every rule")
     v.add_argument("--log", required=True)
@@ -67,8 +73,10 @@ def main(argv=None) -> int:
                             compartments=_list(a.compartments))
             print(f"created {a.log}: owner {a.owner} ({ev['event_id']})")
         elif a.cmd == "register":
+            operator = a.operator or (a.by if a.kind != "human" else None)
             ev = m.register(a.by, a.writer, party=a.party, kind=a.kind, capabilities=_list(a.capabilities),
-                            compartments=_list(a.compartments))
+                            compartments=_list(a.compartments), name=a.name, model=a.model, operator=operator,
+                            surface=a.surface, session=a.session)
             print(f"registered {a.writer} ({ev['event_id']})")
         elif a.cmd == "verify":
             r = m.verify()

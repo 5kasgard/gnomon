@@ -175,9 +175,9 @@ class Memories(unittest.TestCase):
         self.m = m = Memory(self.log)
         m.register("alex", "alex", party="alex", kind="human", capabilities=["owner"],
                    compartments=["lab", "private"], record_time=t(0))
-        m.register("alex", "extractor", party="gnomon-rules", kind="tool",
+        m.register("alex", "extractor", party="gnomon-rules", kind="tool", operator="alex",
                    capabilities=["write"], compartments=["lab"], record_time=t(1))
-        m.register("alex", "calc", party="gnomon-calc", kind="tool",
+        m.register("alex", "calc", party="gnomon-calc", kind="tool", operator="alex",
                    capabilities=["verify"], compartments=["lab"], record_time=t(1))
         ep = record_transcript(m, "alex", self.CHAT, participants=["Alex", "Claude"],
                                compartment="lab", record_time=t(2))
@@ -308,7 +308,7 @@ class Memories(unittest.TestCase):
         # compartment matched a speaker named in the proof.
         self.m.remember("extractor", claim("hello", speaker="bob", frame="f", compartment="lab", truth="true"),
                         record_time=t(7))
-        self.m.register("alex", "bob", party="bob", kind="model", capabilities=["write"],
+        self.m.register("alex", "bob", party="bob", kind="model", model="bob", operator="alex", capabilities=["write"],
                         compartments=["private"], record_time=t(8))
         prog = '?- speaker(C, "bob").'
         r = self.m.query("extractor", prog, as_of=t(9))
@@ -351,7 +351,7 @@ class Disputes(unittest.TestCase):
         m.register("alex", "alex", party="alex", kind="human", capabilities=["owner"],
                    compartments=["ca"], record_time=t(0))
         for i in range(1, 7):
-            m.register("alex", f"w{i}", party=f"p{i}", kind="model", capabilities=["write", "verify"],
+            m.register("alex", f"w{i}", party=f"p{i}", kind="model", model=f"w{i}", operator="alex", capabilities=["write", "verify"],
                        compartments=["ca"], record_time=t(1))
 
     def tearDown(self):
