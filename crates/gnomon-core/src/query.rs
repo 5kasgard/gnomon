@@ -51,6 +51,7 @@ pub fn schema() -> Schema {
         ("appeal", 3),
         ("episode", 3),
         ("participant", 2),
+        ("handoff", 4),
         ("bound", 3),
         ("writer", 3),
         ("identity", 3),
@@ -328,6 +329,14 @@ impl<'a> Builder<'a> {
             }
         }
 
+        for (cid, c) in &st.handoffs {
+            if !self.sees(&c.compartment) {
+                continue;
+            }
+            let src = self.src(cid);
+            self.add(eng, "handoff", vec![s(cid), s(&c.frame), s(&c.writer), s(&c.record_time)], src)?;
+        }
+
         for (eid, e) in &st.episodes {
             if !self.sees(&e.compartment) {
                 continue;
@@ -426,6 +435,7 @@ pub fn event_visible(ledger: &Ledger, visible: &[String], e: &Value) -> bool {
         "verdict" => st.verdicts.get(id).map(|v| claim_seen(&v.claim)).unwrap_or(false),
         "supersede" => st.supersessions.get(id).map(|x| sees(&x.compartment)).unwrap_or(false),
         "appeal" => st.appeals.get(id).map(|x| sees(&x.compartment)).unwrap_or(false),
+        "handoff" => st.handoffs.get(id).map(|x| sees(&x.compartment)).unwrap_or(false),
         "resolve" => {
             let d = field("dispute");
             st.supersessions.get(d).map(|x| sees(&x.compartment)).unwrap_or(false)

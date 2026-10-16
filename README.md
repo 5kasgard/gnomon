@@ -32,6 +32,10 @@ falsifying their own transcripts.
 
 Gnomon is built the other way round:
 
+- **Work carries over between AIs.** An agent leaves a handoff: where
+  things stand, what's done, what's next, what's open. Any other session
+  or model, on any app, resumes exactly there. It also sees what changed
+  since, including whether anything the work relied on has been refuted.
 - **Every word has an author.** That means one person, or one session of one
   model, with its model, where it runs, and the human it acts for on
   record.
@@ -54,6 +58,19 @@ Gnomon is built the other way round:
 - **Nothing hidden gets through.** Invisible characters are refused or
   flagged, and private compartments don't leak, not even through error
   codes.
+
+## Who it's for
+
+- **You, across all your AIs.** Claude in one app, another model in another,
+  your phone, your laptop: one memory, and work continues where it
+  stopped. Private by default, even if you never share anything.
+- **Teams and agent fleets.** A shared space where every agent is
+  accountable. You can see who did what, under which operator, on what
+  evidence, with proofs, and how one agent's work was checked by another.
+- **The commons.** A public record of claims and where each one stands.
+  Questions get answered, answers get verified, and mistakes get corrected
+  in the open, by people and AIs alike. Posting there is opt-in, claim by
+  claim.
 
 ## Quick start: give any AI model this memory (MCP)
 
@@ -88,6 +105,8 @@ For hosts configured with JSON (e.g. Claude Desktop):
 
 The model gets these tools:
 
+- `resume`, `handoff`, `frames`: pick up work where any session or model
+  left it
 - `remember`, `record_conversation`
 - `recall` ("where did we discuss the budget?")
 - `query` ("which decisions still stand?"), with checked proofs
@@ -134,6 +153,11 @@ q = m.ask("alex", "Which database should the prototype use?", frame="db", compar
 a = m.respond("claude-c1", q, "answers", "SQLite: one file, no server.", frame="db", compartment="lab")
 print(m.query("alex", "?- open_question(Q), statement(Q, S).")["answers"])
 print(m.discussion("alex", q))                 # the whole thread, with each post's standing
+
+# Leave the work for whoever comes next; any session or model picks it up
+h = m.handoff("claude-c1", frame="db", compartment="lab", summary="Chose SQLite; schema next.",
+              next=["write the schema"], refs=[a])
+print(m.resume("alex", "db")["handoff"]["next"])   # ['write the schema']
 
 # Where was it said?
 for h in m.recall("alex", "what did we decide about the core language?", k=5)["hits"]:
@@ -205,6 +229,7 @@ caveats.
 | **The record** | Canonical JSON (RFC 8785) and SHA-256 in Rust, checked against FIPS and RFC vectors. One hash-chained log; replay rebuilds identical state. Tampering, truncation and torn writes are detected, and writers in any process are serialised by a lock on the log. |
 | **Claims** | Statement kinds, origin (observed, derived, guessed…), stance (a decision is never confused with a suggestion), four-valued truth, validity domains, and two clocks: when it was recorded and when it is true. |
 | **Verification and disputes** | Verdicts with a stated method. Contests that flag a claim without changing its truth, before a neutral party. One argument per party, then only evidence. Three ways back for a refuted claim. Every dispute can end. |
+| **Continuity** | Handoffs record where a piece of work stands (summary, goal, done, next, open, what it rests on, artifacts). Resume shows the latest one, how everything it relied on stands now, and what happened since. |
 | **Forum** | Questions, answers, critiques, replies and citations are attributed claims linked by reference, never across compartments. Views show open questions, settled ones, and critiques nobody has answered. |
 | **Identity** | Each session or agent is its own writer, on record with its model, surface, session and operator. Names in recordings are bound, never matched. Agreement between sessions of one model counts once. |
 | **Ingestion** | Transcripts and documents are parsed by plain code and classified by named rules. Anything uncertain is set aside, never guessed. Quotes are checked word for word. |
@@ -221,8 +246,8 @@ The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
   written as a failing test before any code existed
   (`tests/incidents.rs`).
 - **Each milestone was attacked by a reviewer who didn't write it.** That
-  covered the record, queries, the MCP server, recall, identity and the
-  forum, over 15 review rounds. Every confirmed finding is now a
+  covered the record, queries, the MCP server, recall, identity, the forum
+  and continuity, over 16 review rounds. Every confirmed finding is now a
   regression test.
 - **The query engine has a second implementation to agree with.** It is
   checked against a deliberately naive evaluator on hundreds of random
@@ -231,7 +256,7 @@ The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
 - **The MCP server is tested hard.** It is fuzzed with thousands of
   malformed messages and driven in CI by the official MCP Python SDK.
 - **Recall was tested on data it was never tuned on.**
-- **Every platform:** 174 Rust tests and 146 Python tests run on Linux,
+- **Every platform:** 176 Rust tests and 157 Python tests run on Linux,
   macOS and Windows on every change.
 
 ```bash
@@ -253,10 +278,20 @@ bash scripts/build.sh && python3 -m unittest discover -s python/tests
 - [x] **M7, the record as a forum:** questions, answers, critiques,
   replies and citations; open and settled questions; content-addressed
   proofs.
-- [ ] **M8, a shared public space:**
-  - independent memories merging into a commons;
+- [x] **M8, continuity:** handoff and resume across sessions, models and
+  apps.
+- [ ] **M9, storage that scales:** the log in immutable segments, synced to
+  object storage (S3, Backblaze B2, Cloudflare R2), with private
+  compartments encrypted before they leave your device.
+- [ ] **M10, a hosted connector:** remote MCP with sign-in, so anyone can
+  add Gnomon to Claude or another AI app as a connector, from any device.
+- [ ] **M11, the commons:**
+  - opt-in publishing from private memory;
   - signed posts;
-  - derived claims that name the proof and rule version that produced them.
+  - independent memories merging;
+  - derived claims that name the proof that produced them.
+- [ ] **A web viewer for people:** timeline, threads, open questions, and an
+  inbox to approve what agents recorded.
 
 ## Layout
 
