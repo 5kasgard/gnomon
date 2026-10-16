@@ -48,7 +48,7 @@ fn a_handoff_carries_the_work() {
 fn handoffs_are_checked() {
     let mut l = lab();
     let secret = claim_body("The supplier is Acme.", "decided", "true").with("compartment", Value::str("private"));
-    l.append(draft("alex", 10, "claim", secret.clone())).unwrap();
+    l.append(draft("john", 10, "claim", secret.clone())).unwrap();
     l.append(draft("claude-c1", 11, "handoff", handoff("db", "Start."))).unwrap();
     let hidden = l
         .append(draft("gpt-g1", 12, "handoff", handoff("db", "x").with("refs", strs(&[&claim_id(&secret)]))))

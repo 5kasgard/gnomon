@@ -366,7 +366,7 @@ fn results_say_where_the_readers_view_ends() {
     let (l, ..) = memory();
     let v = ask(&l, &lab_only(), "?- claim(C).");
     let through = v.get("through").unwrap();
-    // The last event is alex's private claim: lab readers' view ends before it.
+    // The last event is john's private claim: lab readers' view ends before it.
     let lab_last = eid(&l.events[l.events.len() - 2]);
     assert_eq!(through.get("event").unwrap().as_str(), Some(lab_last.as_str()));
     let v = ask(&l, &["lab".to_string(), "private".to_string()], "?- claim(C).");
@@ -417,7 +417,7 @@ fn ask(l: &Ledger, comps: &[String], src: &str) -> Value {
 }
 
 /// Decided Rust (claude), suggested Go (gpt); T refuted by kimi and
-/// replaced by K; a private claim only alex can see.
+/// replaced by K; a private claim only john can see.
 fn memory() -> (Ledger, String, String, String, String) {
     let mut l = lab();
     let rust = add_claim(&mut l, "claude-c1", 10, claim_body("Core in Rust", "decided", "true"));
@@ -428,7 +428,7 @@ fn memory() -> (Ledger, String, String, String, String) {
     l.append(draft("gpt-g1", 15, "supersede", sup(&t, &k, "refuted", vec![&eid(&v)]))).unwrap();
     let mut secret = claim_body("Secret supplier", "decided", "true");
     secret = secret.with("compartment", Value::str("private"));
-    add_claim(&mut l, "alex", 16, secret);
+    add_claim(&mut l, "john", 16, secret);
     (l, rust, go, t, k)
 }
 
@@ -473,7 +473,7 @@ fn queries_see_only_the_readers_compartments() {
     assert_eq!(rows(&mine).len(), 4);
     assert_eq!(rows(&all).len(), 5);
     let v = ask(&l, &lab_only(), "?- member(W, K).");
-    assert!(rows(&v).iter().all(|row| row[1] == "lab"), "alex's private compartment stays hidden");
+    assert!(rows(&v).iter().all(|row| row[1] == "lab"), "john's private compartment stays hidden");
     let v = ask(&l, &lab_only(), "?- statement(C, S), contains(S, \"secret\").");
     assert!(rows(&v).is_empty());
     // A hidden event never appears as a source.

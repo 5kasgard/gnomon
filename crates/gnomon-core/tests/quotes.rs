@@ -9,7 +9,7 @@ use common::*;
 use gnomon_core::json::Value;
 use gnomon_core::ledger::Ledger;
 
-const TEXT: &str = "Alex: Café first. Let's use Rust for the core.\nClaude: Agreed. We will delete nothing.";
+const TEXT: &str = "John: Café first. Let's use Rust for the core.\nClaude: Agreed. We will delete nothing.";
 
 /// Code-point offset of `needle` in TEXT.
 fn at(needle: &str) -> i64 {
@@ -25,10 +25,10 @@ fn turn(speaker: &str, start: i64, end: i64) -> Value {
 }
 
 fn transcript_turns() -> Value {
-    let alex_end = at("\nClaude:");
+    let john_end = at("\nClaude:");
     let claude_start = at("Agreed.");
     Value::Array(vec![
-        turn("Alex", at("Café"), alex_end),
+        turn("John", at("Café"), john_end),
         turn("Claude", claude_start, TEXT.chars().count() as i64),
     ])
 }
@@ -50,7 +50,7 @@ fn episode(l: &mut Ledger, minute: u32, content: &str, participants: &[&str], tu
 }
 
 fn transcript(l: &mut Ledger) -> String {
-    episode(l, 10, TEXT, &["Alex", "Claude"], Some(transcript_turns())).unwrap()
+    episode(l, 10, TEXT, &["John", "Claude"], Some(transcript_turns())).unwrap()
 }
 
 /// A direct quote: statement == quote.
@@ -69,7 +69,7 @@ fn exact_quote_by_its_speaker_is_accepted() {
     let ep = transcript(&mut l);
     // Offsets count Unicode code points: "é" is one, not two bytes.
     let q = "Let's use Rust for the core.";
-    assert_eq!(code(l.append(draft("gpt-g1", 11, "claim", said(&ep, "Alex", q, at(q))))), "OK");
+    assert_eq!(code(l.append(draft("gpt-g1", 11, "claim", said(&ep, "John", q, at(q))))), "OK");
 }
 
 #[test]
@@ -88,7 +88,7 @@ fn invented_shifted_or_overlong_quotes_are_refused() {
         ("Café first.", at("Café first.") + 1), // shifted by one, still inside the turn
         ("CAFÉ FIRST.", at("Café first.")), // case changed
     ] {
-        assert_eq!(code(l.append(draft("gpt-g1", 11, "claim", said(&ep, "Alex", q, s)))), "E_QUOTE", "{q}");
+        assert_eq!(code(l.append(draft("gpt-g1", 11, "claim", said(&ep, "John", q, s)))), "E_QUOTE", "{q}");
     }
 }
 
@@ -97,21 +97,21 @@ fn invented_shifted_or_overlong_quotes_are_refused() {
 fn a_quote_cannot_certify_a_different_statement_or_speaker() {
     let mut l = lab();
     let ep = transcript(&mut l);
-    // Claude's words attributed to Alex.
+    // Claude's words attributed to John.
     let q = "We will delete nothing.";
-    assert_eq!(code(l.append(draft("gpt-g1", 11, "claim", said(&ep, "Alex", q, at(q))))), "E_QUOTE");
+    assert_eq!(code(l.append(draft("gpt-g1", 11, "claim", said(&ep, "John", q, at(q))))), "E_QUOTE");
     assert_eq!(code(l.append(draft("gpt-g1", 12, "claim", said(&ep, "Claude", q, at(q))))), "OK");
     // A quote spanning two turns belongs to nobody.
     let both = "core.\nClaude: Agreed.";
-    for who in ["Alex", "Claude"] {
+    for who in ["John", "Claude"] {
         assert_eq!(code(l.append(draft("gpt-g1", 13, "claim", said(&ep, who, both, at(both))))), "E_QUOTE", "{who}");
     }
     // A direct claim must say exactly what its quote says.
-    let lie = said(&ep, "Alex", "Café first.", at("Café first."))
-        .with("statement", Value::str("Alex approved deleting the database."));
+    let lie = said(&ep, "John", "Café first.", at("Café first."))
+        .with("statement", Value::str("John approved deleting the database."));
     assert_eq!(code(l.append(draft("gpt-g1", 14, "claim", lie))), "E_QUOTE");
-    // Text outside every turn (the "Alex: " label) is nobody's words.
-    assert_eq!(code(l.append(draft("gpt-g1", 15, "claim", said(&ep, "Alex", "Alex", 0)))), "E_QUOTE");
+    // Text outside every turn (the "John: " label) is nobody's words.
+    assert_eq!(code(l.append(draft("gpt-g1", 15, "claim", said(&ep, "John", "John", 0)))), "E_QUOTE");
 }
 
 #[test]
@@ -120,8 +120,8 @@ fn paraphrase_is_allowed_only_when_not_claimed_as_direct_and_never_near_certain(
     let ep = transcript(&mut l);
     let q = "Let's use Rust for the core.";
     let para = |confidence: i64| {
-        said(&ep, "Alex", q, at(q))
-            .with("statement", Value::str("Alex chose Rust for the core"))
+        said(&ep, "John", q, at(q))
+            .with("statement", Value::str("John chose Rust for the core"))
             .with("origin", Value::str("inferred"))
             .with("confidence", Value::Int(confidence))
     };
@@ -137,7 +137,7 @@ fn a_direct_claim_must_carry_its_quote() {
     let mut l = lab();
     let ep = transcript(&mut l);
     let bare = claim_body("I approve deleting the production database.", "decided", "true")
-        .with("speaker", Value::str("Alex"))
+        .with("speaker", Value::str("John"))
         .with("origin", Value::str("direct"));
     assert_eq!(code(l.append(draft("gpt-g1", 11, "claim", bare.clone()))), "E_QUOTE");
     let sourced = bare.with("source_episode", Value::str(ep));
@@ -149,7 +149,7 @@ fn a_direct_claim_must_carry_its_quote() {
 #[test]
 fn participant_names_are_distinct_and_single_line() {
     let mut l = lab();
-    for people in [&["Alex", "ALEX"][..], &["Alex\nClaude"][..], &["Alex", "Al\tex"][..]] {
+    for people in [&["John", "JOHN"][..], &["John\nClaude"][..], &["John", "Al\tex"][..]] {
         assert_eq!(episode(&mut l, 10, TEXT, people, None), Err("E_BODY"), "{people:?}");
     }
 }
@@ -160,7 +160,7 @@ fn readers_see_who_recorded_the_quoted_source() {
     let ep = transcript(&mut l);
     let q = "Let's use Rust for the core.";
     let id = {
-        let body = said(&ep, "Alex", q, at(q));
+        let body = said(&ep, "John", q, at(q));
         l.append(draft("gpt-g1", 11, "claim", body.clone())).unwrap();
         gnomon_core::ledger::claim_id(&body)
     };
@@ -173,12 +173,12 @@ fn readers_see_who_recorded_the_quoted_source() {
 fn episodes_without_turns_have_one_speaker_or_none() {
     let mut l = lab();
     let doc = "Rust is fast. Python is friendly.";
-    let solo = episode(&mut l, 10, doc, &["Alex"], None).unwrap();
-    assert_eq!(code(l.append(draft("gpt-g1", 11, "claim", said(&solo, "Alex", "Rust is fast.", 0)))), "OK");
+    let solo = episode(&mut l, 10, doc, &["John"], None).unwrap();
+    assert_eq!(code(l.append(draft("gpt-g1", 11, "claim", said(&solo, "John", "Rust is fast.", 0)))), "OK");
     assert_eq!(code(l.append(draft("gpt-g1", 12, "claim", said(&solo, "Claude", "Python is friendly.", 14)))), "E_QUOTE");
     // Two participants and no turns: nobody can be quoted.
-    let group = episode(&mut l, 13, doc, &["Alex", "Claude"], None).unwrap();
-    assert_eq!(code(l.append(draft("gpt-g1", 14, "claim", said(&group, "Alex", "Rust is fast.", 0)))), "E_QUOTE");
+    let group = episode(&mut l, 13, doc, &["John", "Claude"], None).unwrap();
+    assert_eq!(code(l.append(draft("gpt-g1", 14, "claim", said(&group, "John", "Rust is fast.", 0)))), "E_QUOTE");
 }
 
 #[test]
@@ -187,13 +187,13 @@ fn turns_must_be_well_formed() {
     let n = TEXT.chars().count() as i64;
     for (turns, why) in [
         (Value::Array(vec![turn("Bob", 0, 5)]), "speaker not a participant"),
-        (Value::Array(vec![turn("Alex", 5, 5)]), "empty"),
-        (Value::Array(vec![turn("Alex", 0, n + 1)]), "past the end"),
-        (Value::Array(vec![turn("Alex", 0, 10), turn("Claude", 5, 20)]), "overlapping"),
-        (Value::Array(vec![turn("Claude", 20, 30), turn("Alex", 0, 10)]), "out of order"),
-        (Value::Array(vec![turn("Alex", -1, 10)]), "negative"),
+        (Value::Array(vec![turn("John", 5, 5)]), "empty"),
+        (Value::Array(vec![turn("John", 0, n + 1)]), "past the end"),
+        (Value::Array(vec![turn("John", 0, 10), turn("Claude", 5, 20)]), "overlapping"),
+        (Value::Array(vec![turn("Claude", 20, 30), turn("John", 0, 10)]), "out of order"),
+        (Value::Array(vec![turn("John", -1, 10)]), "negative"),
     ] {
-        assert_eq!(episode(&mut l, 10, TEXT, &["Alex", "Claude"], Some(turns)), Err("E_BODY"), "{why}");
+        assert_eq!(episode(&mut l, 10, TEXT, &["John", "Claude"], Some(turns)), Err("E_BODY"), "{why}");
     }
 }
 
@@ -209,32 +209,32 @@ fn quote_needs_its_source_and_position() {
         .with("source_episode", Value::str(ep.clone()))
         .with("quote", Value::str("Agreed."));
     assert_eq!(code(l.append(draft("gpt-g1", 11, "claim", no_start))), "E_BODY");
-    assert_eq!(code(l.append(draft("gpt-g1", 11, "claim", said(&ep, "Alex", "Alex", -1)))), "E_BODY");
+    assert_eq!(code(l.append(draft("gpt-g1", 11, "claim", said(&ep, "John", "John", -1)))), "E_BODY");
 }
 
 #[test]
 fn hidden_characters_cannot_be_quoted_into_a_claim() {
     let mut l = lab();
-    let ep = episode(&mut l, 10, "ok\u{200b}go now", &["Alex"], None).unwrap();
+    let ep = episode(&mut l, 10, "ok\u{200b}go now", &["John"], None).unwrap();
     // The episode keeps them; a claim may not carry them, even as a quote.
-    assert_eq!(code(l.append(draft("gpt-g1", 11, "claim", said(&ep, "Alex", "ok\u{200b}go now", 0)))), "E_HIDDEN_CHARS");
+    assert_eq!(code(l.append(draft("gpt-g1", 11, "claim", said(&ep, "John", "ok\u{200b}go now", 0)))), "E_HIDDEN_CHARS");
 }
 
 #[test]
 fn hidden_episode_answers_like_missing_even_with_a_quote() {
     let mut l = lab();
-    l.append(draft("alex", 5, "register", register_body("bridge", "bridge-co", "model", &["write"], &["private"])))
+    l.append(draft("john", 5, "register", register_body("bridge", "bridge-co", "model", &["write"], &["private"])))
         .unwrap();
     let body = Value::obj(vec![
         ("compartment", Value::str("private")),
         ("content", Value::str("secret plan")),
         ("medium", Value::str("chat")),
-        ("participants", Value::Array(vec![Value::str("Alex")])),
+        ("participants", Value::Array(vec![Value::str("John")])),
     ]);
     l.append(draft("bridge", 10, "episode", body)).unwrap();
     // Guessing the right words gives the same answer as guessing wrong ones.
-    let right = code(l.append(draft("gpt-g1", 11, "claim", said("bridge/1", "Alex", "secret", 0))));
-    let wrong = code(l.append(draft("gpt-g1", 11, "claim", said("bridge/1", "Alex", "public", 0))));
+    let right = code(l.append(draft("gpt-g1", 11, "claim", said("bridge/1", "John", "secret", 0))));
+    let wrong = code(l.append(draft("gpt-g1", 11, "claim", said("bridge/1", "John", "public", 0))));
     assert_eq!((right, wrong), ("E_REF", "E_REF"));
 }
 
@@ -243,8 +243,8 @@ fn hidden_episode_answers_like_missing_even_with_a_quote() {
 fn hearsay_without_a_quote_is_never_near_certain() {
     let mut l = lab();
     let hearsay = |origin: &str, confidence: i64| {
-        claim_body("Alex approved deleting the production database.", "decided", "true")
-            .with("speaker", Value::str("Alex"))
+        claim_body("John approved deleting the production database.", "decided", "true")
+            .with("speaker", Value::str("John"))
             .with("origin", Value::str(origin))
             .with("confidence", Value::Int(confidence))
     };
@@ -252,13 +252,13 @@ fn hearsay_without_a_quote_is_never_near_certain() {
         assert_eq!(code(l.append(draft("gpt-g1", 11, "claim", hearsay(origin, 10_000)))), "E_ATTRIBUTION", "{origin}");
     }
     assert_eq!(code(l.append(draft("gpt-g1", 12, "claim", hearsay("inferred", 7_000)))), "OK");
-    // M6: a name is only a name. "Alex" is not the writer alex unless alex
+    // M6: a name is only a name. "John" is not the writer john unless john
     // registered that name.
-    assert_eq!(code(l.append(draft("alex", 13, "claim", hearsay("manual", 10_000)))), "E_ATTRIBUTION");
-    let mine = hearsay("manual", 10_000).with("speaker", Value::str("alex"));
-    assert_eq!(code(l.append(draft("alex", 13, "claim", mine))), "OK");
-    let named = register_body("ann", "ann", "human", &["write"], &["lab"]).with("name", Value::str("Alex"));
-    l.append(draft("alex", 14, "register", named)).unwrap();
+    assert_eq!(code(l.append(draft("john", 13, "claim", hearsay("manual", 10_000)))), "E_ATTRIBUTION");
+    let mine = hearsay("manual", 10_000).with("speaker", Value::str("john"));
+    assert_eq!(code(l.append(draft("john", 13, "claim", mine))), "OK");
+    let named = register_body("ann", "ann", "human", &["write"], &["lab"]).with("name", Value::str("John"));
+    l.append(draft("john", 14, "register", named)).unwrap();
     assert_eq!(code(l.append(draft("ann", 15, "claim", hearsay("manual", 10_000)))), "OK");
     // Nor does a writer speak with certainty for its party, or for another
     // session of its own model: each instance is its own speaker.
@@ -278,9 +278,9 @@ fn look_alike_participant_names_are_refused_by_the_gate() {
         &["Zo\u{eb}", "Zoe\u{308}"][..], // composed and decomposed
         &["Zoe\u{308}"][..],              // decomposed alone
         &["Stra\u{df}e", "STRASSE"][..],  // full case fold
-        &["Alex", "\u{410}lex"][..],      // Cyrillic A
-        &["Alex", "Alex\u{a0}"][..],      // trailing no-break space
-        &["Alex", " Alex"][..],           // leading space
+        &["John", "\u{410}lex"][..],      // Cyrillic A
+        &["John", "John\u{a0}"][..],      // trailing no-break space
+        &["John", " John"][..],           // leading space
     ] {
         assert_eq!(episode(&mut l, 10, TEXT, people, None), Err("E_BODY"), "{people:?}");
     }
@@ -296,11 +296,11 @@ fn quoting_others_from_your_own_recording_is_capped() {
     let mut l = lab();
     let ep = transcript(&mut l); // recorded by claude-c1 (party anthropic)
     let q = "Let's use Rust for the core.";
-    let sure = said(&ep, "Alex", q, at(q)).with("confidence", Value::Int(9000));
+    let sure = said(&ep, "John", q, at(q)).with("confidence", Value::Int(9000));
     // Same party as the recorder: capped.
     assert_eq!(code(l.append(draft("claude-c2", 11, "claim", sure.clone()))), "E_ATTRIBUTION");
     assert_eq!(code(l.append(draft("claude-c1", 12, "claim", sure.clone()))), "E_ATTRIBUTION");
-    assert_eq!(code(l.append(draft("claude-c2", 13, "claim", said(&ep, "Alex", q, at(q))))), "OK"); // 7000
+    assert_eq!(code(l.append(draft("claude-c2", 13, "claim", said(&ep, "John", q, at(q))))), "OK"); // 7000
     // Another party quoting the same recording: the recording is not theirs.
     assert_eq!(code(l.append(draft("gpt-g1", 14, "claim", sure))), "OK");
 }

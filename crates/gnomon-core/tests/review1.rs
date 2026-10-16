@@ -47,7 +47,7 @@ fn eid(env: &Value) -> String {
 fn lab_with_bridge() -> Ledger {
     let mut l = lab();
     l.append(draft(
-        "alex",
+        "john",
         5,
         "register",
         register_body("bridge", "bridge-co", "model", &["write", "verify"], &["lab", "private"]),
@@ -117,7 +117,7 @@ fn f3_open_dispute_blocks_further_supersession() {
     // Once a neutral party resolves it, evidence-backed refutation is open to
     // anyone, provided the refuting verdict comes from outside the dispute
     // (kimi's verdict here).
-    l.append(draft("alex", 15, "resolve", resolve(&eid(&s), "both"))).unwrap();
+    l.append(draft("john", 15, "resolve", resolve(&eid(&s), "both"))).unwrap();
     assert_eq!(code(l.append(draft("claude-c1", 16, "supersede", sup(&b, &a, "refuted", vec![&v])))), "OK");
     assert_eq!(l.state.truth(&b).unwrap(), "false");
 }
@@ -259,11 +259,11 @@ fn f10_duplicate_keys_from_code_are_refused() {
     assert_eq!(code(r), "E_ENVELOPE");
 
     let path = tmp_path("f10");
-    store::append(&path, draft("alex", 0, "register", register_body("alex", "alex", "human", &["owner"], &["lab"])))
+    store::append(&path, draft("john", 0, "register", register_body("john", "john", "human", &["owner"], &["lab"])))
         .unwrap();
     let mut members = claim_body("A", "asserted", "true").as_object().unwrap().to_vec();
     members.push(("statement".to_string(), Value::str("dup")));
-    assert!(store::append(&path, draft("alex", 1, "claim", Value::Object(members))).is_err());
+    assert!(store::append(&path, draft("john", 1, "claim", Value::Object(members))).is_err());
     assert!(store::open(&path, None).is_ok(), "a refused append must not brick the log");
 }
 
@@ -272,7 +272,7 @@ fn f10_duplicate_keys_from_code_are_refused() {
 fn f11_owner_can_change_schema() {
     let mut l = lab();
     let r = l.append(draft(
-        "alex",
+        "john",
         10,
         "schema_change",
         Value::obj(vec![("version", Value::Int(3)), ("description", Value::str("v3"))]),
@@ -306,7 +306,7 @@ fn f13_impossible_dates_refused() {
         .with("seq", Value::Int(l.events.len() as i64))
         .with("prev", Value::str(l.head()))
         .with("writer_seq", Value::Int(5))
-        .with("event_id", Value::str("alex/5"))
+        .with("event_id", Value::str("john/5"))
         .with("record_time", Value::str("2026-02-31T00:00:00Z"));
     let env = env.with("hash", Value::str(envelope_hash(&env)));
     assert_eq!(l.apply(env).unwrap_err().code, "E_TIME_FORMAT");
@@ -332,17 +332,17 @@ fn truth_follows_log_order_of_resolutions() {
     // The loser cannot be revived by another contest, by anyone.
     assert_eq!(code(l.append(draft("claude-c1", 14, "supersede", sup(&b, &a, "contested", vec![])))), "E_FINAL");
     // An outsider can't stand in for the loser (consent), and couldn't revive it anyway.
-    assert_eq!(code(l.append(draft("alex", 15, "supersede", sup(&b, &a, "contested", vec![])))), "E_CONSENT");
+    assert_eq!(code(l.append(draft("john", 15, "supersede", sup(&b, &a, "contested", vec![])))), "E_CONSENT");
     // But the winner can still be refuted with outside evidence; later wins.
     let v = l
-        .append(draft("alex", 16, "verdict", Value::obj(vec![
+        .append(draft("john", 16, "verdict", Value::obj(vec![
             ("claim", Value::str(b.clone())),
             ("result", Value::str("refutes")),
             ("method", Value::str("test")),
         ])))
         .unwrap();
-    let c = add_claim(&mut l, "alex", 17, claim_body("C", "asserted", "true"));
-    l.append(draft("alex", 18, "supersede", sup(&b, &c, "refuted", vec![&eid(&v)]))).unwrap();
+    let c = add_claim(&mut l, "john", 17, claim_body("C", "asserted", "true"));
+    l.append(draft("john", 18, "supersede", sup(&b, &c, "refuted", vec![&eid(&v)]))).unwrap();
     assert_eq!((l.state.truth(&a).unwrap(), l.state.truth(&b).unwrap()), ("false".into(), "false".into()));
 }
 

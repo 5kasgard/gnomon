@@ -32,23 +32,23 @@ class Fixture(unittest.TestCase):
         self.dir = tempfile.TemporaryDirectory()
         self.log = str(Path(self.dir.name) / "memory.jsonl")
         m = self.m = Memory(self.log)
-        m.register("alex", "alex", party="alex", kind="human", capabilities=["owner"], compartments=["lab"],
-                   name="Alex Duff", record_time=t(0))
-        m.register("alex", "claude", party="anthropic", kind="model", model=OPUS, operator="alex", name="Claude",
+        m.register("john", "john", party="john", kind="human", capabilities=["owner"], compartments=["lab"],
+                   name="John Doe", record_time=t(0))
+        m.register("john", "claude", party="anthropic", kind="model", model=OPUS, operator="john", name="Claude",
                    surface="claude-code", capabilities=["write", "verify", "spawn"], compartments=["lab"],
                    record_time=t(1))
         for i, sess in ((1, "aaaa"), (2, "bbbb")):
-            m.register("claude", f"claude-{i}", party="anthropic", kind="model", model=OPUS, operator="alex",
+            m.register("claude", f"claude-{i}", party="anthropic", kind="model", model=OPUS, operator="john",
                        name="Claude", surface="claude-code", session=sess, capabilities=["write"],
                        compartments=["lab"], record_time=t(2))
-        m.register("alex", "gpt", party="openai", kind="model", model="gpt-6", operator="alex", name="GPT",
+        m.register("john", "gpt", party="openai", kind="model", model="gpt-6", operator="john", name="GPT",
                    capabilities=["write"], compartments=["lab"], record_time=t(3))
 
     def tearDown(self):
         self.dir.cleanup()
 
     def ask(self, program: str) -> set:
-        r = self.m.query("alex", program)
+        r = self.m.query("john", program)
         self.assertEqual(proofs.check(r, program, VIEWS, self.log), [], program)
         return {tuple(a["values"]) for a in r["answers"]}
 
@@ -57,15 +57,15 @@ class Identity(Fixture):
     def test_titles_tell_sessions_apart(self):
         ws = self.m.state()["state"]["writers"]
         a, b = title(ws, "claude-1"), title(ws, "claude-2")
-        self.assertEqual(a, "Claude (claude-opus-5-5, claude-code, session aaaa) [claude-1] for Alex Duff [alex]")
+        self.assertEqual(a, "Claude (claude-opus-5-5, claude-code, session aaaa) [claude-1] for John Doe [john]")
         self.assertNotEqual(a, b)
-        self.assertEqual(title(ws, "alex"), "Alex Duff [alex]")
+        self.assertEqual(title(ws, "john"), "John Doe [john]")
         self.assertIn("not a registered writer", title(ws, "nobody"))
 
     def test_views_with_checked_proofs(self):
         self.assertEqual(self.ask("?- same_model(\"claude-1\", W)."), {("claude",), ("claude-2",)})
         self.assertEqual(self.ask("?- instance_of(W, \"claude\")."), {("claude-1",), ("claude-2",)})
-        self.assertEqual(self.ask("?- acts_for(\"claude-2\", H)."), {("alex",)})
+        self.assertEqual(self.ask("?- acts_for(\"claude-2\", H)."), {("john",)})
         self.assertEqual(self.ask("?- identity(\"claude-1\", \"session\", S)."), {("aaaa",)})
 
     def test_agreement_counts_once_per_model(self):
@@ -82,8 +82,8 @@ class Identity(Fixture):
                          ["model:claude-opus-5-5", "model:gpt-6"])
 
     def test_bound_names_resolve_and_unbound_ones_do_not(self):
-        ep = record_messages(self.m, "claude-1", [("Alex", "Use Rust."), ("Claude", "Rust it is.")],
-                             compartment="lab", bindings={"Claude": "claude-1", "Alex": "alex"}, record_time=t(4))
+        ep = record_messages(self.m, "claude-1", [("John", "Use Rust."), ("Claude", "Rust it is.")],
+                             compartment="lab", bindings={"Claude": "claude-1", "John": "john"}, record_time=t(4))
         loose = record_messages(self.m, "claude-2", [("Claude", "Rust it is.")], compartment="lab",
                                 record_time=t(5))
         content = self.m.state()["state"]["episodes"][ep]["body"]["content"]
@@ -100,7 +100,7 @@ class Identity(Fixture):
         nobody = self.m.remember("claude-2", quote(loose, lc.index("Rust"), 7000), record_time=t(8))
         self.assertEqual(self.ask(f"?- speaks_as(\"{mine}\", W)."), {("claude-1",)})
         self.assertEqual(self.ask(f"?- speaks_as(\"{nobody}\", W)."), set())
-        hits = self.m.recall("alex", "rust", kinds=["turns"], k=5)["hits"]
+        hits = self.m.recall("john", "rust", kinds=["turns"], k=5)["hits"]
         self.assertEqual({(h["episode"], h["speaker_is"]) for h in hits if h["speaker"] == "Claude"},
                          {(ep, "claude-1"), (loose, None)})
 
@@ -115,17 +115,17 @@ class PerSessionServer(Fixture):
             wa = a.call("whoami", {})["structuredContent"]
             wb = b.call("whoami", {})["structuredContent"]
             self.assertNotEqual(wa["writer"], wb["writer"])
-            self.assertEqual((wa["model"], wa["operator"], wa["group"]), (OPUS, "alex", f"model:{OPUS}"))
+            self.assertEqual((wa["model"], wa["operator"], wa["group"]), (OPUS, "john", f"model:{OPUS}"))
             self.assertEqual(wb["session"], "host-session-42")
             self.assertNotIn("spawn", wa["capabilities"])
             r = a.call("record_conversation", {
-                "messages": [{"speaker": "Alex", "text": "Let's use Rust for the core."},
+                "messages": [{"speaker": "John", "text": "Let's use Rust for the core."},
                              {"speaker": "Claude", "text": "We will use Rust for the core."}],
-                "compartment": "lab", "frame": "stack", "me": "Claude", "operator_name": "Alex"})
+                "compartment": "lab", "frame": "stack", "me": "Claude", "operator_name": "John"})
             self.assertFalse(r["isError"], r)
             ep = r["structuredContent"]["episode"]
             self.assertEqual(self.m.state()["state"]["episodes"][ep]["body"]["bindings"],
-                             {"Claude": wa["writer"], "Alex": "alex"})
+                             {"Claude": wa["writer"], "John": "john"})
             self.assertEqual(self.ask("?- instance_of(W, \"claude\")."),
                              {("claude-1",), ("claude-2",), (wa["writer"],), (wb["writer"],)})
         finally:

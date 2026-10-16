@@ -482,7 +482,7 @@ def title(writers: dict, wid: str) -> str:
     who it acts for. `writers` is state()["state"]["writers"].
 
     >>> title(ws, "claude-c1-2")
-    'Claude (claude-opus-5-5, claude-code, session 7f3a) [claude-c1-2] for Alex Duff [alex]'
+    'Claude (claude-opus-5-5, claude-code, session 7f3a) [claude-c1-2] for John Doe [john]'
     """
     w = writers.get(wid)
     if w is None:

@@ -74,7 +74,7 @@ their meaning.
 
 | Field | For | Meaning |
 | --- | --- | --- |
-| `name` | anyone, optional | how to address it ("Alex Duff", "Claude"); no other party's writer may hold the same name |
+| `name` | anyone, optional | how to address it ("John Doe", "Claude"); no other party's writer may hold the same name |
 | `model` | models: required; tools: optional | the model it runs as reported by its runtime (not verified), or a tool's version |
 | `operator` | models and tools: required | the registered human it acts for |
 | `surface` | models and tools, optional | where it runs: claude-code, claude-app, api… |
@@ -98,10 +98,10 @@ host is configured; a session that resumes keeps its writer.
 **Names in recordings.** An episode may bind participant names to writers
 in its compartment (`"bindings": {"Claude": "claude-3"}`): this is the
 recorder's account of who each name is. A recorder may bind only its own
-id or registered name to itself: binding "Alex" to yourself would make
-Alex's words yours. A name without a binding is only a name: "Claude" in a
-transcript is not any particular Claude, and "Alex" is not the writer
-`alex`. Binding to a writer that does not exist and to one outside the
+id or registered name to itself: binding "John" to yourself would make
+John's words yours. A name without a binding is only a name: "Claude" in a
+transcript is not any particular Claude, and "John" is not the writer
+`john`. Binding to a writer that does not exist and to one outside the
 compartment are refused alike, so neither reveals the other.
 
 **Who a claim's speaker is** is settled when the claim is first recorded.
@@ -127,8 +127,8 @@ never as proof of independence.
 
 **Titles.** `gnomon.title()` names a writer so that it cannot be mistaken
 for another: name, model, surface, session, id, and who it acts for, e.g.
-`Claude (claude-opus-5-5, claude-code, session 7f3a) [claude-3] for Alex
-Duff [alex]`.
+`Claude (claude-opus-5-5, claude-code, session 7f3a) [claude-3] for John
+Doe [john]`.
 
 Queries see identity through `identity(W, Key, Value)` (keys: name, model,
 operator, surface, session), `group(W, G)`, `instance_of(W, Parent)`,
@@ -463,14 +463,14 @@ The computer does what it can do exactly; a model is the last resort.
 
 1. **Record who said what, once.** Structured messages (chat exports, APIs)
    are recorded with their turns straight from the source, with no parsing.
-   A plain-text transcript is split into turns at labelled lines ("Alex:",
-   "**Alex:**", "[10:31] Alex:", or the name on its own line), on every
+   A plain-text transcript is split into turns at labelled lines ("John:",
+   "**John:**", "[10:31] John:", or the name on its own line), on every
    Unicode line break. Only participants become speakers; any other label
    ("Bob:", "Step 1:") ends the turn before it and starts text with no known
    speaker, so it is never absorbed into someone else's turn. A document has one author and needs no turns. The turns
    are stored in the episode, and extraction always reads them from there.
-   Plain text has one unavoidable ambiguity: a quoted "Alex: …" line inside
-   someone else's message looks like Alex speaking, so structured input is
+   Plain text has one unavoidable ambiguity: a quoted "John: …" line inside
+   someone else's message looks like John speaking, so structured input is
    preferred whenever it exists.
 2. **Split sentences exactly.** Abbreviations, initials and decimals do not
    end sentences; every offset is kept. The same input always gives the same
