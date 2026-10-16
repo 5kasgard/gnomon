@@ -54,6 +54,9 @@ _SIGNATURES = {
     "gn_verify": [ctypes.c_char_p, ctypes.c_int64],
     "gn_state": [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p],
     "gn_checkpoint": [ctypes.c_char_p, ctypes.c_int64, ctypes.c_char_p],
+    "gn_query": [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p],
+    "gn_datalog": [ctypes.c_char_p],
+    "gn_views": [],
 }
 for _name, _args in _SIGNATURES.items():
     _fn = getattr(_lib, _name)
