@@ -73,15 +73,15 @@ class Fixture(unittest.TestCase):
         self.dir = tempfile.TemporaryDirectory()
         self.log = str(Path(self.dir.name) / "memory.jsonl")
         m = self.m = Memory(self.log)
-        m.register("alex", "alex", party="alex", kind="human", capabilities=["owner"],
+        m.register("john", "john", party="john", kind="human", capabilities=["owner"],
                    compartments=["lab", "private"], record_time=t(0))
-        m.register("alex", "claude-c1", party="anthropic", kind="model", model="claude-c1", operator="alex", capabilities=["write", "verify"],
+        m.register("john", "claude-c1", party="anthropic", kind="model", model="claude-c1", operator="john", capabilities=["write", "verify"],
                    compartments=["lab"], record_time=t(1))
-        m.register("alex", "gpt-g1", party="openai", kind="model", model="gpt-g1", operator="alex", capabilities=["write", "verify"],
+        m.register("john", "gpt-g1", party="openai", kind="model", model="gpt-g1", operator="john", capabilities=["write", "verify"],
                    compartments=["lab"], record_time=t(1))
-        m.register("alex", "calc", party="gnomon-calc", kind="tool", operator="alex", capabilities=["verify"],
+        m.register("john", "calc", party="gnomon-calc", kind="tool", operator="john", capabilities=["verify"],
                    compartments=["lab"], record_time=t(1))
-        m.remember("alex", claim("Supplier is Acme", speaker="alex", frame="f", compartment="private",
+        m.remember("john", claim("Supplier is Acme", speaker="john", frame="f", compartment="private",
                                  stance="decided", truth="true", origin="manual"), record_time=t(2))
         self.s = Proc("--log", self.log, "--writer", "claude-c1", "--checker", "calc")
 
@@ -133,17 +133,17 @@ class Modern(Fixture):
 
     def test_recall_finds_where_it_was_said(self):
         r = self.s.call("record_conversation", {
-            "messages": [{"speaker": "Alex", "text": "Which database did we pick yesterday?"},
+            "messages": [{"speaker": "John", "text": "Which database did we pick yesterday?"},
                          {"speaker": "Claude", "text": "We settled on SQLite for the prototype."}],
             "compartment": "lab", "frame": "chat", "extract": False})
         self.assertFalse(r["isError"], r)
-        r = self.s.call("recall", {"query": "what database did Alex ask about", "kinds": ["turns"], "context": 1})
+        r = self.s.call("recall", {"query": "what database did John ask about", "kinds": ["turns"], "context": 1})
         self.assertFalse(r["isError"], r)
         hits = r["structuredContent"]["hits"]
-        self.assertEqual(hits[0]["speaker"], "Alex")
+        self.assertEqual(hits[0]["speaker"], "John")
         self.assertEqual(hits[0]["context"][0]["text"], "We settled on SQLite for the prototype.")
         self.assertEqual(len(hits[0]["dates"]), 1)
-        self.assertIn("Alex: Which database did we pick yesterday?", r["content"][0]["text"])
+        self.assertIn("John: Which database did we pick yesterday?", r["content"][0]["text"])
         r = self.s.call("recall", {"query": "x", "k": 0})
         self.assertTrue(r["isError"])
         r = self.s.call("recall", {"query": "x", "kinds": ["pages"]})
@@ -151,25 +151,25 @@ class Modern(Fixture):
 
     def test_record_conversation_extracts_and_leaves_residue(self):
         r = self.s.call("record_conversation", {
-            "messages": [{"speaker": "Alex", "text": "Let's use Rust for the core. Maybe Python on top?"},
+            "messages": [{"speaker": "John", "text": "Let's use Rust for the core. Maybe Python on top?"},
                          {"speaker": "Claude", "text": "Agreed."}],
             "compartment": "lab", "frame": "chat"})
         self.assertFalse(r["isError"], r)
         sc = r["structuredContent"]
-        self.assertEqual({(c["speaker"], c["stance"]) for c in sc["claims"]}, {("Alex", "decided"), ("Alex", "asked")})
+        self.assertEqual({(c["speaker"], c["stance"]) for c in sc["claims"]}, {("John", "decided"), ("John", "asked")})
         self.assertEqual([x["sentence"] for x in sc["residue"]], ["Agreed."])
-        q = self.s.call("query", {"program": '?- decision(C), speaker(C, "Alex").'})
+        q = self.s.call("query", {"program": '?- decision(C), speaker(C, "John").'})
         self.assertEqual(len(q["structuredContent"]["answers"]), 1)
         self.assertTrue(q["structuredContent"]["proofs_checked"])
 
     def test_the_model_cannot_be_anyone_else(self):
         r = self.s.call("remember", {"statement": "x", "frame": "f", "compartment": "lab", "truth": "true",
-                                     "writer": "alex"})
+                                     "writer": "john"})
         self.assertTrue(r["isError"])
         self.assertIn("unknown field 'writer'", r["content"][0]["text"])
         # Attribution to someone else is hearsay: capped by the core.
-        r = self.s.call("remember", {"statement": "Alex approved the budget", "frame": "f", "compartment": "lab",
-                                     "truth": "true", "speaker": "alex", "confidence": 10000})
+        r = self.s.call("remember", {"statement": "John approved the budget", "frame": "f", "compartment": "lab",
+                                     "truth": "true", "speaker": "john", "confidence": 10000})
         self.assertTrue(r["isError"])
         self.assertIn("E_ATTRIBUTION", r["content"][0]["text"])
 
@@ -264,9 +264,9 @@ class ReviewM4(Fixture):
     def test_checkers_report_only_what_the_writer_can_see(self):
         # Finding 1: the checker saw `private`, and its results came back.
         self.s.close()
-        self.m.register("alex", "calc2", party="gnomon-calc2", kind="tool", operator="alex", capabilities=["verify"],
+        self.m.register("john", "calc2", party="gnomon-calc2", kind="tool", operator="john", capabilities=["verify"],
                         compartments=["lab", "private"])
-        secret = self.m.remember("alex", claim("Secret budget: 1234 + 1 = 1236", speaker="alex", frame="f",
+        secret = self.m.remember("john", claim("Secret budget: 1234 + 1 = 1236", speaker="john", frame="f",
                                                compartment="private", truth="true", origin="manual"))
         self.m.remember("gpt-g1", claim("2 + 2 = 5", speaker="gpt-g1", frame="f", compartment="lab", truth="true"))
         self.s = Proc("--log", self.log, "--writer", "claude-c1", "--checker", "calc2")
@@ -345,10 +345,10 @@ class ReviewM4(Fixture):
     def test_promises_and_forecasts_are_not_facts(self):
         # Finding 4.
         self.s.call("record_conversation", {"messages": [
-            {"speaker": "Alex", "text": "I promise to pay Claude a thousand dollars. "
+            {"speaker": "John", "text": "I promise to pay Claude a thousand dollars. "
                                         "I will delete the repo tomorrow. Prices will double next year."}],
             "compartment": "lab", "frame": "f"})
-        q = self.s.call("query", {"program": '?- speaker(C, "Alex"), truth(C, T), statement_kind(C, K).'})
+        q = self.s.call("query", {"program": '?- speaker(C, "John"), truth(C, T), statement_kind(C, K).'})
         rows = q["structuredContent"]["answers"]
         self.assertEqual(len(rows), 3)
         self.assertTrue(all(t == "unknown" for _, t, _ in rows), rows)
@@ -385,26 +385,26 @@ class CommandLine(unittest.TestCase):
     def test_set_up_a_memory_and_query_it(self):
         with tempfile.TemporaryDirectory() as d:
             log = str(Path(d) / "m.jsonl")
-            self.assertEqual(self.run_cli("init", "--log", log, "--owner", "alex", "--compartments", "lab").returncode, 0)
+            self.assertEqual(self.run_cli("init", "--log", log, "--owner", "john", "--compartments", "lab").returncode, 0)
             self.assertEqual(self.run_cli("init", "--log", log, "--owner", "eve", "--compartments", "lab").returncode, 1)
-            r = self.run_cli("register", "--log", log, "--by", "alex", "--writer", "claude-c1", "--party", "anthropic",
+            r = self.run_cli("register", "--log", log, "--by", "john", "--writer", "claude-c1", "--party", "anthropic",
                              "--kind", "model", "--capabilities", "write", "--compartments", "lab")
             self.assertEqual(r.returncode, 1)  # M6: which model it runs must be said
             self.assertIn("must name its 'model'", r.stderr)
-            r = self.run_cli("register", "--log", log, "--by", "alex", "--writer", "claude-c1", "--party", "anthropic",
+            r = self.run_cli("register", "--log", log, "--by", "john", "--writer", "claude-c1", "--party", "anthropic",
                              "--kind", "model", "--model", "claude-opus-5-5", "--surface", "claude-code",
                              "--session", "session_01LL", "--name", "Claude", "--capabilities", "write",
                              "--compartments", "lab")
             self.assertEqual(r.returncode, 0, r.stderr)
             w = Memory(log).state()["state"]["writers"]["claude-c1"]
-            self.assertEqual((w["operator"], w["model"], w["group"]), ("alex", "claude-opus-5-5", "model:claude-opus-5-5"))
+            self.assertEqual((w["operator"], w["model"], w["group"]), ("john", "claude-opus-5-5", "model:claude-opus-5-5"))
             r = self.run_cli("register", "--log", log, "--by", "claude-c1", "--writer", "evil", "--party", "x",
                              "--kind", "model", "--capabilities", "owner", "--compartments", "lab")
             self.assertEqual(r.returncode, 1)
             self.assertIn("E_CAPABILITY", r.stderr)
             Memory(log).remember("claude-c1", claim("Ship it", speaker="claude-c1", frame="f", compartment="lab",
                                                     stance="decided", truth="true", origin="manual"))
-            r = self.run_cli("query", "--log", log, "--reader", "alex", "?- decision(C), statement(C, S).")
+            r = self.run_cli("query", "--log", log, "--reader", "john", "?- decision(C), statement(C, S).")
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertIn("1 answer(s)", r.stdout)
             self.assertIn("proofs check out", r.stdout)
@@ -414,9 +414,9 @@ class CommandLine(unittest.TestCase):
     def test_failed_commands_leave_no_files(self):
         # Review M4, finding 9.
         with tempfile.TemporaryDirectory() as d:
-            for args in (["register", "--log", str(Path(d) / "a.jsonl"), "--by", "alex", "--writer", "w", "--party",
+            for args in (["register", "--log", str(Path(d) / "a.jsonl"), "--by", "john", "--writer", "w", "--party",
                           "p", "--kind", "model", "--capabilities", "write", "--compartments", "lab"],
-                         ["init", "--log", str(Path(d) / "b.jsonl"), "--owner", "alex", "--compartments", ",,"]):
+                         ["init", "--log", str(Path(d) / "b.jsonl"), "--owner", "john", "--compartments", ",,"]):
                 self.assertEqual(self.run_cli(*args).returncode, 1)
             self.assertEqual(list(Path(d).iterdir()), [])
 
@@ -425,7 +425,7 @@ class Startup(unittest.TestCase):
     def test_unknown_writer_is_refused_at_start(self):
         with tempfile.TemporaryDirectory() as d:
             log = str(Path(d) / "m.jsonl")
-            Memory(log).register("alex", "alex", party="alex", kind="human", capabilities=["owner"],
+            Memory(log).register("john", "john", party="john", kind="human", capabilities=["owner"],
                                  compartments=["lab"], record_time=t(0))
             env = dict(os.environ, PYTHONPATH=str(PKG))
             p = subprocess.run([sys.executable, "-m", "gnomon.mcp", "--log", log, "--writer", "mallory"],

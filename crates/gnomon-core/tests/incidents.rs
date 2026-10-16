@@ -163,7 +163,7 @@ fn arp001_party_to_dispute_cannot_resolve_it() {
     assert_eq!(l.state.truth(&old).unwrap(), "false");
     assert_eq!(l.state.truth(&new).unwrap(), "true");
     // And it cannot be re-resolved.
-    assert_eq!(code(l.append(draft("alex", 15, "resolve", resolve("old")))), "E_RESOLVE");
+    assert_eq!(code(l.append(draft("john", 15, "resolve", resolve("old")))), "E_RESOLVE");
 }
 
 // ------------------------------------------------- The Field / RabbitHole
@@ -240,7 +240,7 @@ fn hidden_channels_rejected_in_claims_flagged_in_episodes() {
         ("compartment", Value::str("lab")),
         ("content", Value::str("raw transcript\u{202e}with bidi")),
         ("medium", Value::str("chat")),
-        ("participants", Value::Array(vec![Value::str("alex")])),
+        ("participants", Value::Array(vec![Value::str("john")])),
     ]);
     let env = l.append(draft("claude-c1", 11, "episode", ep)).unwrap();
     let id = env.get("event_id").unwrap().as_str().unwrap();
@@ -261,7 +261,7 @@ fn compartments_do_not_leak() {
     let mut l = lab();
     let private = claim_body("private note", "asserted", "true").with("compartment", Value::str("private"));
     assert_eq!(code(l.append(draft("claude-c1", 10, "claim", private.clone()))), "E_COMPARTMENT");
-    let id = add_claim(&mut l, "alex", 11, private);
+    let id = add_claim(&mut l, "john", 11, private);
     let r = l.append(draft(
         "gpt-g1",
         12,

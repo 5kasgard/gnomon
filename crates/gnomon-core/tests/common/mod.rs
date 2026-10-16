@@ -25,13 +25,13 @@ pub fn draft(writer: &str, minute: u32, kind: &str, body: Value) -> Draft {
     }
 }
 
-/// Models and tools act for alex; each model instance runs its own model
+/// Models and tools act for john; each model instance runs its own model
 /// (by its writer id) unless a test says otherwise.
 pub fn register_body(writer: &str, party: &str, kind: &str, caps: &[&str], comps: &[&str]) -> Value {
     let mut v = register_plain(writer, party, kind, caps, comps);
     if kind != "human" {
         if let Value::Object(o) = &mut v {
-            o.push(("operator".to_string(), Value::str("alex")));
+            o.push(("operator".to_string(), Value::str("john")));
             if kind == "model" {
                 o.push(("model".to_string(), Value::str(writer)));
             }
@@ -56,16 +56,16 @@ pub fn register_plain(writer: &str, party: &str, kind: &str, caps: &[&str], comp
     ])
 }
 
-/// A ledger with: alex (human owner), claude-c1 (party anthropic),
+/// A ledger with: john (human owner), claude-c1 (party anthropic),
 /// claude-c2 (second identity, party anthropic), gpt-g1 (party openai),
 /// kimi-k1 (party moonshot). All write and verify in "lab".
 pub fn lab() -> Ledger {
     let mut l = Ledger::new();
     l.append(draft(
-        "alex",
+        "john",
         0,
         "register",
-        register_body("alex", "alex", "human", &["owner"], &["lab", "private"]).with("schema_version", Value::Int(2)),
+        register_body("john", "john", "human", &["owner"], &["lab", "private"]).with("schema_version", Value::Int(2)),
     ))
     .unwrap();
     for (i, (w, p)) in [
@@ -78,7 +78,7 @@ pub fn lab() -> Ledger {
     .enumerate()
     {
         l.append(draft(
-            "alex",
+            "john",
             1 + i as u32,
             "register",
             register_body(w, p, "model", &["write", "verify"], &["lab"]),

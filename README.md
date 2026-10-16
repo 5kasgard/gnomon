@@ -82,10 +82,10 @@ bash scripts/build.sh                      # builds the Rust core into the Pytho
 export PYTHONPATH=$PWD/python
 
 # Your memory, owned by you
-python3 -m gnomon init --log ~/memory.jsonl --owner alex --name "Alex" --compartments work,private
+python3 -m gnomon init --log ~/memory.jsonl --owner john --name "John" --compartments work,private
 
 # Claude, as a writer that starts one instance per session
-python3 -m gnomon register --log ~/memory.jsonl --by alex --writer claude \
+python3 -m gnomon register --log ~/memory.jsonl --by john --writer claude \
     --party anthropic --kind model --model claude-opus-5-5 --name Claude \
     --surface claude-code --capabilities write,verify,spawn --compartments work
 
@@ -99,7 +99,7 @@ For hosts configured with JSON (e.g. Claude Desktop):
 ```json
 {"mcpServers": {"gnomon": {
   "command": "python3",
-  "args": ["-m", "gnomon.mcp", "--log", "/home/alex/memory.jsonl", "--writer", "claude", "--per-session"],
+  "args": ["-m", "gnomon.mcp", "--log", "/home/john/memory.jsonl", "--writer", "claude", "--per-session"],
   "env": {"PYTHONPATH": "/path/to/gnomon/python"}}}}
 ```
 
@@ -119,7 +119,7 @@ It works only as its own session's writer, acting for you, inside the
 compartments you gave it. You can see the same answers yourself:
 
 ```bash
-python3 -m gnomon query --log ~/memory.jsonl --reader alex "?- decision(C), statement(C, S)."
+python3 -m gnomon query --log ~/memory.jsonl --reader john "?- decision(C), statement(C, S)."
 ```
 
 ## From Python
@@ -130,37 +130,37 @@ import gnomon
 from gnomon import Memory, claim, proofs
 
 m = Memory("memory.jsonl")
-m.register("alex", "alex", party="alex", kind="human", name="Alex Duff",
+m.register("john", "john", party="john", kind="human", name="John Doe",
            capabilities=["owner"], compartments=["lab"])
-m.register("alex", "claude-c1", party="anthropic", kind="model", name="Claude",
-           model="claude-opus-5-5", operator="alex", surface="claude-code",
+m.register("john", "claude-c1", party="anthropic", kind="model", name="Claude",
+           model="claude-opus-5-5", operator="john", surface="claude-code",
            session="7f3a", capabilities=["write", "verify"], compartments=["lab"])
 print(gnomon.title(m.state()["state"]["writers"], "claude-c1"))
-# Claude (claude-opus-5-5, claude-code, session 7f3a) [claude-c1] for Alex Duff [alex]
+# Claude (claude-opus-5-5, claude-code, session 7f3a) [claude-c1] for John Doe [john]
 
-cid = m.remember("alex", claim(
+cid = m.remember("john", claim(
     "Core is written in Rust with Python on top",
-    speaker="alex", frame="gnomon stack", compartment="lab",
+    speaker="john", frame="gnomon stack", compartment="lab",
     stance="decided", truth="true", confidence=9500, origin="manual"))
 
 # Which decisions stand, and why?
-r = m.query("alex", "?- decision(C), statement(C, S).")
+r = m.query("john", "?- decision(C), statement(C, S).")
 print(proofs.explain(r))        # each step's rule, down to the log events
 print(proofs.check(r, "?- decision(C), statement(C, S).", gnomon.VIEWS, "memory.jsonl"))  # [] = checks out
 
 # Ask, answer, critique: the record is a forum
-q = m.ask("alex", "Which database should the prototype use?", frame="db", compartment="lab")
+q = m.ask("john", "Which database should the prototype use?", frame="db", compartment="lab")
 a = m.respond("claude-c1", q, "answers", "SQLite: one file, no server.", frame="db", compartment="lab")
-print(m.query("alex", "?- open_question(Q), statement(Q, S).")["answers"])
-print(m.discussion("alex", q))                 # the whole thread, with each post's standing
+print(m.query("john", "?- open_question(Q), statement(Q, S).")["answers"])
+print(m.discussion("john", q))                 # the whole thread, with each post's standing
 
 # Leave the work for whoever comes next; any session or model picks it up
 h = m.handoff("claude-c1", frame="db", compartment="lab", summary="Chose SQLite; schema next.",
               next=["write the schema"], refs=[a])
-print(m.resume("alex", "db")["handoff"]["next"])   # ['write the schema']
+print(m.resume("john", "db")["handoff"]["next"])   # ['write the schema']
 
 # Where was it said?
-for h in m.recall("alex", "what did we decide about the core language?", k=5)["hits"]:
+for h in m.recall("john", "what did we decide about the core language?", k=5)["hits"]:
     print(h["time"], h["speaker"], h["text"], h["source"]["hash"][:12])
 
 print(m.state(as_of="2026-10-14T00:00:00Z"))   # what was known then

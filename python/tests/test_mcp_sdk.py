@@ -41,9 +41,9 @@ class OfficialClient(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             log = str(Path(d) / "memory.jsonl")
             m = Memory(log)
-            m.register("alex", "alex", party="alex", kind="human", capabilities=["owner"],
+            m.register("john", "john", party="john", kind="human", capabilities=["owner"],
                        compartments=["lab"], record_time="2026-10-14T10:00:00Z")
-            m.register("alex", "claude-c1", party="anthropic", kind="model", model="claude-c1", operator="alex", capabilities=["write", "verify"],
+            m.register("john", "claude-c1", party="anthropic", kind="model", model="claude-c1", operator="john", capabilities=["write", "verify"],
                        compartments=["lab"], record_time="2026-10-14T10:01:00Z")
             asyncio.run(self.session(log))
 
@@ -62,7 +62,7 @@ class OfficialClient(unittest.TestCase):
                 self.assertTrue({"remember", "record_conversation", "recall", "query", "query_language"} <= names)
 
                 r = await s.call_tool("record_conversation", {
-                    "messages": [{"speaker": "Alex", "text": "Let's use Rust for the core."},
+                    "messages": [{"speaker": "John", "text": "Let's use Rust for the core."},
                                  {"speaker": "Claude", "text": "I'd suggest Python for the bindings."}],
                     "compartment": "lab", "frame": "stack"})
                 self.assertFalse(f(r, "isError"), r)
@@ -70,7 +70,7 @@ class OfficialClient(unittest.TestCase):
 
                 r = await s.call_tool("query", {"program": "?- decision(C), statement(C, S), speaker(C, P)."})
                 self.assertFalse(f(r, "isError"), r)
-                self.assertEqual(f(r, "structuredContent")["answers"][0][1:], ["Let's use Rust for the core.", "Alex"])
+                self.assertEqual(f(r, "structuredContent")["answers"][0][1:], ["Let's use Rust for the core.", "John"])
                 self.assertTrue(f(r, "structuredContent")["proofs_checked"])
                 self.assertIn("proofs checked independently: OK", r.content[0].text)
 

@@ -30,13 +30,13 @@ class Fixture(unittest.TestCase):
         self.dir = tempfile.TemporaryDirectory()
         self.log = str(Path(self.dir.name) / "memory.jsonl")
         m = self.m = Memory(self.log)
-        m.register("alex", "alex", party="alex", kind="human", name="Alex", capabilities=["owner"],
+        m.register("john", "john", party="john", kind="human", name="John", capabilities=["owner"],
                    compartments=["lab"], record_time=t(0))
-        m.register("alex", "claude", party="anthropic", kind="model", model="claude-opus-5-5", operator="alex",
+        m.register("john", "claude", party="anthropic", kind="model", model="claude-opus-5-5", operator="john",
                    name="Claude", capabilities=["write", "verify", "spawn"], compartments=["lab"], record_time=t(1))
-        m.register("alex", "gpt", party="openai", kind="model", model="gpt-6", operator="alex", name="GPT",
+        m.register("john", "gpt", party="openai", kind="model", model="gpt-6", operator="john", name="GPT",
                    capabilities=["write", "verify"], compartments=["lab"], record_time=t(1))
-        self.q = m.ask("alex", "Which database should the prototype use?", frame="db", compartment="lab",
+        self.q = m.ask("john", "Which database should the prototype use?", frame="db", compartment="lab",
                        record_time=t(2))
         self.a = m.respond("claude", self.q, "answers", "SQLite: one file, no server.", frame="db",
                            compartment="lab", truth="true", confidence=7000, record_time=t(3))
@@ -47,7 +47,7 @@ class Fixture(unittest.TestCase):
         self.dir.cleanup()
 
     def ask(self, program: str) -> set:
-        r = self.m.query("alex", program)
+        r = self.m.query("john", program)
         self.assertEqual(proofs.check(r, program, VIEWS, self.log), [], program)
         return {tuple(a["values"]) for a in r["answers"]}
 
@@ -74,7 +74,7 @@ class Forum(Fixture):
     def test_threads_and_discussion(self):
         r = self.m.respond("claude", self.k, "replies", "Fair point.", frame="db", compartment="lab",
                            record_time=t(5))
-        d = self.m.discussion("alex", self.q)
+        d = self.m.discussion("john", self.q)
         self.assertEqual(d["root"], self.q)
         self.assertFalse(d["truncated"])
         self.assertEqual([p["claim"] for p in d["posts"]], [self.q, self.a, self.k, r])
@@ -91,7 +91,7 @@ class Forum(Fixture):
 
     def test_forged_references_are_caught(self):
         q = "?- critique(K, C)."
-        r = self.m.query("alex", q)
+        r = self.m.query("john", q)
         for node in r["nodes"].values():
             if node["fact"][0] == "reference":
                 node["fact"][3] = "answers"
@@ -135,7 +135,7 @@ class ContentAddressedProofs(Fixture):
         import copy
         import hashlib
         q = "?- open_question(Q), statement(Q, S)."
-        r1, r2 = self.m.query("alex", q), self.m.query("alex", q)
+        r1, r2 = self.m.query("john", q), self.m.query("john", q)
         self.assertEqual(r1["answers"][0]["proof_hash"], r2["answers"][0]["proof_hash"])
         for rule in r1["rules"].values():
             self.assertEqual(rule["hash"], hashlib.sha256(rule["text"].encode()).hexdigest())
@@ -150,8 +150,8 @@ class ContentAddressedProofs(Fixture):
         self.assertTrue(any("content-addressed" in p for p in proofs.check(bad, q, VIEWS, self.log)))
         # A new answer to the question changes the derivation, so the hash.
         self.m.verdict("gpt", self.a, "supports", "external_source", record_time=t(9))
-        r3 = self.m.query("alex", "?- question(Q), statement(Q, S).")
-        r4 = self.m.query("alex", "?- question(Q), statement(Q, S).")
+        r3 = self.m.query("john", "?- question(Q), statement(Q, S).")
+        r4 = self.m.query("john", "?- question(Q), statement(Q, S).")
         self.assertEqual(r3["answers"][0]["proof_hash"], r4["answers"][0]["proof_hash"])
 
 
@@ -177,10 +177,10 @@ class ReviewM7(Fixture):
                                                              about=[{"claim": ids[-1], "relation": "cites"},
                                                                     {"claim": ids[-2], "relation": "cites"}]),
                                        record_time=t(10)))
-        d = self.m.discussion("alex", self.q)
+        d = self.m.discussion("john", self.q)
         self.assertEqual(len(d["posts"]), 63)
         self.assertEqual(len({p["claim"] for p in d["posts"]}), 63)
-        small = self.m.discussion("alex", self.q, limit=10)
+        small = self.m.discussion("john", self.q, limit=10)
         self.assertTrue(small["truncated"])
         self.assertEqual(len(small["posts"]), 10)
 
@@ -188,7 +188,7 @@ class ReviewM7(Fixture):
         # Finding 3.
         b = self.m.respond("gpt", self.q, "answers", "Postgres.", frame="db", compartment="lab",
                            record_time=t(5))
-        both = self.m.remember("alex", gnomon.claim("Both ignore backups.", speaker="alex", frame="db",
+        both = self.m.remember("john", gnomon.claim("Both ignore backups.", speaker="john", frame="db",
                                                     compartment="lab", about=[{"claim": self.a, "relation": "critiques"},
                                                                               {"claim": b, "relation": "critiques"}]),
                                record_time=t(6))
@@ -212,7 +212,7 @@ class ReviewM7(Fixture):
 
     def test_one_answer_answers_one_question(self):
         # Finding 10.
-        q2 = self.m.ask("alex", "And for tests?", frame="db", compartment="lab", record_time=t(5))
+        q2 = self.m.ask("john", "And for tests?", frame="db", compartment="lab", record_time=t(5))
         with self.assertRaises(GateError):
             self.m.remember("claude", gnomon.claim("SQLite.", speaker="claude", frame="db", compartment="lab",
                                                   about=[{"claim": self.q, "relation": "answers"},
@@ -222,7 +222,7 @@ class ReviewM7(Fixture):
         # Finding 7.
         import copy
         q = "?- answer(A, Q)."
-        r = self.m.query("alex", q)
+        r = self.m.query("john", q)
         bad = copy.deepcopy(r)
         for a in bad["answers"]:
             a.pop("proof_hash")
@@ -240,13 +240,13 @@ class ReviewM7(Fixture):
         # Findings 8 and 9.
         rs = [self.m.respond("claude", self.k, "replies", f"r{i}", frame="db", compartment="lab",
                              record_time=t(5)) for i in range(12)]
-        posts = [p["claim"] for p in self.m.discussion("alex", self.k)["posts"]]
+        posts = [p["claim"] for p in self.m.discussion("john", self.k)["posts"]]
         self.assertEqual(posts, [self.k] + rs)
         two = self.m.remember("gpt", gnomon.claim("See both.", speaker="gpt", frame="db", compartment="lab",
                                                  about=[{"claim": self.a, "relation": "replies"},
                                                         {"claim": self.a, "relation": "cites"}]),
                               record_time=t(6))
-        posts = self.m.discussion("alex", self.a)["posts"]
+        posts = self.m.discussion("john", self.a)["posts"]
         self.assertEqual([p["claim"] for p in posts].count(two), 1)
         with self.assertRaises(GateError):
             self.m.discussion("nobody", self.q)

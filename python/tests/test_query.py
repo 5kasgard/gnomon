@@ -165,7 +165,7 @@ class Differential(unittest.TestCase):
 
 
 class Memories(unittest.TestCase):
-    CHAT = ("Alex: Let's use Rust for the core. Maybe Python on top?\n"
+    CHAT = ("John: Let's use Rust for the core. Maybe Python on top?\n"
             "Claude: I'd suggest Python for the bindings.\n"
             "Claude: 14 October 2026 is a Wednesday.\n")
 
@@ -173,19 +173,19 @@ class Memories(unittest.TestCase):
         self.dir = tempfile.TemporaryDirectory()
         self.log = Path(self.dir.name) / "memory.jsonl"
         self.m = m = Memory(self.log)
-        m.register("alex", "alex", party="alex", kind="human", capabilities=["owner"],
+        m.register("john", "john", party="john", kind="human", capabilities=["owner"],
                    compartments=["lab", "private"], record_time=t(0))
-        m.register("alex", "extractor", party="gnomon-rules", kind="tool", operator="alex",
+        m.register("john", "extractor", party="gnomon-rules", kind="tool", operator="john",
                    capabilities=["write"], compartments=["lab"], record_time=t(1))
-        m.register("alex", "calc", party="gnomon-calc", kind="tool", operator="alex",
+        m.register("john", "calc", party="gnomon-calc", kind="tool", operator="john",
                    capabilities=["verify"], compartments=["lab"], record_time=t(1))
-        ep = record_transcript(m, "alex", self.CHAT, participants=["Alex", "Claude"],
+        ep = record_transcript(m, "john", self.CHAT, participants=["John", "Claude"],
                                compartment="lab", record_time=t(2))
         ingest(m, "extractor", ep, frame="chat", compartment="lab", record_time=t(3))
         self.wrong = m.remember("extractor", claim("2 + 2 = 5", speaker="Claude", frame="f",
                                                    compartment="lab", truth="true"), record_time=t(4))
         checkers.run(m, "calc", record_time=t(5))
-        m.remember("alex", claim("Supplier is Acme", speaker="alex", frame="f", compartment="private",
+        m.remember("john", claim("Supplier is Acme", speaker="john", frame="f", compartment="private",
                                  stance="decided", truth="true", origin="manual"), record_time=t(6))
 
     def tearDown(self):
@@ -198,7 +198,7 @@ class Memories(unittest.TestCase):
 
     def test_decisions_with_their_words_and_speaker(self):
         r = self.ask("?- decision(C), statement(C, S), speaker(C, P).")
-        self.assertEqual([a["values"][1:] for a in r["answers"]], [["Let's use Rust for the core.", "Alex"]])
+        self.assertEqual([a["values"][1:] for a in r["answers"]], [["Let's use Rust for the core.", "John"]])
         text = proofs.explain(r)
         self.assertIn("decision(", text)
         self.assertIn("by view: decision(C) :- stance(C, \"decided\"), believed(C).", text)
@@ -216,7 +216,7 @@ class Memories(unittest.TestCase):
     def test_compartments_and_readers(self):
         r = self.ask("?- claim(C), statement(C, S), contains(S, \"acme\").", reader="extractor")
         self.assertEqual(r["answers"], [])
-        r = self.ask("?- claim(C), statement(C, S), contains(S, \"acme\").", reader="alex")
+        r = self.ask("?- claim(C), statement(C, S), contains(S, \"acme\").", reader="john")
         self.assertEqual(len(r["answers"]), 1)
         with self.assertRaises(GateError) as e:
             self.m.query("nobody", "?- claim(C).")
@@ -231,7 +231,7 @@ class Memories(unittest.TestCase):
 
     def test_errors_carry_line_numbers(self):
         with self.assertRaises(GateError) as e:
-            self.m.query("alex", "mine(C) :- claim(C).\n?- mien(C).")
+            self.m.query("john", "mine(C) :- claim(C).\n?- mien(C).")
         self.assertEqual(e.exception.code, "E_QUERY")
         self.assertIn("line 2", e.exception.message)
         self.assertIn("unknown relation 'mien/1'", e.exception.message)
@@ -308,7 +308,7 @@ class Memories(unittest.TestCase):
         # compartment matched a speaker named in the proof.
         self.m.remember("extractor", claim("hello", speaker="bob", frame="f", compartment="lab", truth="true"),
                         record_time=t(7))
-        self.m.register("alex", "bob", party="bob", kind="model", model="bob", operator="alex", capabilities=["write"],
+        self.m.register("john", "bob", party="bob", kind="model", model="bob", operator="john", capabilities=["write"],
                         compartments=["private"], record_time=t(8))
         prog = '?- speaker(C, "bob").'
         r = self.m.query("extractor", prog, as_of=t(9))
@@ -336,7 +336,7 @@ class Memories(unittest.TestCase):
             name = head.split("(")[0]
             arity = head.count(",") + 1
             args = ", ".join(f"X{i}" for i in range(arity))
-            self.ask(f"?- {name}({args}).", reader="alex")
+            self.ask(f"?- {name}({args}).", reader="john")
 
 
 class Disputes(unittest.TestCase):
@@ -348,10 +348,10 @@ class Disputes(unittest.TestCase):
         self.dir = tempfile.TemporaryDirectory()
         self.log = Path(self.dir.name) / "m.jsonl"
         self.m = m = Memory(self.log)
-        m.register("alex", "alex", party="alex", kind="human", capabilities=["owner"],
+        m.register("john", "john", party="john", kind="human", capabilities=["owner"],
                    compartments=["ca"], record_time=t(0))
         for i in range(1, 7):
-            m.register("alex", f"w{i}", party=f"p{i}", kind="model", model=f"w{i}", operator="alex", capabilities=["write", "verify"],
+            m.register("john", f"w{i}", party=f"p{i}", kind="model", model=f"w{i}", operator="john", capabilities=["write", "verify"],
                        compartments=["ca"], record_time=t(1))
 
     def tearDown(self):
