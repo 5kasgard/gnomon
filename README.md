@@ -50,6 +50,10 @@ happens. This repository is the first milestone: **the record itself.**
   Every answer comes with a proof: each step names its rule, and each leaf
   names the log events it was read from, by hash. `gnomon.proofs` re-checks
   proofs without the core.
+- **Any AI model can use it** (M4): an MCP server (standard library only,
+  for current and older MCP clients) gives a model tools to remember,
+  record conversations, query with checked proofs, and verify others'
+  claims, always as one writer fixed by whoever configured it.
 - **Native checkers as verifiers:** arithmetic is checked with exact
   fractions and dates against the real calendar. Checkers are their own
   parties, so their verdicts pass through the same rules as anyone else's.
@@ -68,12 +72,16 @@ answers are checked against a deliberately naive second evaluator on
 hundreds of random programs, and every proof against an independent checker
 that re-derives disputes from the log itself.
 
+The MCP server (M4) had its own security review (10 findings, now tests in
+`python/tests/test_mcp.py`), is fuzzed with thousands of malformed messages,
+and is exercised in CI by the official MCP Python SDK as a real client.
+
 ## Build and test
 
 Requires Rust (stable) and Python 3.10+. Nothing else.
 
 ```bash
-cargo test --release            # Rust: 152 tests
+cargo test --release            # Rust: 153 tests
 bash scripts/build.sh           # builds the core into the Python package
 python3 -m unittest discover -s python/tests -v
 ```
@@ -107,6 +115,35 @@ print(proofs.explain(r))        # the rules used, down to log events
 print(proofs.check(r, "?- decision(C), statement(C, S).", gnomon.VIEWS, "memory.jsonl"))  # [] = checks out
 ```
 
+## Use from any AI model (MCP)
+
+Set up a memory, register the model, and point your MCP host at the server:
+
+```bash
+export PYTHONPATH=/path/to/gnomon/python
+python -m gnomon init --log ~/memory.jsonl --owner alex --compartments lab,private
+python -m gnomon register --log ~/memory.jsonl --by alex --writer claude-c1 \
+    --party anthropic --kind model --capabilities write,verify --compartments lab
+
+# Claude Code:
+claude mcp add gnomon -e PYTHONPATH=/path/to/gnomon/python -- \
+    python3 -m gnomon.mcp --log ~/memory.jsonl --writer claude-c1
+```
+
+For a host configured with JSON (e.g. Claude Desktop):
+
+```json
+{"mcpServers": {"gnomon": {
+  "command": "python3",
+  "args": ["-m", "gnomon.mcp", "--log", "/home/alex/memory.jsonl", "--writer", "claude-c1"],
+  "env": {"PYTHONPATH": "/path/to/gnomon/python"}}}}
+```
+
+The model can then remember, query ("which decisions still stand?") and
+explain answers, but only as `claude-c1` and only in its compartments.
+`python -m gnomon query --log ~/memory.jsonl --reader alex "?- decision(C), statement(C, S)."`
+shows you the same answers with their proofs.
+
 ## Layout
 
 ```
@@ -121,6 +158,8 @@ python/gnomon/            Python package (ctypes binding)
   ingest.py               exact parsing and rule-based extraction
   checkers.py             arithmetic and calendar verifiers
   proofs.py               independent proof checker and explanations
+  mcp.py                  MCP server (stdio, both protocol eras)
+  __main__.py             command line: init, register, verify, query
 python/tests/             oracle, end-to-end and multi-process tests
 spec/                     claim protocol v0.1
 tests/vectors/            shared canonical-JSON vectors
@@ -129,8 +168,8 @@ scripts/                  build and vector generation
 
 ## Status and what's next
 
-Milestones M0–M3 of the v1 plan: the record, ingestion, and queries with
-proofs. Next are an MCP server so any model can use it, and a benchmark
+Milestones M0–M4 of the v1 plan: the record, ingestion, queries with
+proofs, and an MCP server so any model can use it. Next is a benchmark
 against the best existing memory systems. Open design
 questions are listed in the [spec](spec/claim-protocol-v0.1.md).
 
