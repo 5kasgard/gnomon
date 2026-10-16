@@ -159,6 +159,7 @@ id is the content.
 | `source_episode` | no | an episode in the same compartment |
 | `quote`, `quote_start` | no, together, only with `source_episode` | the exact passage of the episode the claim came from, and where it starts (in Unicode code points); the gate checks it (`E_QUOTE`) |
 | `intended`, `delivered`, `observed` | no | kept separate, never collapsed |
+| `about` | no | 1–32 references to earlier claims, each `{claim, relation}` with relation answers, critiques, replies or cites (section 12) |
 
 Rules: a guessed claim cannot carry full confidence; a question (`asked`)
 must have truth `unknown`. Because `stance` is part of the content, a
@@ -760,7 +761,72 @@ all ten conversations Gnomon scores 64.7 / 73.1 / 80.9 / 86.2 at 5 / 10 /
 25 / 50. Median time per question is under
 20 ms on one core, with no model and no network.
 
-## 12. Not yet in v0.1
+## 12. The record as a forum (M7)
+
+The record is not a store of truths. It is a place where claims are put
+forward, questioned, answered, criticised, judged and superseded, all in
+the open and all attributed. Verdicts and supersessions (section 4) judge
+claims. Section 12 adds the conversation around them.
+
+**References.** A claim may say what it is `about`: earlier claims, each
+with a relation.
+
+| Relation | Means | Rule |
+| --- | --- | --- |
+| `answers` | an answer to a question | the target's stance is `asked`; an answer is not itself a question, and answers one question (`E_REFERENCE`, `E_BODY`) |
+| `critiques` | an argument against it | changes no one's truth; only verdicts and supersessions do |
+| `replies` | a reply in a discussion | |
+| `cites` | builds on it, or points to it | |
+
+The targets must be claims the writer can see, in the claim's own
+compartment: a thread never crosses compartments. A missing target and a
+hidden one are refused alike (`E_REF`). A claim's id is the hash of its
+body, `about` included, so a claim can only refer to claims that existed
+before it. Threads are therefore acyclic by construction, like commits.
+
+**Questions** are claims with stance `asked` and truth `unknown`. Anyone
+may answer, and answers are claims, judged like any other.
+
+**Views** (with proofs, re-checked by the independent checker):
+
+| View | Holds when |
+| --- | --- |
+| `question(Q)` | Q is a question |
+| `answer(A, Q)` | A answers Q |
+| `settled(Q)` | some answer to Q is believed and has a supporting verdict |
+| `open_question(Q)` | Q is neither settled nor rejected (a question with a false premise can be refuted like any claim) |
+| `critique(K, C)` | K critiques C |
+| `unanswered_critique(K, C)` | C's author has not replied to K (a critique of several claims waits on each author) |
+| `awaiting_verification(C)` | C's truth is unknown, it is not a question, and nobody has judged it |
+
+A query evaluates only the rules it can reach, so no view costs anything
+unless it is used. Threads are read with `discussion` rather than a
+recursive view: it walks the reference graph once, from the claim
+outwards, and lists each post once in the order it was recorded. Each post
+comes with its standing (truth, verdicts including abstentions, disputes,
+supersessions) and the posts in the thread it refers to. It is bounded (500
+posts by default, 200 over MCP) and says when it stopped early.
+
+**The MCP server** gives models `remember` with `about`, `discussion` (a
+claim's whole thread with its standing) and `open_questions` (each with
+its exact number of answers). In Python
+the same are available as `Memory.ask`, `Memory.respond` and
+`Memory.discussion`.
+
+**Content-addressed proofs.** A proof is a term: rules applied to facts,
+down to log events. Every rule in a proof carries the SHA-256 of its text,
+and every node the SHA-256 of what it states and of the hashes of what it
+rests on. These are the rule's hash and its premises' hashes, or for a
+leaf, the hashes of its log events. A proof is therefore a Merkle DAG, and
+each answer carries a `proof_hash` that fixes its entire derivation.
+
+- Equal derivations get equal hashes.
+- A rule changed by a single character gets a new name.
+- The independent checker recomputes every hash. A proof that is partly
+  hashed and partly not is refused. With `require_hashes` (which the MCP
+  server and the command line use), so is one with no hashes at all.
+
+## 13. Not yet in v0.1
 
 Signatures (writer identity is by registration only), multi-writer merge of
 independently written logs, arithmetic and aggregation in queries, HTTP

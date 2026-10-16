@@ -536,7 +536,17 @@ pub struct Claim<'a> {
     /// Exact passage of the source episode the claim was taken from, and
     /// where it starts (in Unicode code points). The gate checks it.
     pub quote: Option<(&'a str, i64)>,
+    pub stance: &'a str,
+    /// What this claim is about: other claims, each with how it relates.
+    /// Because a claim's id is the hash of its body, references can only
+    /// point back in time: the threads they form never loop.
+    pub about: Vec<(&'a str, &'a str)>,
 }
+
+/// How a claim can relate to an earlier one. A verdict judges a claim; these
+/// discuss it, and change no one's truth.
+pub const RELATIONS: &[&str] = &["answers", "critiques", "replies", "cites"];
+pub const MAX_ABOUT: usize = 32;
 
 pub const CLAIM_FIELDS: &[&str] = &[
     "statement",
@@ -557,6 +567,7 @@ pub const CLAIM_FIELDS: &[&str] = &[
     "intended",
     "delivered",
     "observed",
+    "about",
 ];
 
 pub fn claim(body: &Value) -> GateResult<Claim<'_>> {
@@ -618,7 +629,35 @@ pub fn claim(body: &Value) -> GateResult<Claim<'_>> {
     if stance == "asked" && truth != "unknown" {
         return Err(body_err("claim: a question must have truth 'unknown'"));
     }
+    let mut about = Vec::new();
+    if let Some(raw) = f.raw("about") {
+        let items = raw.as_array().ok_or_else(|| body_err("claim: 'about' must be a list"))?;
+        if items.is_empty() || items.len() > MAX_ABOUT {
+            return Err(body_err(format!("claim: 'about' holds 1 to {MAX_ABOUT} references")));
+        }
+        for item in items {
+            let r = Fields::of(item, "claim reference")?;
+            r.only(&["claim", "relation"])?;
+            let target = r.text("claim", 80, false)?;
+            if !(target.len() == 66 && target.starts_with("c:") && is_hex64(&target[2..])) {
+                return Err(body_err(format!("claim: '{target}' is not a claim id")));
+            }
+            let relation = r.one_of("relation", RELATIONS)?;
+            if about.contains(&(target, relation)) {
+                return Err(body_err("claim: the same reference appears twice in 'about'"));
+            }
+            if relation == "answers" && stance == "asked" {
+                return Err(body_err("claim: an answer is not itself a question"));
+            }
+            if relation == "answers" && about.iter().any(|(_, r)| *r == "answers") {
+                return Err(body_err("claim: an answer answers one question"));
+            }
+            about.push((target, relation));
+        }
+    }
     Ok(Claim {
+        stance,
+        about,
         compartment: f.ident("compartment")?,
         statement,
         speaker,
