@@ -10,6 +10,7 @@
 //! * [`store`]: the log on disk
 //! * [`datalog`]: a small, exact query engine with proofs
 //! * [`query`]: the memory as facts, built-in views, queries
+//! * [`recall`]: ranked recall of what was said, with exact dates
 //! * [`ffi`]: a C ABI used by the Python package (via ctypes)
 
 pub mod datalog;
@@ -17,6 +18,7 @@ pub mod ffi;
 pub mod json;
 pub mod ledger;
 pub mod query;
+pub mod recall;
 pub mod schema;
 pub mod sha256;
 pub mod store;

@@ -593,9 +593,89 @@ library only).
 `python -m gnomon init | register | verify | query` sets up and inspects a
 memory from the command line, through the same gate.
 
-## 11. Not yet in v0.1
+## 11. Recall (M5)
+
+`query` answers exactly, with proofs. Recall answers the other question a
+memory gets: *where was this said?* It ranks what the reader can see, in
+plain words, with no model in the loop, and every hit says exactly where
+it came from.
+
+**What is searched.** The turns of every episode (or its paragraphs when it
+has no turns) and every claim, in the reader's compartments, as of the
+requested moment: the same visibility as queries (section 9), so recall
+leaks nothing a query would not. `speaker`, `after` and `before` choose
+which hits are returned; ranking still runs over everything visible, so a
+reply can be found through the question before it.
+
+**Ranking.** Each step is a standard, documented method with fixed settings,
+and each can be switched off (`tuning`) to measure it:
+
+1. *Words.* Unicode lower-casing, runs of letters and digits, a fixed stop
+   list, and Porter's 1980 stemmer (words over 48 letters are left alone).
+2. *Joins* (on). Adjacent words are also indexed joined, so "road trip"
+   meets "roadtrip" and "de-stress" meets "destress".
+3. *BM25* with k1 = 1.2 and b = 0.75.
+4. *Speakers* (on). A speaker named in the question by their whole name, or
+   by their first name with a capital, is who spoke: their turns score
+   ×1.3 and the name stops counting as a word to find (people are mostly
+   named when addressed), unless the question is nothing but names.
+5. *Neighbours* (on). A turn gains half the score of the turn just before
+   it when that turn is a question, otherwise a quarter, and a quarter of
+   the turn after it. The gain is listed among its matches as
+   `(neighbours)`.
+6. *Dates in the question.* With `now`, relative dates in the question are
+   resolved and anything said, or dated, within them scores ×1.5.
+7. *Feedback* (off). RM3-style expansion from the first results. It is
+   implemented but off by default because it hurt the top of the ranking
+   on the development conversations (see below).
+
+A hit's `score` is the sum of its `matched` shares times its `boosts`. Ties
+go to what was recorded first. The output is identical for identical
+inputs.
+
+**Dates, by the calendar.** Every hit lists the relative dates in it,
+resolved against the day it was recorded: yesterday, today, tonight,
+tomorrow, the day before yesterday, the day after tomorrow, last night,
+last/this/next with a weekday, week, weekend, month or year, "N days,
+weeks, months or years ago", "N … from now" and "in N …". Conventions:
+weeks run Monday to Sunday; "last Friday" is the latest Friday before
+today (a week back when today is Friday) and "next Friday" the first after
+it; "this Friday" is the Friday of this week; "a week ago" is the whole
+week seven days back; "last weekend" is the Saturday and Sunday of last
+week; months are calendar months. Dates outside 0000–9999 are not
+resolved.
+
+**Provenance.** Each hit gives its words, speaker, time, the episode, turn
+number and code-point span, and the event it was recorded in with that
+event's hash, so it can be checked against the log. Text holding hidden
+characters (section 6) is flagged with `hidden_chars`; the MCP server shows
+such characters escaped.
+
+**Measured.** On LoCoMo (Maharana et al., 2024; 10 conversations of up to
+35 sessions, 1,986 questions each labelled with the turns holding its
+evidence), recall is measured exactly: the share of a question's evidence
+turns among the first k hits. Choices were made on conversations 0–4 only;
+conversations 5–9 were held out. `bench/locomo.py` reproduces every number.
+
+| Held out (conversations 5–9) | R@1 | R@5 | R@10 | R@25 | R@50 |
+|---|---|---|---|---|---|
+| BM25 alone, categories 1–4 | 26.4 | 49.2 | 57.2 | 65.5 | 71.3 |
+| Gnomon recall, categories 1–4 | 34.3 | 61.4 | 68.8 | 77.0 | 82.9 |
+| Gnomon recall, all questions | 34.6 | 63.9 | 71.8 | 79.5 | 85.4 |
+| DRAGON, as reported in the LoCoMo paper, all questions | – | 58.8 | 67.5 | 79.9 | 84.8 |
+
+DRAGON is a trained neural retriever; its numbers are from the LoCoMo paper
+over the whole dataset, possibly another release of it, while Gnomon's are
+on the held-out half only, so the comparison is indicative, not exact. Over
+all ten conversations Gnomon scores 64.7 / 73.1 / 80.9 / 86.2 at 5 / 10 /
+25 / 50. Median time per question is under
+20 ms on one core, with no model and no network.
+
+## 12. Not yet in v0.1
 
 Signatures (writer identity is by registration only), multi-writer merge of
 independently written logs, arithmetic and aggregation in queries, HTTP
-transport for the MCP server, and a benchmark against other memory systems.
+transport for the MCP server, a persistent recall index (recall re-reads
+the visible memory on every request), and end-to-end question answering
+benchmarks, which need a language model to read the hits.
 See the v1 implementation plan.

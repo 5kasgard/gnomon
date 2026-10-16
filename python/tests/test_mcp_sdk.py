@@ -59,7 +59,7 @@ class OfficialClient(unittest.TestCase):
                 init = await s.initialize()
                 self.assertEqual(f(init, "serverInfo").name, "gnomon")
                 names = {t.name for t in (await s.list_tools()).tools}
-                self.assertTrue({"remember", "record_conversation", "query", "query_language"} <= names)
+                self.assertTrue({"remember", "record_conversation", "recall", "query", "query_language"} <= names)
 
                 r = await s.call_tool("record_conversation", {
                     "messages": [{"speaker": "Alex", "text": "Let's use Rust for the core."},
