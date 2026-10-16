@@ -301,6 +301,11 @@ writer's account of what someone else said. However it is labelled, it cannot
 carry confidence above 7000 (`E_ATTRIBUTION`). Quoting is the only way to put
 someone's words on record with certainty, and the gate checks the quote.
 
+A quote is only as good as its recording. Quoting someone else from an
+episode recorded by the writer's own party is still that party's account of
+what was said (it chose the words and the turns), so it is capped at 7000 too.
+A quote from an episode another party recorded is not.
+
 ### Verdict methods
 
 `test`, `cross_model_review`, `external_source`, `scored_prediction`,
@@ -384,7 +389,10 @@ The computer does what it can do exactly; a model is the last resort.
    hypothetical, asked, asserted), kind (describe, promise, imagine, ask),
    truth and confidence come from visible language cues, and the rule that
    fired is reported. A sentence opening with a condition is hypothetical as
-   a whole.
+   a whole. A first-person commitment ("I will…", "we're going to…", "I
+   promise…") is a promise, and any other statement about the future ("prices
+   will double") a forecast: both have truth `unknown`, since neither is true
+   or false yet.
 4. **Residue, not guesses.** Text between recorded turns is reported too
    (unless it is only a speaker label). A sentence goes back unrecorded, with
    its reason, if it: has no known speaker; holds hidden characters or a speaker
@@ -553,8 +561,41 @@ are still open), and the value and the cited events must match. The one
 thing it cannot confirm from a proof alone is that an absent fact is absent;
 running the query again does.
 
-## 10. Not yet in v0.1
+## 10. The MCP server (M4)
+
+`python -m gnomon.mcp --log memory.jsonl --writer <writer> [--checker <writer>]`
+serves the memory to any AI model over MCP (stdio, JSON-RPC 2.0, standard
+library only).
+
+* **One identity, fixed by whoever configures it.** The server acts as
+  `--writer`; nothing a model sends can change that. It reads only that
+  writer's compartments, and every write still passes the core's write gate.
+  `run_checkers` (listed only when `--checker` is given) checks only claims
+  the writer can see.
+* **Tools.** `remember`, `record_conversation` (record, then extract by the
+  rules of section 8), `query` (answers, proofs explained, and every proof
+  re-checked by `gnomon.proofs` before it is returned), `query_language`,
+  `give_verdict`, `supersede`, `run_checkers`, `verify_log` (pass or fail
+  only: the log's size would reveal what the writer cannot see). Refusals by
+  the gate come back as tool errors with their code, so a model can correct
+  itself.
+* **Both protocol eras.** Modern (2026-07-28): every request carries
+  `io.modelcontextprotocol/protocolVersion` and `clientCapabilities` in
+  `_meta`; `server/discover`; results carry `resultType`; other versions get
+  `-32022` listing the supported ones. Legacy (2025-11-25 and earlier,
+  e.g. today's official SDKs): an `initialize` handshake for the stdio
+  process. Earlier revisions are reached only through `initialize`.
+* **Robust framing.** One message per line, at most 4 MiB (longer lines are
+  skipped as they are read, never held in memory), nesting at most 64
+  levels, no NaN or infinities, no lone surrogates, no batches. Every request
+  gets exactly one well-formed reply and no input ends the server.
+
+`python -m gnomon init | register | verify | query` sets up and inspects a
+memory from the command line, through the same gate.
+
+## 11. Not yet in v0.1
 
 Signatures (writer identity is by registration only), multi-writer merge of
-independently written logs, arithmetic and aggregation in queries, and the
-MCP server. See the v1 implementation plan.
+independently written logs, arithmetic and aggregation in queries, HTTP
+transport for the MCP server, and a benchmark against other memory systems.
+See the v1 implementation plan.
