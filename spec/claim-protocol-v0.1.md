@@ -683,6 +683,49 @@ library only).
 `python -m gnomon init | register | verify | query` sets up and inspects a
 memory from the command line, through the same gate.
 
+**Auto mode (Claude Code).** A model that is asked to record its
+conversations may forget to. With host hooks, nothing depends on it
+(`python -m gnomon hooks` prints the settings, shell-quoted; `gnomon.hook`
+runs them):
+
+- **SessionStart:** the session gets its own writer, an instance of the
+  template writer keyed by the host's session id (only that template's own
+  instances count), so a resumed session keeps its writer. The model is
+  told who it is on record and given a token-budgeted resume packet. It
+  also gets a token for the `attach` tool, which makes its MCP tool calls
+  those of the same writer.
+  - **The token:** a random secret kept beside the log, readable only by
+    its owner. It is single use, tied to its session (a server that knows
+    its own session cannot redeem another's), and expires after a day.
+    There is at most one outstanding token per session.
+  - **Never recorded:** any outstanding token that appears in recorded text
+    is replaced with "[attach token]".
+  - So the binding never rests on what a model says about itself.
+- **Stop, PreCompact, SessionEnd:** the turns added to the host's
+  transcript since the last time are recorded as episodes. The model's
+  turns go under its registered name (or its id) bound to its writer, and
+  "User" is bound to its operator.
+  - **What counts as said:** only words people and the model said. These are
+    left out:
+    - tool calls and tool output (unless asked for);
+    - side conversations;
+    - the host's own entries: notes, compaction summaries, slash commands
+      and their output, interruptions, API errors.
+  - **Losslessness:**
+    - Recording is exact: a very long turn becomes several turns whose text
+      joins back to exactly the original.
+    - A broken surrogate pair becomes U+FFFD rather than losing the turn.
+  - **The transcript is read from a byte offset,** never whole.
+    - One recorder runs per session at a time; overlapping hooks wait.
+    - The offset advances after each recorded episode, so a failure never
+      duplicates turns.
+    - A part the gate refuses is replaced by a note saying so, so it never
+      stops recording.
+    - A rewritten or replaced transcript is read again from the start.
+    - A half-written last line waits for the next run.
+- **Failures:** a hook never breaks the session it serves. It reports
+  failures on stderr and exits 0.
+
 ## 11. Recall (M5)
 
 `query` answers exactly, with proofs. Recall answers the other question a
@@ -861,6 +904,31 @@ default the most recently active one the reader can see):
   so;
 - what happened after it: new claims in the frame, decisions that stand,
   open questions, and critiques nobody has answered.
+- the end of the last recorded conversation: the turns recorded by the
+  writer that left the handoff, or, without one, by the writer of the most
+  recent conversation. That is one session's conversation, never several
+  interleaved.
+
+**Context is a budget.** As text for a model (`render_resume`, MCP
+`resume` with `budget_tokens`, the SessionStart packet), resume is fitted
+to a budget of tokens, estimated at four characters each. Parts are kept
+in this order:
+
+1. The handoff. Its goal, next steps and open items come first. Its summary
+   is shortened rather than dropped, and the handoff as a whole is never
+   left out.
+2. What changed under the handoff.
+3. Open questions.
+4. The end of the last conversation, newest turns kept first and shown
+   oldest first.
+5. Decisions.
+6. What happened since the handoff.
+7. Unanswered critiques.
+
+A section's title appears only with at least one of its items. Whatever is
+left out is counted, with a note on how to ask for more. Over MCP the
+structured result carries ids only, so a resume never costs its tokens
+twice.
 
 Order is log order. The state gives each visible claim and handoff an
 `order`: its rank among the claims and handoffs the reader can see, which

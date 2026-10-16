@@ -288,7 +288,7 @@ class Memory:
         return out
 
     def resume(self, reader: str, frame: Optional[str] = None, as_of: Optional[str] = None,
-               limit: int = 20) -> dict:
+               limit: int = 20, turns: int = 12) -> dict:
         """Pick up a piece of work exactly where it was left, whoever left
         it: the latest handoff of `frame` (default: the most recently active
         frame), the earlier ones, how everything it rests on stands now (a
@@ -297,10 +297,11 @@ class Memory:
         nobody has answered. Everything with its source. Long texts are cut
         to a budget (marked "cut"), and lists to the `limit` most recent."""
         limit = max(1, min(int(limit), 200))
+        turns = max(0, min(int(turns), 200))
         st = self.state(as_of=as_of, compartments=self._compartments(reader))["state"]
         empty = {"frame": frame, "handoff": None, "earlier_handoffs": [], "rests_on": [],
                  "since": {"claims": [], "more": 0}, "decisions": [], "open_questions": [],
-                 "unanswered_critiques": []}
+                 "unanswered_critiques": [], "recent_turns": self._recent_turns(st, None, turns)}
         if frame is None:
             fs = self.frames(reader, as_of)
             if not fs:
@@ -367,7 +368,34 @@ class Memory:
             "decisions": decisions[-limit:],
             "open_questions": open_qs[-limit:],
             "unanswered_critiques": critiques[-limit:],
+            "recent_turns": self._recent_turns(st, latest[1]["writer"] if latest else None, turns),
         }
+
+    @staticmethod
+    def _recent_turns(st: dict, writer: Optional[str], n: int) -> list:
+        """The last `n` turns of recorded conversation: those recorded by the
+        writer that left the latest handoff (that session's own words and
+        its user's), or, without one, by the writer of the most recent
+        conversation on record. One session's conversation, never several
+        interleaved."""
+        eps = sorted(st["episodes"].items(), key=lambda kv: kv[1]["order"])
+        if writer is None and eps:
+            writer = eps[-1][1]["writer"]  # one conversation: the latest one's writer's, never interleaved
+        eps = [kv for kv in eps if kv[1]["writer"] == writer]
+        out: list = []
+        for eid, e in reversed(eps):
+            body = e["body"]
+            content, turns = body.get("content", ""), body.get("turns", [])
+            binds = body.get("bindings", {})
+            for i in range(len(turns) - 1, -1, -1):
+                tr = turns[i]
+                text = content[tr["start"]:tr["end"]]  # offsets are code points, as Python's
+                out.append({"episode": eid, "turn": i, "speaker": tr["speaker"],
+                            "speaker_is": binds.get(tr["speaker"]), "time": e["record_time"],
+                            "text": _cut(text, 600), "hidden_chars": e["hidden_chars"]})
+                if len(out) >= n:
+                    return list(reversed(out))
+        return list(reversed(out))
 
     def _compartments(self, reader: str) -> list:
         writers = self.state()["state"]["writers"]
