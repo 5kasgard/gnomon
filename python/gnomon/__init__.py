@@ -16,6 +16,8 @@ from . import _native
 __all__ = [
     "GateError",
     "Memory",
+    "VIEWS",
+    "datalog",
     "canonicalize",
     "canonicalize_text",
     "claim",
@@ -44,6 +46,13 @@ def _unwrap(result: dict) -> dict:
 def _dumps(obj: Any) -> str:
     # allow_nan=False: NaN/Infinity never even reach the core.
     return json.dumps(obj, ensure_ascii=False, allow_nan=False)
+
+
+def datalog(program: str) -> dict:
+    """Run a self-contained Datalog program (facts written as clauses) and
+    return its answers with proofs. See gnomon.proofs to check or explain
+    them."""
+    return _unwrap(_native.call("gn_datalog", program))["result"]
 
 
 def now() -> str:
@@ -183,9 +192,25 @@ class Memory:
         comps = None if compartments is None else _dumps(list(compartments))
         return _unwrap(_native.call("gn_state", self.path, as_of, comps))
 
+    def query(self, reader: str, program: str, as_of: Optional[str] = None) -> dict:
+        """Answer a Datalog query over this memory as `reader` sees it (only
+        its compartments), as of `as_of` (latest if None).
+
+        The result has `variables`, `answers` (each with `values` and the id
+        of its `proof`), and the proof `nodes`: every derived fact names its
+        rule and premises, every base fact the log events it comes from.
+        Check them with gnomon.proofs.check, print them with
+        gnomon.proofs.explain. Base relations and built-in views are listed
+        in the spec (and in gnomon.VIEWS)."""
+        return _unwrap(_native.call("gn_query", self.path, as_of, reader, program))["result"]
+
     def checkpoint(self) -> tuple[int, str]:
         r = self.verify()
         return r["count"], r["head"]
 
     def check_checkpoint(self, count: int, head: str) -> None:
         _unwrap(_native.call("gn_checkpoint", self.path, count, head))
+
+
+#: The built-in views, as Datalog source (each line says what it means).
+VIEWS: str = _unwrap(_native.call("gn_views"))["views"]
