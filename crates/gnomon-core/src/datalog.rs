@@ -31,8 +31,9 @@ use std::collections::HashMap;
 use std::fmt::Write as _;
 use std::rc::Rc;
 
-use crate::json::Value;
+use crate::json::{canonical, Value};
 use crate::schema::GateError;
+use crate::sha256::hex_digest;
 
 // ------------------------------------------------------------------ values
 
@@ -1126,9 +1127,18 @@ impl<'p> Engine<'p> {
     }
 
     pub fn run(&mut self) -> Result<(), GateError> {
-        let strata = self.prog.strata.clone();
+        // Only rules whose head the query can reach: a view the query does
+        // not use costs nothing, however large it would be.
+        let strata: Vec<Vec<usize>> = self
+            .prog
+            .strata
+            .iter()
+            .map(|rules| rules.iter().copied().filter(|&r| self.prog.reachable[self.prog.rules[r].head.pred]).collect())
+            .collect();
         for rules in &strata {
-            self.run_stratum(rules)?;
+            if !rules.is_empty() {
+                self.run_stratum(rules)?;
+            }
         }
         Ok(())
     }
@@ -1375,14 +1385,24 @@ impl<'p> Engine<'p> {
         let truncated = order.len() > self.lim.max_answers;
         order.truncate(self.lim.max_answers);
 
-        let mut out = Proofs { ids: HashMap::new(), nodes: Vec::new(), rules: Vec::new(), rule_ids: HashMap::new(), size: 0 };
+        let mut out = Proofs {
+            ids: HashMap::new(),
+            nodes: Vec::new(),
+            rules: Vec::new(),
+            rule_ids: HashMap::new(),
+            rule_hashes: HashMap::new(),
+            hashes: HashMap::new(),
+            size: 0,
+        };
         let mut answers = Vec::new();
         for &a in &order {
             let node = self.node(prog.answer, a, &mut out, source)?;
-            out.charge(rel.rows[a].iter().map(val_size).sum::<usize>() + 32, self.lim.max_output)?;
+            out.charge(rel.rows[a].iter().map(val_size).sum::<usize>() + 32 + 84, self.lim.max_output)?;
+            let root = out.hashes[&node].clone();
             answers.push(Value::obj(vec![
                 ("values", Value::Array(rel.rows[a].iter().map(Val::to_json).collect())),
                 ("proof", Value::str(node)),
+                ("proof_hash", Value::str(root)),
             ]));
         }
         Ok(Value::obj(vec![
@@ -1418,16 +1438,34 @@ impl<'p> Engine<'p> {
             }
             let id = format!("n{}", out.nodes.len());
             let row = &self.rels[f.0].rows[f.1];
-            out.charge(64 + row.iter().map(val_size).sum::<usize>(), max)?;
+            out.charge(64 + 76 + row.iter().map(val_size).sum::<usize>(), max)?;
             let mut fact = vec![Value::str(self.prog.preds[f.0].name.clone())];
             fact.extend(row.iter().map(Val::to_json));
-            let v = match prov {
+            // Every node is named by a hash of what it says and of the hashes
+            // of what it rests on (a Merkle DAG, like a proof term): equal
+            // derivations get equal hashes, and an answer's proof_hash fixes
+            // its whole derivation down to the log events.
+            let (v, digest) = match prov {
                 Prov::Base(srcs) => {
                     out.charge(160 * srcs.len(), max)?;
-                    Value::obj(vec![
-                        ("fact", Value::Array(fact)),
-                        ("sources", Value::Array(srcs.iter().map(|&s| source(s)).collect())),
-                    ])
+                    let sources: Vec<Value> = srcs.iter().map(|&s| source(s)).collect();
+                    let event_hashes: Vec<Value> =
+                        sources.iter().map(|x| x.get("hash").cloned().unwrap_or(Value::Null)).collect();
+                    let digest = hex_digest(
+                        canonical(&Value::obj(vec![
+                            ("fact", Value::Array(fact.clone())),
+                            ("sources", Value::Array(event_hashes)),
+                        ]))
+                        .as_bytes(),
+                    );
+                    (
+                        Value::obj(vec![
+                            ("fact", Value::Array(fact)),
+                            ("sources", Value::Array(sources)),
+                            ("hash", Value::str(digest.clone())),
+                        ]),
+                        digest,
+                    )
                 }
                 Prov::Rule { rule, premises, absent } => {
                     let rule_id = match out.rule_ids.get(rule) {
@@ -1435,13 +1473,21 @@ impl<'p> Engine<'p> {
                         None => {
                             let rl = &self.prog.rules[*rule];
                             let text = self.prog.rule_text(rl);
-                            out.charge(text.len() + 32, max)?;
+                            out.charge(text.len() + 32 + 76 + rl.origin.len() + 16, max)?;
                             let rid = format!("r{}", out.rules.len());
+                            // A rule is named by the hash of its text: a
+                            // proof says exactly which rule it used.
+                            let rh = hex_digest(text.as_bytes());
                             out.rules.push((
                                 rid.clone(),
-                                Value::obj(vec![("text", Value::str(text)), ("origin", Value::str(rl.origin.clone()))]),
+                                Value::obj(vec![
+                                    ("text", Value::str(text)),
+                                    ("origin", Value::str(rl.origin.clone())),
+                                    ("hash", Value::str(rh.clone())),
+                                ]),
                             ));
                             out.rule_ids.insert(*rule, rid.clone());
+                            out.rule_hashes.insert(rid.clone(), rh);
                             rid
                         }
                     };
@@ -1452,15 +1498,31 @@ impl<'p> Engine<'p> {
                         a.extend(pat.iter().map(|v| v.as_ref().map(Val::to_json).unwrap_or(Value::Null)));
                         absent_v.push(Value::Array(a));
                     }
-                    out.charge(8 * premises.len(), max)?;
-                    Value::obj(vec![
-                        ("fact", Value::Array(fact)),
-                        ("rule", Value::str(rule_id)),
-                        ("premises", Value::Array(premises.iter().map(|p| Value::str(out.ids[p].clone())).collect())),
-                        ("absent", Value::Array(absent_v)),
-                    ])
+                    out.charge(8 * premises.len() + 72, max)?;
+                    let premise_hashes: Vec<Value> =
+                        premises.iter().map(|p| Value::str(out.hashes[&out.ids[p]].clone())).collect();
+                    let digest = hex_digest(
+                        canonical(&Value::obj(vec![
+                            ("fact", Value::Array(fact.clone())),
+                            ("rule", Value::str(out.rule_hashes[&rule_id].clone())),
+                            ("premises", Value::Array(premise_hashes)),
+                            ("absent", Value::Array(absent_v.clone())),
+                        ]))
+                        .as_bytes(),
+                    );
+                    (
+                        Value::obj(vec![
+                            ("fact", Value::Array(fact)),
+                            ("rule", Value::str(rule_id)),
+                            ("premises", Value::Array(premises.iter().map(|p| Value::str(out.ids[p].clone())).collect())),
+                            ("absent", Value::Array(absent_v)),
+                            ("hash", Value::str(digest.clone())),
+                        ]),
+                        digest,
+                    )
                 }
             };
+            out.hashes.insert(id.clone(), digest);
             out.ids.insert(f, id.clone());
             out.nodes.push((id, v));
         }
@@ -1473,6 +1535,10 @@ struct Proofs {
     nodes: Vec<(String, Value)>,
     rules: Vec<(String, Value)>,
     rule_ids: HashMap<usize, String>,
+    /// Rule id -> hash of its text.
+    rule_hashes: HashMap<String, String>,
+    /// Node id -> its hash.
+    hashes: HashMap<String, String>,
     size: usize,
 }
 

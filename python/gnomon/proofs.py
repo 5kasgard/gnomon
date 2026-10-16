@@ -465,6 +465,10 @@ def _event_says(fact: list, ev: dict) -> bool:
         return kind == "claim" and _claim_id(body) == args[0] and body.get(_FIELD[rel]) == args[1]
     if rel == "claim":
         return kind == "claim" and _claim_id(body) == args[0]
+    if rel == "reference":
+        c, target, relation = args
+        return kind == "claim" and _claim_id(body) == c \
+            and {"claim": target, "relation": relation} in body.get("about", [])
     if rel in ("recorded", "author"):
         want = ev["record_time"] if rel == "recorded" else ev["writer"]
         return kind == "claim" and _claim_id(body) == args[0] and want == args[1]
@@ -738,7 +742,8 @@ def _establishes(fact: list, cited: set, d: _Disputes) -> bool:
     return False
 
 
-def check(result: dict, program: str, views: str = "", log: Optional[str | Path] = None) -> list[str]:
+def check(result: dict, program: str, views: str = "", log: Optional[str | Path] = None,
+          require_hashes: bool = False) -> list[str]:
     """Check every proof in a query result. Returns the problems found (an
     empty list means every proof checks out). `program` is the query that
     was run, `views` the built-in views (gnomon.VIEWS) when querying a
@@ -850,10 +855,64 @@ def check(result: dict, program: str, views: str = "", log: Optional[str | Path]
                 if not _establishes(fact, {ev["event_id"] for ev in cited}, disputes):
                     problems.append(f"{nid}: the log does not establish {fact} from {[s.get('event') for s in sources]}")
 
+    problems.extend(_check_hashes(result, require_hashes))
     for i, ans in enumerate(result.get("answers", [])):
         node = nodes.get(ans["proof"])
         if node is None or node["fact"] != ["?"] + ans["values"]:
             problems.append(f"answer {i}: its proof does not prove it")
+        elif "proof_hash" in ans and node.get("hash") != ans["proof_hash"]:
+            problems.append(f"answer {i}: its proof_hash is not its proof's hash")
+    return problems
+
+
+def _sha(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _check_hashes(result: dict, required: bool = False) -> list[str]:
+    """Rules are named by the hash of their text and proof nodes by the
+    hash of what they say and of what they rest on (a Merkle DAG). Recompute
+    every hash; a proof whose hashes are present must match them all."""
+    problems: list[str] = []
+    rules, nodes = result.get("rules", {}), result.get("nodes", {})
+    marked = ["hash" in x for x in list(rules.values()) + list(nodes.values())]
+    marked += ["proof_hash" in a for a in result.get("answers", [])]
+    if (any(marked) or required) and not all(marked):
+        problems.append("the proof is not fully content-addressed" if required and not any(marked)
+                        else "some of the proof is content-addressed and some is not")
+    for rid, r in rules.items():
+        if "hash" in r and r["hash"] != _sha(r.get("text", "")):
+            problems.append(f"rule {rid}: its hash is not the hash of its text")
+    memo: dict[str, Optional[str]] = {}
+    opened: set[str] = set()  # expanded, not yet hashed: meeting one again is a cycle
+    for start in nodes:
+        stack = [(start, False)]
+        while stack:
+            nid, ready = stack.pop()
+            if nid in memo or nid not in nodes:
+                continue
+            n = nodes[nid]
+            if "rule" in n and not ready:
+                if nid in opened:
+                    memo[nid] = None  # circular: reported by the main check
+                    continue
+                opened.add(nid)
+                stack.append((nid, True))
+                stack.extend((p, False) for p in n.get("premises", []) if p not in memo)
+                continue
+            if "rule" in n:
+                rh = rules.get(n["rule"], {}).get("hash")
+                ph = [memo.get(p) for p in n.get("premises", [])]
+                if rh is None or None in ph:
+                    memo[nid] = None
+                    continue
+                body = {"fact": n["fact"], "rule": rh, "premises": ph, "absent": n.get("absent", [])}
+            else:
+                body = {"fact": n["fact"], "sources": [x.get("hash") for x in n.get("sources", [])]}
+            h = _sha(canonical(body))
+            if "hash" in n and n["hash"] != h:
+                problems.append(f"{nid}: its hash does not match what it says and rests on")
+            memo[nid] = h
     return problems
 
 

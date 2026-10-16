@@ -40,12 +40,17 @@ Gnomon is built the other way round:
 - **Nothing is overwritten.** The log is hash-chained and append-only, so
   any edit, deletion or reordering is detected. You can ask what was known
   at any moment.
+- **It works like a forum.** Anyone can post a question, answer it,
+  critique a claim, reply or cite earlier work. Every post is attributed,
+  and threads show what is still open and which critiques nobody has
+  answered.
 - **Disagreement is a process, not a delete key.** Claims can be supported,
   refuted, contested before a neutral party, appealed or superseded.
   Nobody judges their own case.
 - **Answers come with proofs.** Each step names its rule and each fact names
   the log events it rests on. An independent checker re-derives the proof
-  from the log.
+  from the log. Every proof has a single hash covering its whole
+  derivation, from the rules used down to the log events.
 - **Nothing hidden gets through.** Invisible characters are refused or
   flagged, and private compartments don't leak, not even through error
   codes.
@@ -86,6 +91,7 @@ The model gets these tools:
 - `remember`, `record_conversation`
 - `recall` ("where did we discuss the budget?")
 - `query` ("which decisions still stand?"), with checked proofs
+- `discussion`, `open_questions`
 - `give_verdict`, `supersede`
 - `whoami`
 - `verify_log`
@@ -122,6 +128,12 @@ cid = m.remember("alex", claim(
 r = m.query("alex", "?- decision(C), statement(C, S).")
 print(proofs.explain(r))        # each step's rule, down to the log events
 print(proofs.check(r, "?- decision(C), statement(C, S).", gnomon.VIEWS, "memory.jsonl"))  # [] = checks out
+
+# Ask, answer, critique: the record is a forum
+q = m.ask("alex", "Which database should the prototype use?", frame="db", compartment="lab")
+a = m.respond("claude-c1", q, "answers", "SQLite: one file, no server.", frame="db", compartment="lab")
+print(m.query("alex", "?- open_question(Q), statement(Q, S).")["answers"])
+print(m.discussion("alex", q))                 # the whole thread, with each post's standing
 
 # Where was it said?
 for h in m.recall("alex", "what did we decide about the core language?", k=5)["hits"]:
@@ -193,9 +205,10 @@ caveats.
 | **The record** | Canonical JSON (RFC 8785) and SHA-256 in Rust, checked against FIPS and RFC vectors. One hash-chained log; replay rebuilds identical state. Tampering, truncation and torn writes are detected, and writers in any process are serialised by a lock on the log. |
 | **Claims** | Statement kinds, origin (observed, derived, guessed…), stance (a decision is never confused with a suggestion), four-valued truth, validity domains, and two clocks: when it was recorded and when it is true. |
 | **Verification and disputes** | Verdicts with a stated method. Contests that flag a claim without changing its truth, before a neutral party. One argument per party, then only evidence. Three ways back for a refuted claim. Every dispute can end. |
+| **Forum** | Questions, answers, critiques, replies and citations are attributed claims linked by reference, never across compartments. Views show open questions, settled ones, and critiques nobody has answered. |
 | **Identity** | Each session or agent is its own writer, on record with its model, surface, session and operator. Names in recordings are bound, never matched. Agreement between sessions of one model counts once. |
 | **Ingestion** | Transcripts and documents are parsed by plain code and classified by named rules. Anything uncertain is set aside, never guessed. Quotes are checked word for word. |
-| **Queries** | Datalog with recursion and stratified negation, under hard limits. Every answer has a proof down to log events, re-checked by an independent checker. |
+| **Queries** | Datalog with recursion and stratified negation, under hard limits. Every answer has a proof down to log events, re-checked by an independent checker. Proofs are content-addressed: each rule is named by a hash of its text and each step by a hash of what it rests on. |
 | **Recall** | Ranked search with provenance on every hit, and dates resolved by the calendar. |
 | **Checkers** | Arithmetic with exact fractions and dates against the real calendar, acting as verifiers under the same rules as everyone else. |
 | **MCP server** | Standard library only, for current and older MCP clients. It is fuzzed, and tested in CI with the official MCP SDK. |
@@ -208,8 +221,9 @@ The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
   written as a failing test before any code existed
   (`tests/incidents.rs`).
 - **Each milestone was attacked by a reviewer who didn't write it.** That
-  covered the record, queries, the MCP server, recall and identity, over
-  14 review rounds. Every confirmed finding is now a regression test.
+  covered the record, queries, the MCP server, recall, identity and the
+  forum, over 15 review rounds. Every confirmed finding is now a
+  regression test.
 - **The query engine has a second implementation to agree with.** It is
   checked against a deliberately naive evaluator on hundreds of random
   programs, and proofs against a checker that re-derives everything from
@@ -217,7 +231,7 @@ The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
 - **The MCP server is tested hard.** It is fuzzed with thousands of
   malformed messages and driven in CI by the official MCP Python SDK.
 - **Recall was tested on data it was never tuned on.**
-- **Every platform:** 171 Rust tests and 130 Python tests run on Linux,
+- **Every platform:** 174 Rust tests and 146 Python tests run on Linux,
   macOS and Windows on every change.
 
 ```bash
@@ -236,13 +250,13 @@ bash scripts/build.sh && python3 -m unittest discover -s python/tests
 - [x] **M4, MCP server,** so any AI model can use it.
 - [x] **M5, recall without a model,** measured on LoCoMo.
 - [x] **M6, identity down to the session.**
-- [ ] **M7, the record as a forum:**
-  - critiques and replies as first-class records;
-  - answers tied to their questions, and open questions;
-  - references between claims;
-  - proofs as typed terms, and rules stored by their hash.
-- [ ] **M8, a shared public space:** independent memories merging into a
-  commons, with signed posts.
+- [x] **M7, the record as a forum:** questions, answers, critiques,
+  replies and citations; open and settled questions; content-addressed
+  proofs.
+- [ ] **M8, a shared public space:**
+  - independent memories merging into a commons;
+  - signed posts;
+  - derived claims that name the proof and rule version that produced them.
 
 ## Layout
 
