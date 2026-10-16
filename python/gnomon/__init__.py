@@ -178,6 +178,77 @@ class Memory:
         self.append(writer, "claim", body, record_time)
         return claim_id(body)
 
+    # ------------------------------------------------------------ forum (M7)
+    def ask(self, writer: str, question: str, *, frame: str, compartment: str, speaker: Optional[str] = None,
+            about: Optional[list] = None, record_time: Optional[str] = None) -> str:
+        """Post a question; returns its id. `about`: [(claim id, relation)]."""
+        body = claim(question, speaker=speaker or writer, frame=frame, compartment=compartment,
+                     stance="asked", truth="unknown", origin="manual", statement_kind="ask",
+                     about=_about(about))
+        return self.remember(writer, body, record_time)
+
+    def respond(self, writer: str, to: str, relation: str, statement: str, *, frame: str, compartment: str,
+                truth: str = "unknown", confidence: int = 5000, origin: str = "manual",
+                speaker: Optional[str] = None, record_time: Optional[str] = None) -> str:
+        """Answer, critique, reply to or cite claim `to` (relation: answers,
+        critiques, replies, cites); returns the new claim's id. A response
+        is a claim of its own, judged like any other; it changes no truth."""
+        body = claim(statement, speaker=speaker or writer, frame=frame, compartment=compartment,
+                     truth=truth, confidence=confidence, origin=origin, about=_about([(to, relation)]))
+        return self.remember(writer, body, record_time)
+
+    def discussion(self, reader: str, claim_id: str, as_of: Optional[str] = None, limit: int = 500) -> dict:
+        """Everything on record about a claim, as `reader` sees it: the claim
+        and every claim that answers, critiques, replies to or cites it, or
+        any of those, in the order they were recorded. Each post appears
+        once, with its standing (truth, verdicts, disputes, supersessions)
+        and the posts in the thread it refers to. At most `limit` posts;
+        `truncated` says if there were more."""
+        st = self.state(as_of=as_of, compartments=self._compartments(reader))["state"]
+        claims = st["claims"]
+        if claim_id not in claims:
+            raise GateError("E_REF", f"claim '{claim_id}' does not exist or is not accessible")
+
+        def order(cid: str) -> tuple:
+            c = claims[cid]
+            w, _, n = c["first_event"].rpartition("/")
+            return (c["record_time"], int(n) if n.isdigit() else 0, w, cid)
+
+        children: dict[str, set] = {}
+        for cid, c in claims.items():
+            for r in c["body"].get("about", []):
+                children.setdefault(r["claim"], set()).add(cid)
+        # Breadth first from the claim, each post once, then by record order.
+        seen, frontier, truncated = {claim_id}, [claim_id], False
+        while frontier:
+            nxt = []
+            for cid in frontier:
+                for ch in sorted(children.get(cid, ()), key=order):
+                    if ch not in seen:
+                        if len(seen) >= limit:
+                            truncated = True
+                            break
+                        seen.add(ch)
+                        nxt.append(ch)
+            frontier = nxt
+        posts = []
+        for cid in sorted(seen, key=order):
+            c = claims[cid]
+            posts.append({
+                "claim": cid, "statement": c["body"]["statement"], "speaker": c["body"]["speaker"],
+                "author": c["author"], "time": c["record_time"], "stance": c["body"]["stance"],
+                "truth": c["effective_truth"], "disputed": c["disputed"], "supports": c["supports"],
+                "refutes": c["refutes"], "abstains": c["abstains"], "superseded_by": c["superseded_by"],
+                "refers_to": [r for r in c["body"].get("about", []) if r["claim"] in seen],
+            })
+        return {"root": claim_id, "posts": posts, "truncated": truncated}
+
+    def _compartments(self, reader: str) -> list:
+        writers = self.state()["state"]["writers"]
+        if reader not in writers:
+            raise GateError("E_UNKNOWN_WRITER", f"reader '{reader}' is not registered")
+        return writers[reader]["compartments"]
+
     def verdict(self, writer: str, claim: str, result: str, method: str,
                 note: Optional[str] = None, record_time: Optional[str] = None) -> dict:
         body = {"claim": claim, "result": result, "method": method}
@@ -254,6 +325,13 @@ class Memory:
 
 #: The protocol version new memories start at (see the spec, section 2a).
 SCHEMA_VERSION = 2
+
+
+def _about(refs) -> Optional[list]:
+    """[(claim id, relation)] -> the claim body's 'about' list."""
+    if not refs:
+        return None
+    return [{"claim": c, "relation": r} for c, r in refs]
 
 
 def title(writers: dict, wid: str) -> str:

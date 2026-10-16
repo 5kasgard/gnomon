@@ -50,6 +50,10 @@ conversation; sentences are extracted by plain rules, uncertain ones are \
 returned as residue rather than guessed).
 - Find where something was said with `recall` (plain words, ranked, each \
 hit with its source and its relative dates resolved).
+- The record is a forum, not a store of truths: ask questions (stance \
+"asked"), and answer, critique, reply to or cite earlier claims with \
+`about`. Read a thread with `discussion`; see what is unresolved with \
+`open_questions`. Judge claims with `give_verdict`.
 - Ask with `query`, in Datalog. Call `query_language` once to see the \
 relations and views. Every answer comes with a proof down to log events, \
 checked independently before it is returned.
@@ -72,7 +76,8 @@ TOOLS: list[dict] = [
         "title": "Remember a claim",
         "description": (
             "Record one claim in the memory as this server's writer. Returns the claim's id "
-            "(its content hash). The same claim recorded again by another party corroborates it. "
+            "(its content hash). To ask a question: stance 'asked', truth 'unknown'. To answer, critique, "
+            "reply to or cite earlier claims: `about`. The same claim recorded again by another party corroborates it. "
             "`truth`: true, false, unknown or contested. `stance`: asserted, decided, suggested, "
             "hypothetical or asked (a question must have truth 'unknown'). `origin`: how you know it "
             "(direct, manual, observed, forecast, derived, inferred, guessed). `confidence` is in "
@@ -93,6 +98,16 @@ TOOLS: list[dict] = [
             "validity_domain": {"type": "string"},
             "valid_from": {"type": "string", "description": "YYYY-MM-DDTHH:MM:SSZ"},
             "valid_to": {"type": "string", "description": "YYYY-MM-DDTHH:MM:SSZ"},
+            "about": {
+                "type": "array",
+                "description": "What this claim responds to: earlier claims in the same compartment, each with "
+                               "a relation: answers (a question), critiques, replies or cites. A response is a "
+                               "claim of its own and changes no one's truth; use give_verdict to judge.",
+                "items": _schema({"claim": S, "relation": {"type": "string",
+                                                            "enum": ["answers", "critiques", "replies", "cites"]}},
+                                 ["claim", "relation"]),
+                "minItems": 1,
+            },
         }, ["statement", "frame", "compartment", "truth"]),
         "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False,
                         "openWorldHint": False},
@@ -222,6 +237,27 @@ TOOLS: list[dict] = [
                         "openWorldHint": False},
     },
     {
+        "name": "discussion",
+        "title": "The discussion around a claim",
+        "description": (
+            "Everything on record about one claim: the claim, its verdicts and standing, and the thread "
+            "of answers, critiques, replies and citations to it (and to them), oldest first."
+        ),
+        "inputSchema": _schema({"claim": {"type": "string", "description": "The claim id (c:...)."},
+                                "as_of": {"type": "string", "description": "YYYY-MM-DDTHH:MM:SSZ"}}, ["claim"]),
+        "annotations": {"readOnlyHint": True, "openWorldHint": False},
+    },
+    {
+        "name": "open_questions",
+        "title": "Open questions",
+        "description": (
+            "Questions on record that are not settled: no answer to them is both believed and verified "
+            "by someone. Each with its id, who asked, and how many answers it has."
+        ),
+        "inputSchema": {"type": "object", "additionalProperties": False},
+        "annotations": {"readOnlyHint": True, "openWorldHint": False},
+    },
+    {
         "name": "whoami",
         "title": "Who am I in this memory",
         "description": (
@@ -314,6 +350,8 @@ class Server:
             statement_kind=a.get("statement_kind", "describe"),
             **optional,
         )
+        if "about" in a:
+            body["about"] = [{"claim": r["claim"], "relation": r["relation"]} for r in a["about"]]
         cid = self.memory.remember(self.writer, body)
         return f"Remembered {cid}", {"claim": cid}
 
@@ -345,7 +383,7 @@ class Server:
     def t_query(self, a: dict) -> tuple[str, Any]:
         program = a["program"]
         r = self.memory.query(self.writer, program, a.get("as_of"))
-        problems = proofs.check(r, program, VIEWS, self.log)
+        problems = proofs.check(r, program, VIEWS, self.log, require_hashes=True)
         n = min(a.get("explain", 3), len(r["answers"]))
         explained = [proofs.explain(r, i, max_nodes=60) for i in range(n)]
         out: dict[str, Any] = {
@@ -425,6 +463,39 @@ class Server:
         out = {"verdicts": [{"claim": c, "result": r, "note": n} for c, r, n in rep.verdicts],
                "failures": [{"claim": c, "error": e} for c, e in rep.failures]}
         return f"{len(rep.verdicts)} verdict(s) recorded, {len(rep.failures)} claim(s) could not be checked.", out
+
+    def t_discussion(self, a: dict) -> tuple[str, Any]:
+        d = self.memory.discussion(self.writer, a["claim"], a.get("as_of"), limit=200)
+        lines = [f"{len(d['posts'])} post(s)" + (" (more not shown)" if d["truncated"] else "")]
+        short = {p["claim"]: f"#{i}" for i, p in enumerate(d["posts"])}
+        for i, p in enumerate(d["posts"]):
+            refs = ", ".join(f"{r['relation']} {short[r['claim']]}" for r in p["refers_to"])
+            verdicts = f"{len(p['supports'])} support / {len(p['refutes'])} refute / {len(p['abstains'])} abstain"
+            flags = (" [disputed]" if p["disputed"] else "") + (" [superseded]" if p["superseded_by"] else "")
+            lines.append(f"#{i} {p['speaker']} ({p['author']}, {p['time']}){' — ' + refs if refs else ''}: "
+                         f"{_shown(p['statement'])}  [{p['stance']}, {p['truth']}, {verdicts}{flags}] {p['claim']}")
+        return "\n".join(lines), d
+
+    def t_open_questions(self, a: dict) -> tuple[str, Any]:
+        q = "?- open_question(Q), statement(Q, S), author(Q, W), recorded(Q, T)."
+        r = self.memory.query(self.writer, q)
+        problems = proofs.check(r, q, VIEWS, self.log, require_hashes=True)
+        # Answers counted from the record itself, exactly.
+        st = self.memory.state(compartments=self.memory._compartments(self.writer))["state"]
+        counts: dict[str, int] = {}
+        for c in st["claims"].values():
+            for ref in c["body"].get("about", []):
+                if ref["relation"] == "answers":
+                    counts[ref["claim"]] = counts.get(ref["claim"], 0) + 1
+        rows = sorted((x["values"] for x in r["answers"]), key=lambda v: (v[3], v[0]))
+        out = {"questions": [{"claim": c, "statement": st_, "asked_by": w, "time": t, "answers": counts.get(c, 0)}
+                             for c, st_, w, t in rows],
+               "truncated": r["truncated"], "proofs_checked": not problems}
+        text = f"{len(rows)} open question(s)" + (" (more not shown)" if r["truncated"] else "") \
+            + ("" if not problems else " (PROOF CHECK FAILED)")
+        for x in out["questions"][:50]:
+            text += f"\n- {_shown(x['statement'])}  ({x['asked_by']}, {x['time']}, {x['answers']} answer(s)) [{x['claim']}]"
+        return text, out
 
     def t_whoami(self, a: dict) -> tuple[str, Any]:
         full = self.memory.state()["state"]["writers"]
