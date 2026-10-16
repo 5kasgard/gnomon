@@ -298,8 +298,10 @@ class RunReport:
     failures: list[tuple[str, str]]  # (claim, error) for claims that could not be checked
 
 
-def run(memory, writer: str, *, record_time: Optional[str] = None) -> RunReport:
-    """Check every claim the checker's writer can see.
+def run(memory, writer: str, *, record_time: Optional[str] = None,
+        compartments: Optional[Iterable[str]] = None) -> RunReport:
+    """Check every claim the checker's writer can see (and, if given, only
+    in these compartments: a caller that sees less must not learn more).
 
     Only claims asserted true or false are checked, and the result is judged
     against what the claim asserts: a claim that "2 + 2 = 5" is false is
@@ -310,7 +312,8 @@ def run(memory, writer: str, *, record_time: Optional[str] = None) -> RunReport:
     me = memory.state()["state"]["writers"].get(writer)
     if me is None:
         raise GateError("E_UNKNOWN_WRITER", f"writer '{writer}' is not registered")
-    state = memory.state(compartments=me["compartments"])["state"]
+    scope = [c for c in me["compartments"] if compartments is None or c in set(compartments)]
+    state = memory.state(compartments=scope)["state"]
     report = RunReport([], [])
     for cid, c in sorted(state["claims"].items()):
         body = c["body"]
