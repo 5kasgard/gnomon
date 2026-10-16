@@ -440,8 +440,121 @@ hypotheticals and claims of unknown or contested truth are skipped. A checker re
 compartments, and one claim that fails to check is reported and never stops
 the rest.
 
-## 9. Not yet in v0.1
+## 9. Queries (M3)
+
+Queries are written in Datalog: rules over facts, with no function symbols,
+so every query terminates and its answers do not depend on the order rules
+are written in. The engine is part of the core (`datalog.rs`, no
+dependencies).
+
+### Language
+
+```text
+path(X, Y) :- edge(X, Y).            % a rule
+path(X, Z) :- path(X, Y), edge(Y, Z). % recursion
+sink(X) :- node(X), not edge(X, _).  % negation
+edge("a", "b").                      % a fact
+?- path("a", Y), Y != "a".           % the query: exactly one per program
+```
+
+* **Terms.** Variables start with an upper-case letter or `_`; `_` alone
+  matches anything. Variables whose name starts with `_` (`_`, `_X`) are not
+  reported as answer columns, though a named one like `_X` still links its
+  occurrences. Constants are `"strings"` (escapes
+  `\" \\ \n \t \r \u{hex}`), 64-bit integers, or bare lower-case words
+  (`decided` is the string "decided").
+* **Literals.** `p(...)`, `not p(...)`, comparisons `= != < <= > >=`, and
+  `contains(S, Sub)` (substring, ignoring the case of ASCII letters only, so
+  the answer is the same on every platform and Unicode version: "CAFÉ"
+  contains "caf" but not "café"). Integers compare as
+  numbers and strings by code point; values of different types are never
+  equal and never ordered, so `1 = "1"` is false.
+* **Left to right.** A variable must be bound by a positive literal to its
+  left before a negation, comparison or `contains` uses it; `X = c` may bind
+  `X`. Every head variable must be bound. Violations are errors with a
+  reason, not silent emptiness.
+* **Stratified negation.** A relation may not depend on its own negation
+  (`p :- not q. q :- not p.` has no single meaning and is refused).
+* **No silent typos.** An unknown relation, a wrong number of arguments, or
+  a rule for a base relation or built-in view is an error (`E_QUERY`, with
+  the line).
+* **Limits.** Programs are capped at 100 KB, 10,000 clauses, 32 literals per
+  body and 16 arguments; evaluation at 500,000 facts, 20,000,000 steps (join
+  work, index building, `contains` by length, storing facts) and 10,000,000
+  values held in facts and indexes; results at 10,000 answers (flagged
+  `truncated`) and 64 MB of answers and proofs. Exceeding a limit is
+  `E_QUERY_LIMIT`, never a partial answer. `not` applies to one atom, once.
+* **Only what is needed.** Base relations the query cannot reach through
+  its rules are not loaded; they cannot change an answer.
+
+The query's named variables, in order of first appearance, are the answer's
+columns (`variables`). Answers are sorted.
+
+### The memory as facts
+
+`Memory.query(reader, program, as_of=None)` runs a program over the log as
+of `as_of`, through the compartments of `reader` (a registered writer;
+unknown readers are `E_REF`). Base relations:
+
+| Relation | From |
+| --- | --- |
+| `claim(C)` | the claim's first event |
+| `statement`, `speaker`, `frame`, `compartment`, `stance`, `origin`, `statement_kind`, `asserted_truth`, `source`, `validity_domain`, `valid_from`, `valid_to` `(C, Value)` | the claim's fields (strings), from its first event |
+| `confidence(C, N)`, `quote_start(C, N)` | integer fields |
+| `recorded(C, Time)`, `author(C, Writer)` | the first event's time and writer |
+| `asserted_by(C, Writer)` | every event that asserted it (author and corroborators) |
+| `truth(C, T)` | effective truth (section 4), citing the events that decide it: the claim's first event if nothing changed it; the refutation; or the contest and the ruling or refutation that ended it (plus the first event if the claim won); or the appeal, its reinstatement and the first event |
+| `disputed(C)` | each open contest or appeal involving it |
+| `defeated(C)` | the refutation, or the contest and the event that ended it against the claim |
+| `verdict(V, C, Writer, Result, Method)` | the verdict event `V` |
+| `supersession(S, Old, New, Kind, Writer)`, `evidence(S_or_A, Item)` | the supersession or appeal event |
+| `resolution(D, Outcome, R)` | the dispute or appeal `D` together with the event `R` that ended it (a ruling, a withdrawal, or a refutation of one side) |
+| `appeal(A, C, Writer)` | the appeal event |
+| `episode(E, Writer, Medium)`, `participant(E, Name)` | the episode event |
+| `writer(W, Party, Kind)`, `capability(W, Cap)`, `member(W, Compartment)` | the registration; only writers sharing a compartment with the reader, and only the shared compartments |
+
+Built-in views are plain Datalog over these (`gnomon.VIEWS`):
+`believed(C)` (true and not disputed), `rejected(C)` (false),
+`decision(C)` (a decided claim that is believed), `supported(C)`,
+`challenged(C)`, `asserted_by_party(C, P)`, `refined(Old, New)` (narrowed or
+generalised). They may be used but not redefined.
+
+### Proofs
+
+Every answer has a proof: a finite, acyclic tree of `nodes`. A derived node
+gives the fact, the id of its rule (the rule's text and origin, `view` or
+`line N`, appear once in `rules`), its premises (one per positive literal,
+in order) and the atoms it found absent (one per negation; `_` shown as
+null). A base node gives the fact and the events it was read from, each as
+`event`, `kind` and `hash`.
+
+Absence is judged against the same view: the log as of `as_of`, through the
+reader's compartments. The result's `through` names the last event of that
+view (`event`, `kind`, `hash`, `time`), so a proof stays checkable as the
+log grows: every event that can bear on a visible fact is at or before it.
+The result's `as_of` always states the moment it describes: the one asked
+for, or else the time of `through`. A proof is a claim about that moment, so
+the checker rejects one whose moment includes, after `through`, any event
+bearing on what it cites (a past view relabelled as a later one). Sources
+never give an event's position, and results carry no event count or head
+hash, since either would reveal how many events the reader cannot see.
+
+`gnomon.proofs.check` re-checks proofs without the core: its own parser and
+printer, its own canonical JSON and SHA-256, and the log file read directly.
+For each derived node it confirms the rule is in the program or views, that
+the fact and premises are an instance of it, that every comparison holds and
+the absent atoms are exactly its negations; for each base node, that each
+event is in an unbroken hash chain with that hash, no later than `as_of`,
+and that the events say so: a fact read from one event must be stated by
+it. `truth`, `defeated`, `disputed` and `resolution` it re-derives itself,
+by folding the log up to `through` with the rules of section 4 (which
+contest a ruling or refutation ended, which ruling came last, which disputes
+are still open), and the value and the cited events must match. The one
+thing it cannot confirm from a proof alone is that an absent fact is absent;
+running the query again does.
+
+## 10. Not yet in v0.1
 
 Signatures (writer identity is by registration only), multi-writer merge of
-independently written logs, views beyond the derived state, the query
-language (Datalog), and the MCP server. See the v1 implementation plan.
+independently written logs, arithmetic and aggregation in queries, and the
+MCP server. See the v1 implementation plan.

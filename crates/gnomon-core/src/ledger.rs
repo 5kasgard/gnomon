@@ -182,6 +182,8 @@ pub struct State {
     pub supersessions: BTreeMap<String, SupersessionInfo>,
     pub verdicts: BTreeMap<String, VerdictInfo>,
     pub appeals: BTreeMap<String, AppealInfo>,
+    /// Appeal ids by claim, in log order (an index; not part of the view).
+    pub appeals_by_claim: BTreeMap<String, Vec<String>>,
     pub schema_version: i64,
 }
 
@@ -478,6 +480,7 @@ fn commit(st: &mut State, checked: Checked, seq: usize) {
         }
         Change::Appeal { event, mut info } => {
             info.seq = seq;
+            st.appeals_by_claim.entry(info.claim.clone()).or_default().push(event.clone());
             st.appeals.insert(event, info);
         }
         Change::ResolveAppeal { appeal, event, outcome, party } => {
@@ -504,18 +507,16 @@ fn judge_party(r: &Resolution) -> Option<String> {
 }
 
 fn interested_parties(st: &State, claim: &str) -> Vec<String> {
-    let from_contests = st
-        .supersessions
-        .values()
-        .filter(|sp| sp.is_ruled() && sp.involves(claim))
+    let from_contests = involving(st, claim)
+        .map(|(_, sp)| sp)
+        .filter(|sp| sp.is_ruled())
         .flat_map(|sp| {
             let resolver = sp.resolution.as_ref().and_then(judge_party);
             sp.dispute_parties.iter().cloned().chain(resolver)
         });
-    let from_appeals = st
-        .appeals
-        .values()
-        .filter(|a| a.is_ruled() && a.claim == claim)
+    let from_appeals = appeals_of(st, claim)
+        .map(|(_, a)| a)
+        .filter(|a| a.is_ruled())
         .flat_map(|a| {
             let resolver = a.resolution.as_ref().map(|r| r.party.clone());
             a.appeal_parties.iter().cloned().chain(resolver)
@@ -527,7 +528,7 @@ fn interested_parties(st: &State, claim: &str) -> Vec<String> {
 /// the refuting verdicts cited.
 fn refuter_parties(st: &State, claim: &str) -> Vec<String> {
     let mut out = Vec::new();
-    for sp in st.supersessions.values().filter(|sp| sp.kind == "refuted" && sp.old == claim) {
+    for (_, sp) in involving(st, claim).filter(|(_, sp)| sp.kind == "refuted" && sp.old == claim) {
         out.push(sp.by_party.clone());
         for ev in &sp.evidence {
             if let Some(v) = st.verdicts.get(ev) {
@@ -540,9 +541,13 @@ fn refuter_parties(st: &State, claim: &str) -> Vec<String> {
 
 /// Parties that gave a verdict on `claim` (optionally only of one result).
 fn verdict_parties(st: &State, claim: &str, result: Option<&str>) -> Vec<String> {
-    st.verdicts
-        .values()
-        .filter(|v| v.claim == claim && result.map(|r| v.result == r).unwrap_or(true))
+    // From the claim's own verdict lists, not every verdict in the log.
+    st.claims
+        .get(claim)
+        .into_iter()
+        .flat_map(|c| c.supports.iter().chain(&c.refutes).chain(&c.abstains))
+        .map(|vid| &st.verdicts[vid])
+        .filter(|v| result.map(|r| v.result == r).unwrap_or(true))
         .map(|v| st.writers[&v.writer].party.clone())
         .collect()
 }
@@ -553,7 +558,7 @@ fn verdict_parties(st: &State, claim: &str, result: Option<&str>) -> Vec<String>
 fn opponents(st: &State, claim: &str) -> Vec<String> {
     let mut out = refuter_parties(st, claim);
     out.extend(verdict_parties(st, claim, Some("refutes")));
-    for sp in st.supersessions.values() {
+    for (_, sp) in involving(st, claim) {
         let other = if sp.kind == "contested" && sp.involves(claim) {
             if sp.old == claim { &sp.new } else { &sp.old }
         } else if sp.kind == "refuted" && sp.old == claim {
@@ -574,7 +579,7 @@ fn opponents(st: &State, claim: &str) -> Vec<String> {
 fn argued(st: &State, claim: &str) -> Vec<String> {
     let mut out = refuter_parties(st, claim);
     out.extend(verdict_parties(st, claim, Some("refutes")));
-    for sp in st.supersessions.values().filter(|sp| sp.is_ruled() && sp.involves(claim)) {
+    for (_, sp) in involving(st, claim).filter(|(_, sp)| sp.is_ruled()) {
         if sp.old == claim {
             out.push(sp.by_party.clone());
         }
@@ -582,7 +587,7 @@ fn argued(st: &State, claim: &str) -> Vec<String> {
             out.push(j);
         }
     }
-    for a in st.appeals.values().filter(|a| a.is_ruled() && a.claim == claim) {
+    for (_, a) in appeals_of(st, claim).filter(|(_, a)| a.is_ruled()) {
         if let Some(j) = a.resolution.as_ref().and_then(judge_party) {
             out.push(j);
         }
@@ -601,15 +606,32 @@ fn backstop_exists(st: &State, compartment: &str, core: &[String]) -> bool {
 
 /// Open contest or appeal involving `claim`?
 fn is_disputed(st: &State, claim: &str) -> bool {
-    st.supersessions.values().any(|sp| sp.is_open_dispute() && sp.involves(claim))
-        || st.appeals.values().any(|a| a.is_open() && a.claim == claim)
+    involving(st, claim).any(|(_, sp)| sp.is_open_dispute()) || appeals_of(st, claim).any(|(_, a)| a.is_open())
+}
+
+/// Supersessions involving `claim` (as old or new), from its own lists:
+/// cost proportional to the claim's history, not the whole log.
+fn involving<'a>(st: &'a State, claim: &str) -> impl Iterator<Item = (&'a String, &'a SupersessionInfo)> + 'a {
+    st.claims
+        .get(claim)
+        .into_iter()
+        .flat_map(|c| c.superseded_by.iter().chain(&c.supersedes))
+        .map(move |sid| (sid, &st.supersessions[sid]))
+}
+
+/// Appeals of `claim`, in log order.
+fn appeals_of<'a>(st: &'a State, claim: &str) -> impl Iterator<Item = (&'a String, &'a AppealInfo)> + 'a {
+    st.appeals_by_claim
+        .get(claim)
+        .into_iter()
+        .flatten()
+        .map(move |aid| (aid, &st.appeals[aid]))
 }
 
 /// Seq of the latest reinstatement of `claim` on appeal, if any.
 fn last_reinstatement(st: &State, claim: &str) -> Option<usize> {
-    st.appeals
-        .values()
-        .filter(|a| a.claim == claim)
+    appeals_of(st, claim)
+        .map(|(_, a)| a)
         .filter_map(|a| a.resolution.as_ref())
         .filter(|r| r.outcome == "reinstated")
         .map(|r| r.seq)
@@ -624,25 +646,31 @@ fn is_defeated(st: &State, claim: &str) -> bool {
 /// Seq of the event that currently leaves `claim` defeated, if any: the
 /// latest refutation or lost ruling, unless a later appeal reinstated it.
 fn defeat_seq(st: &State, claim: &str) -> Option<usize> {
-    let mut events: Vec<(usize, bool)> = Vec::new();
-    for sp in st.supersessions.values() {
+    defeat(st, claim).map(|(seq, _)| seq)
+}
+
+/// The defeat and the events that establish it: the refutation, or the
+/// contest and the event that ended it against `claim`.
+fn defeat(st: &State, claim: &str) -> Option<(usize, Vec<String>)> {
+    let mut events: Vec<(usize, Option<Vec<String>>)> = Vec::new();
+    for (sid, sp) in involving(st, claim) {
         if sp.kind == "refuted" && sp.old == claim {
-            events.push((sp.seq, true));
+            events.push((sp.seq, Some(vec![sid.clone()])));
         }
         if sp.is_ruled() && sp.involves(claim) {
             let r = sp.resolution.as_ref().unwrap();
             let lost = (r.outcome == "new" && sp.old == claim) || (r.outcome == "old" && sp.new == claim);
             if lost {
-                events.push((r.seq, true));
+                events.push((r.seq, Some(vec![sid.clone(), r.event.clone()])));
             }
         }
     }
     if let Some(seq) = last_reinstatement(st, claim) {
-        events.push((seq, false));
+        events.push((seq, None));
     }
-    events.sort();
-    match events.last() {
-        Some((seq, true)) => Some(*seq),
+    events.sort_by_key(|(seq, e)| (*seq, e.is_some()));
+    match events.pop() {
+        Some((seq, Some(cause))) => Some((seq, cause)),
         _ => None,
     }
 }
@@ -944,27 +972,19 @@ fn check(
             // stacking further supersessions on either side of it.
             // Evidence-backed refutation of a claim in an open dispute is
             // allowed and ends that dispute; anything else waits.
-            let under_appeal = st
-                .appeals
-                .values()
-                .any(|a| a.is_open() && (a.claim == sp.old || a.claim == sp.new));
+            let under_appeal =
+                appeals_of(st, sp.old).chain(appeals_of(st, sp.new)).any(|(_, a)| a.is_open());
             if under_appeal {
                 return Err(err(
                     "E_OPEN_DISPUTE",
                     "a claim under appeal cannot be superseded until the appeal is decided",
                 ));
             }
-            let open = st.supersessions.values().any(|x| {
-                x.is_open_dispute()
-                    && [&x.old, &x.new]
-                        .iter()
-                        .any(|c| *c == sp.old || *c == sp.new)
-            });
-            let refutes_disputed_old = sp.kind == "refuted"
-                && !st
-                    .supersessions
-                    .values()
-                    .any(|x| x.is_open_dispute() && x.involves(sp.new));
+            let open = involving(st, sp.old)
+                .chain(involving(st, sp.new))
+                .any(|(_, x)| x.is_open_dispute());
+            let refutes_disputed_old =
+                sp.kind == "refuted" && !involving(st, sp.new).any(|(_, x)| x.is_open_dispute());
             if open && !refutes_disputed_old {
                 return Err(err(
                     "E_OPEN_DISPUTE",
@@ -1016,7 +1036,7 @@ fn check(
                 }
                 // A ruling on this pair is final for its parties, and a
                 // withdrawal is final for the party that withdrew.
-                let reargued = st.supersessions.values().any(|x| {
+                let reargued = involving(st, sp.old).map(|(_, x)| x).any(|x| {
                     let same_pair = (x.old == sp.old && x.new == sp.new) || (x.old == sp.new && x.new == sp.old);
                     let withdrew = x.resolution.as_ref().map(|r| r.outcome == "withdrawn").unwrap_or(false)
                         && x.by_party == w.party;
@@ -1067,7 +1087,7 @@ fn check(
                 let mut interested = interested_parties(st, sp.old);
                 // A party to an open contest on the claim cannot win it with
                 // its own verdict.
-                for x in st.supersessions.values().filter(|x| x.is_open_dispute() && x.involves(sp.old)) {
+                for (_, x) in involving(st, sp.old).filter(|(_, x)| x.is_open_dispute()) {
                     interested.extend(x.dispute_parties.iter().cloned());
                 }
                 let reinstated_at = last_reinstatement(st, sp.old);
@@ -1099,17 +1119,13 @@ fn check(
             // (a withdrawn contest may be raised again); other kinds are
             // recorded once.
             let dup = sp.kind != "contested"
-                && st
-                    .supersessions
-                    .values()
-                    .any(|x| x.old == sp.old && x.new == sp.new && x.kind == sp.kind);
+                && involving(st, sp.old).any(|(_, x)| x.old == sp.old && x.new == sp.new && x.kind == sp.kind);
             if dup {
                 return Err(err("E_DUPLICATE", "this supersession is already recorded"));
             }
             let closes: Vec<(String, String)> = if sp.kind == "refuted" {
-                st.supersessions
-                    .iter()
-                    .filter(|(_, x)| x.is_open_dispute() && x.involves(sp.old))
+                involving(st, sp.old)
+                    .filter(|(_, x)| x.is_open_dispute())
                     .map(|(id, x)| {
                         let outcome = if x.old == sp.old { "new" } else { "old" };
                         (id.clone(), outcome.to_string())
@@ -1238,10 +1254,10 @@ fn check(
             let defeated_at = defeat_seq(st, ap.claim).ok_or_else(|| {
                 err("E_APPEAL", "only a refuted or defeated claim can be appealed")
             })?;
-            if st.appeals.values().any(|a| a.claim == ap.claim && a.is_open()) {
+            if appeals_of(st, ap.claim).any(|(_, a)| a.is_open()) {
                 return Err(err("E_OPEN_DISPUTE", "this claim already has an open appeal"));
             }
-            if st.appeals.values().any(|a| a.claim == ap.claim && a.by_party == w.party) {
+            if appeals_of(st, ap.claim).any(|(_, a)| a.by_party == w.party) {
                 return Err(err("E_FINAL", "a party may appeal a claim only once"));
             }
             // An opponent cannot appeal (no sham appeals that block the real
@@ -1347,12 +1363,29 @@ impl ClaimInfo {
     ///   "both" returns both to their asserted truth
     /// * narrowed / generalised: no change (still true within its domain)
     pub fn effective_truth(&self, id: &str, st: &State) -> String {
-        let mut actions: Vec<(usize, String)> = Vec::new();
+        self.truth_and_cause(id, st).0
+    }
+
+    /// Effective truth and the events that decided it, enough to check it
+    /// event by event:
+    /// * nothing changed it: the claim's first event (its asserted truth)
+    /// * refuted: the refutation
+    /// * a contest ended: the contest and the event that ended it (a ruling,
+    ///   or a refutation of the other side), plus the first event if the
+    ///   claim won and so holds its asserted truth
+    /// * reinstated on appeal: the appeal, the ruling, and the first event
+    pub fn truth_and_cause(&self, id: &str, st: &State) -> (String, Vec<String>) {
+        let mut actions: Vec<(usize, String, Vec<String>)> = Vec::new();
+        let won = |cause: Vec<String>| {
+            let mut c = cause;
+            c.push(self.first_event.clone());
+            c
+        };
         for sid in self.superseded_by.iter().chain(&self.supersedes) {
             let sp = &st.supersessions[sid];
             let is_old = sp.old == id;
             if sp.kind == "refuted" && is_old {
-                actions.push((sp.seq, "false".into()));
+                actions.push((sp.seq, "false".into(), vec![sid.clone()]));
             }
             // An open contest changes nothing (it shows as `disputed`); a
             // ruling makes the loser false and returns the winner to its
@@ -1364,23 +1397,29 @@ impl ClaimInfo {
                     "old" => is_old,
                     _ => !is_old,
                 };
-                let t = if wins { self.asserted_truth.clone() } else { "false".into() };
-                actions.push((r.seq, t));
-            }
-        }
-        for a in st.appeals.values().filter(|a| a.claim == id) {
-            if let Some(r) = &a.resolution {
-                if r.outcome == "reinstated" {
-                    actions.push((r.seq, self.asserted_truth.clone()));
+                let cause = vec![sid.clone(), r.event.clone()];
+                if wins {
+                    actions.push((r.seq, self.asserted_truth.clone(), won(cause)));
+                } else {
+                    actions.push((r.seq, "false".into(), cause));
                 }
             }
         }
-        actions.sort_by_key(|(seq, _)| *seq);
+        for (aid, a) in appeals_of(st, id) {
+            if let Some(r) = &a.resolution {
+                if r.outcome == "reinstated" {
+                    actions.push((r.seq, self.asserted_truth.clone(), won(vec![aid.clone(), r.event.clone()])));
+                }
+            }
+        }
+        // Stable: of two actions in one event (a refutation that also ends
+        // a contest), the later-listed wins, as in the original fold.
+        actions.sort_by_key(|(seq, _, _)| *seq);
         actions
             .into_iter()
             .last()
-            .map(|(_, t)| t)
-            .unwrap_or_else(|| self.asserted_truth.clone())
+            .map(|(_, t, e)| (t, e))
+            .unwrap_or_else(|| (self.asserted_truth.clone(), vec![self.first_event.clone()]))
     }
 }
 
@@ -1545,6 +1584,19 @@ impl State {
     /// Is the claim in an open contest or appeal?
     pub fn disputed(&self, id: &str) -> bool {
         is_disputed(self, id)
+    }
+
+    /// The open contests and appeals that make `id` disputed (event ids).
+    pub fn open_disputes(&self, id: &str) -> Vec<String> {
+        let mut out: Vec<String> =
+            involving(self, id).filter(|(_, sp)| sp.is_open_dispute()).map(|(k, _)| k.clone()).collect();
+        out.extend(appeals_of(self, id).filter(|(_, a)| a.is_open()).map(|(k, _)| k.clone()));
+        out
+    }
+
+    /// The events that establish `id` is currently defeated, if it is.
+    pub fn defeated_by(&self, id: &str) -> Option<Vec<String>> {
+        defeat(self, id).map(|(_, cause)| cause)
     }
 
     /// Effective truth of a claim by id.

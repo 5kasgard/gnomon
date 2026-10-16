@@ -8,11 +8,15 @@
 //! * [`schema`]: claim schema v0.1 and body validation
 //! * [`ledger`]: the write gate and derived state
 //! * [`store`]: the log on disk
+//! * [`datalog`]: a small, exact query engine with proofs
+//! * [`query`]: the memory as facts, built-in views, queries
 //! * [`ffi`]: a C ABI used by the Python package (via ctypes)
 
+pub mod datalog;
 pub mod ffi;
 pub mod json;
 pub mod ledger;
+pub mod query;
 pub mod schema;
 pub mod sha256;
 pub mod store;
