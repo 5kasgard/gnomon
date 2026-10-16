@@ -25,6 +25,8 @@ try:
     from mcp.client.stdio import stdio_client
 except ImportError:  # pragma: no cover - the SDK is optional
     ClientSession = None
+    if os.environ.get("GNOMON_REQUIRE_MCP_SDK"):
+        raise  # in the interop CI job, a skip would hide that nothing ran
 
 
 def f(obj, name):
