@@ -277,18 +277,20 @@ BASE_CONFIDENCE = {"asserted": 7000, "decided": 9000, "suggested": 5000, "hypoth
 _ODD = set(f"{chr(0x034f)}{chr(0x115f)}{chr(0x1160)}{chr(0x3164)}{chr(0xffa0)}{chr(0x2800)}{chr(0xfffc)}")
 
 
+def _hidden_char(ch: str) -> bool:
+    """A character that does not show when printed, or a control character
+    (newline and tab aside). Mirrors the core's rule; the core is still the
+    authority and refuses anything it sees."""
+    if ch in "\n\t":
+        return False
+    if unicodedata.category(ch) in ("Cc", "Cf", "Co", "Cs", "Cn", "Zl", "Zp"):
+        return True
+    o = ord(ch)
+    return 0xFE00 <= o <= 0xFE0F or 0xE0100 <= o <= 0xE01EF or ch in _ODD
+
+
 def _hidden(s: str) -> bool:
-    # Mirrors the core's rule closely enough to route such sentences to
-    # residue; the core is still the authority and refuses anything it sees.
-    for ch in s:
-        if ch in "\n\t":
-            continue
-        if unicodedata.category(ch) in ("Cc", "Cf", "Co", "Cs", "Cn", "Zl", "Zp"):
-            return True
-        o = ord(ch)
-        if 0xFE00 <= o <= 0xFE0F or 0xE0100 <= o <= 0xE01EF or ch in _ODD:
-            return True
-    return False
+    return any(_hidden_char(ch) for ch in s)
 
 
 def classify(s: Sentence, speakers: Iterable[str] = ()) -> Candidate | Residue:

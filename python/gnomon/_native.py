@@ -56,6 +56,7 @@ _SIGNATURES = {
     "gn_checkpoint": [ctypes.c_char_p, ctypes.c_int64, ctypes.c_char_p],
     "gn_query": [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p],
     "gn_datalog": [ctypes.c_char_p],
+    "gn_recall": [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p],
     "gn_views": [],
 }
 for _name, _args in _SIGNATURES.items():

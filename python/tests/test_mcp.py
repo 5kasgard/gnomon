@@ -131,6 +131,24 @@ class Modern(Fixture):
         self.assertIn("by view: decision(C)", sc["explanations"][0])
         self.assertIn("proofs checked independently: OK", q["content"][0]["text"])
 
+    def test_recall_finds_where_it_was_said(self):
+        r = self.s.call("record_conversation", {
+            "messages": [{"speaker": "Alex", "text": "Which database did we pick yesterday?"},
+                         {"speaker": "Claude", "text": "We settled on SQLite for the prototype."}],
+            "compartment": "lab", "frame": "chat", "extract": False})
+        self.assertFalse(r["isError"], r)
+        r = self.s.call("recall", {"query": "what database did Alex ask about", "kinds": ["turns"], "context": 1})
+        self.assertFalse(r["isError"], r)
+        hits = r["structuredContent"]["hits"]
+        self.assertEqual(hits[0]["speaker"], "Alex")
+        self.assertEqual(hits[0]["context"][0]["text"], "We settled on SQLite for the prototype.")
+        self.assertEqual(len(hits[0]["dates"]), 1)
+        self.assertIn("Alex: Which database did we pick yesterday?", r["content"][0]["text"])
+        r = self.s.call("recall", {"query": "x", "k": 0})
+        self.assertTrue(r["isError"])
+        r = self.s.call("recall", {"query": "x", "kinds": ["pages"]})
+        self.assertTrue(r["isError"])
+
     def test_record_conversation_extracts_and_leaves_residue(self):
         r = self.s.call("record_conversation", {
             "messages": [{"speaker": "Alex", "text": "Let's use Rust for the core. Maybe Python on top?"},

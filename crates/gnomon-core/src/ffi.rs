@@ -330,6 +330,66 @@ pub unsafe extern "C" fn gn_query(
     })
 }
 
+/// Recall what was said, ranked, as `reader` sees the memory (as of
+/// `as_of`, null = latest). `request` is JSON: {query, k?, kinds?, speaker?,
+/// after?, before?, now?, context?}.
+///
+/// # Safety
+/// Non-null arguments must be valid NUL-terminated strings.
+#[no_mangle]
+pub unsafe extern "C" fn gn_recall(
+    path: *const c_char,
+    as_of: *const c_char,
+    reader: *const c_char,
+    request: *const c_char,
+) -> *mut c_char {
+    guarded(|| {
+        let (path, reader, request) = match (arg(path), arg(reader), arg(request)) {
+            (Ok(p), Ok(r), Ok(q)) => (p, r, q),
+            (Err(e), _, _) | (_, Err(e), _) | (_, _, Err(e)) => return e,
+        };
+        let as_of = if as_of.is_null() {
+            None
+        } else {
+            match arg(as_of) {
+                Ok(t) if crate::schema::is_timestamp(t) => Some(t.to_string()),
+                Ok(_) => return fail("E_TIME_FORMAT", "as_of must be YYYY-MM-DDTHH:MM:SSZ"),
+                Err(e) => return e,
+            }
+        };
+        let req = match json::parse(request) {
+            Ok(v) => match crate::recall::Request::from_json(&v) {
+                Ok(r) => r,
+                Err(e) => return fail(e.code, e.message),
+            },
+            Err(e) => return fail("E_JSON", e.to_string()),
+        };
+        let result = store::with_ledger(Path::new(path), |full| {
+            let comps = match full.state.writers.get(reader) {
+                Some(w) => w.compartments.clone(),
+                None => return fail("E_REF", format!("writer '{reader}' does not exist")),
+            };
+            let view;
+            let ledger = match &as_of {
+                Some(t) => {
+                    view = full.as_of(t);
+                    &view
+                }
+                None => full,
+            };
+            match crate::recall::run(ledger, &comps, &req) {
+                Ok(v) => {
+                    let through = crate::query::view_end(ledger, &comps);
+                    let at = as_of.clone().map(Value::str).or(through.get("time").cloned()).unwrap_or(Value::Null);
+                    ok(vec![("result", v.with("through", through).with("as_of", at))])
+                }
+                Err(e) => fail(e.code, e.message),
+            }
+        });
+        result.unwrap_or_else(store_fail)
+    })
+}
+
 /// The built-in views, as Datalog source, so anyone can read and re-check
 /// exactly what each one means.
 #[no_mangle]

@@ -204,6 +204,27 @@ class Memory:
         in the spec (and in gnomon.VIEWS)."""
         return _unwrap(_native.call("gn_query", self.path, as_of, reader, program))["result"]
 
+    def recall(self, reader: str, query: str, *, k: int = 10, kinds: Optional[Iterable[str]] = None,
+               speaker: Optional[str] = None, after: Optional[str] = None, before: Optional[str] = None,
+               now: Optional[str] = None, context: int = 0, as_of: Optional[str] = None,
+               tuning: Optional[dict] = None) -> dict:
+        """Find what was said, ranked, in plain language: the turns of
+        recorded conversations and documents, and claims, as `reader` sees
+        them. Each hit gives its words, speaker, time, exact position and
+        source event, the terms that matched, and every relative date in it
+        resolved by the calendar ("yesterday" -> 2023-05-07). `now` is the
+        moment of the question, so "last weekend" in it can be resolved too.
+        `tuning` switches ranking techniques on or off for measurement:
+        joins, speaker_prior, propagate (on by default) and prf (off)."""
+        req: dict[str, Any] = {"query": query, "k": k, "context": context}
+        if kinds is not None:
+            req["kinds"] = list(kinds)
+        for key, val in (("speaker", speaker), ("after", after), ("before", before), ("now", now),
+                         ("tuning", tuning)):
+            if val is not None:
+                req[key] = val
+        return _unwrap(_native.call("gn_recall", self.path, as_of, reader, _dumps(req)))["result"]
+
     def checkpoint(self) -> tuple[int, str]:
         r = self.verify()
         return r["count"], r["head"]
