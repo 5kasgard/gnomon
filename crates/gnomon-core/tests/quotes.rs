@@ -277,3 +277,21 @@ fn look_alike_participant_names_are_refused_by_the_gate() {
     }
     assert!(episode(&mut l, 10, TEXT, &["Zo\u{eb}", "\u{410}\u{43b}\u{435}\u{43a}\u{441}"], None).is_ok());
 }
+
+/// Review M4, finding 3: a writer that records a "transcript" itself and
+/// then quotes others from it is still giving its own account of what they
+/// said. The quote is checked against the recording, but the recording is
+/// the writer's party's: such quotes are capped like any attribution.
+#[test]
+fn quoting_others_from_your_own_recording_is_capped() {
+    let mut l = lab();
+    let ep = transcript(&mut l); // recorded by claude-c1 (party anthropic)
+    let q = "Let's use Rust for the core.";
+    let sure = said(&ep, "Alex", q, at(q)).with("confidence", Value::Int(9000));
+    // Same party as the recorder: capped.
+    assert_eq!(code(l.append(draft("claude-c2", 11, "claim", sure.clone()))), "E_ATTRIBUTION");
+    assert_eq!(code(l.append(draft("claude-c1", 12, "claim", sure.clone()))), "E_ATTRIBUTION");
+    assert_eq!(code(l.append(draft("claude-c2", 13, "claim", said(&ep, "Alex", q, at(q))))), "OK"); // 7000
+    // Another party quoting the same recording: the recording is not theirs.
+    assert_eq!(code(l.append(draft("gpt-g1", 14, "claim", sure))), "OK");
+}

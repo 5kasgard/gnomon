@@ -820,6 +820,8 @@ fn check(
             need(w, "write")?;
             let c = schema::claim(body)?;
             need_compartment(w, c.compartment)?;
+            // Did the writer's own party record the episode it quotes?
+            let mut self_recorded = false;
             if let Some(ep) = c.source_episode {
                 let e = st
                     .episodes
@@ -832,6 +834,7 @@ fn check(
                         "a claim cannot cite an episode from another compartment",
                     ));
                 }
+                self_recorded = st.writers.get(&e.writer).map(|x| x.party == w.party).unwrap_or(false);
                 // The quote must be exactly what the episode says at that
                 // position: an extractor cannot put words in anyone's mouth.
                 if let Some((quote, start)) = c.quote {
@@ -869,6 +872,19 @@ fn check(
                     "E_ATTRIBUTION",
                     format!(
                         "a claim about what '{}' said, recorded by someone else without quoting them, cannot carry confidence above {}",
+                        c.speaker,
+                        schema::PARAPHRASE_MAX_CONFIDENCE
+                    ),
+                ));
+            }
+            // A quote is only as good as its recording. Quoting someone else
+            // from an episode the writer's own party recorded is still that
+            // party's account of what was said: the same cap applies.
+            if c.quote.is_some() && self_recorded && !own && c.confidence > schema::PARAPHRASE_MAX_CONFIDENCE {
+                return Err(err(
+                    "E_ATTRIBUTION",
+                    format!(
+                        "quoting '{}' from an episode the writer's own party recorded cannot carry confidence above {}",
                         c.speaker,
                         schema::PARAPHRASE_MAX_CONFIDENCE
                     ),

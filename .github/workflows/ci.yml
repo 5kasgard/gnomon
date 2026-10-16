@@ -30,3 +30,20 @@ jobs:
         run: bash scripts/build.sh
       - name: Python tests (standard library only)
         run: python -m unittest discover -s python/tests -v
+
+  # The MCP server against the official MCP Python SDK, as a real host uses
+  # it. Gnomon has no dependencies; only this job installs the SDK.
+  mcp-interop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Build library into the Python package
+        run: bash scripts/build.sh
+      - name: Install the official MCP SDK (this job only)
+        run: python -m pip install mcp
+      - name: Official client talks to the Gnomon MCP server
+        run: python -m unittest python/tests/test_mcp_sdk.py -v

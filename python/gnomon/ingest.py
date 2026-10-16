@@ -214,7 +214,11 @@ HYPOTHETICAL = [
 ]
 PROMISE = [
     ("promise.will_do", _rx(r"i(?:'ll| will) (?:send|do|build|write|fix|finish|check|make|get|handle|look into|follow up)")),
+    # Any first-person commitment about the future: a promise, not a fact.
+    ("promise.commit", _rx(r"(?:i|we)(?:'ll| will| shall|'m going to| am going to|'re going to| are going to| promise)")),
 ]
+# Other statements about the future are forecasts: not true or false yet.
+FUTURE = _rx(r"will|won't|shall|going to|gonna|'ll|tomorrow|next (?:week|month|year)")
 # Confidence cues for plain assertions.
 WEAK = _rx(r"i think|i believe|probably|likely|i guess|seems|apparently|not sure|i suspect|i'm not sure")
 STRONG = _rx(r"definitely|certainly|always|never|without doubt|for sure|guaranteed")
@@ -341,6 +345,8 @@ def classify(s: Sentence, speakers: Iterable[str] = ()) -> Candidate | Residue:
     if promise:
         return Candidate(s, "promise", "asserted", "unknown", BASE_CONFIDENCE["asserted"], promise[0])
 
+    if FUTURE.search(t):
+        return Candidate(s, "describe", "asserted", "unknown", BASE_CONFIDENCE["asserted"], "asserted.forecast")
     if weak and strong:
         return Residue(s, "mixed signals: weak and strong confidence cues")
     if weak:
@@ -466,12 +472,18 @@ def ingest(memory, writer: str, episode_id: str, *, frame: str, compartment: str
 
     state = memory.state()["state"]
     me = state["writers"].get(writer)
+    my_party = me["party"] if me else None
     visible = memory.state(compartments=me["compartments"] if me else [])["state"]
     ep = visible["episodes"].get(episode_id)
     if ep is None:
         raise GateError("E_REF", f"episode '{episode_id}' does not exist or is not accessible")
     body = ep["body"]
     content, participants = body["content"], list(body.get("participants", []))
+    # If the writer's own party recorded this episode, its quotes of anyone
+    # else are that party's account of what was said: capped at 7000, as
+    # the core requires.
+    recorder = state["writers"].get(ep["writer"], {})
+    self_recorded = my_party is not None and recorder.get("party") == my_party
     _check_names(participants)  # look-alike names: refuse rather than attribute
     report = Report(episode_id)
     if body.get("turns"):
@@ -509,6 +521,9 @@ def ingest(memory, writer: str, episode_id: str, *, frame: str, compartment: str
         residue = still
     report.residue = residue
 
+    def _own(speaker: str) -> bool:
+        return speaker.lower() in (writer.lower(), (my_party or "").lower())
+
     for c, by_judge in judged:
         s = c.sentence
         body = claim(
@@ -518,7 +533,7 @@ def ingest(memory, writer: str, episode_id: str, *, frame: str, compartment: str
             compartment=compartment,
             stance=c.stance,
             truth=c.truth,
-            confidence=min(c.confidence, 7000) if by_judge else c.confidence,
+            confidence=min(c.confidence, 7000) if by_judge or (self_recorded and not _own(s.speaker)) else c.confidence,
             origin="inferred" if by_judge else "direct",
             statement_kind=c.statement_kind,
             source_episode=episode_id,
