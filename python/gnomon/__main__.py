@@ -1,11 +1,11 @@
 """Command line: set up a memory, register writers, verify, query.
 
-    python -m gnomon init     --log memory.jsonl --owner alex --compartments lab,private
-    python -m gnomon register --log memory.jsonl --by alex --writer claude-c1 \\
+    python -m gnomon init     --log memory.jsonl --owner john --compartments lab,private
+    python -m gnomon register --log memory.jsonl --by john --writer claude-c1 \\
                               --party anthropic --kind model --model claude-opus-5-5 \\
                               --capabilities write,verify --compartments lab
     python -m gnomon verify   --log memory.jsonl
-    python -m gnomon query    --log memory.jsonl --reader alex "?- decision(C), statement(C, S)."
+    python -m gnomon query    --log memory.jsonl --reader john "?- decision(C), statement(C, S)."
 
 Every command goes through the core's write gate, like everything else.
 """
@@ -32,17 +32,17 @@ def main(argv=None) -> int:
     i.add_argument("--log", required=True)
     i.add_argument("--owner", required=True, help="the owner's writer id (also their party)")
     i.add_argument("--compartments", required=True, help="comma-separated, e.g. lab,private")
-    i.add_argument("--name", help="how you are named in records, e.g. 'Alex Duff'")
+    i.add_argument("--name", help="how you are named in records, e.g. 'John Doe'")
 
     r = sub.add_parser("register", help="register a writer (by an owner)")
     r.add_argument("--log", required=True)
     r.add_argument("--by", required=True, help="an owner who registers it")
     r.add_argument("--writer", required=True)
-    r.add_argument("--party", required=True, help="who answers for it (e.g. anthropic, openai, alex)")
+    r.add_argument("--party", required=True, help="who answers for it (e.g. anthropic, openai, john)")
     r.add_argument("--kind", required=True, choices=["human", "model", "tool"])
     r.add_argument("--capabilities", required=True, help="comma-separated: write, verify, govern, owner")
     r.add_argument("--compartments", required=True, help="comma-separated")
-    r.add_argument("--name", help="how to address it, e.g. 'Claude' or 'Alex Duff'")
+    r.add_argument("--name", help="how to address it, e.g. 'Claude' or 'John Doe'")
     r.add_argument("--model", help="models: the model it runs, as its runtime reports it (e.g. claude-opus-5-5)")
     r.add_argument("--operator", help="models and tools: the human it acts for (default: --by)")
     r.add_argument("--surface", help="where it runs, e.g. claude-code, claude-app, api")

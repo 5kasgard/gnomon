@@ -138,7 +138,7 @@ TOOLS: list[dict] = [
                    "registered name or writer id (see `whoami`). It is bound to your writer, so your own words "
                    "are recorded as yours."},
             "operator_name": {"type": "string", "description": "The speaker name used for the person you act "
-                              "for (e.g. \"Alex\"). It is bound to them, as your account of who they are."},
+                              "for (e.g. \"John\"). It is bound to them, as your account of who they are."},
         }, ["messages", "compartment", "frame"]),
         "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False,
                         "openWorldHint": False},

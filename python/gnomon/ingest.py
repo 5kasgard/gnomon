@@ -63,7 +63,7 @@ class Sentence:
 
 # A speaker label at the start of a line: optional "[10:31]" stamp, optional
 # markdown bold, the name, a colon. Only names in the participant list count,
-# so quoted text ("Alex: ..." inside Claude's turn is still possible, see
+# so quoted text ("John: ..." inside Claude's turn is still possible, see
 # below) or labels like "Step 1:" never become speakers.
 _LABEL = re.compile(r"^[ \t]*(?:\[[^\]\n]{1,24}\][ \t]*)?(?:\*\*|__)?(?P<name>[^\n:*_]{1,40}?)(?:\*\*|__)?[ \t]*:(?:\*\*|__)?(?:[ \t]+|$)")
 
@@ -424,8 +424,8 @@ def record_messages(memory, writer: str, messages: Iterable[tuple[str, str]], *,
     Prefer this whenever the source already says who sent each message (chat
     exports, APIs): the turns come from the source, so nothing about who said
     what is parsed or guessed. In a plain-text transcript, a line such as
-    "Alex: ..." quoted inside someone else's message is indistinguishable
-    from Alex speaking.
+    "John: ..." quoted inside someone else's message is indistinguishable
+    from John speaking.
 
     `bindings` says which registered writer each name refers to ({"Claude":
     "claude-c1"}); without one, a name is only a name.

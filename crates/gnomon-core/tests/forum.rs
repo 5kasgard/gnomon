@@ -23,7 +23,7 @@ fn question(text: &str) -> Value {
 fn answers_critiques_and_replies() {
     let mut l = lab();
     let q = question("Which database should the prototype use?");
-    l.append(draft("alex", 10, "claim", q.clone())).unwrap();
+    l.append(draft("john", 10, "claim", q.clone())).unwrap();
     let qid = claim_id(&q);
     let a = claim_body("SQLite: one file, no server.", "suggested", "unknown").with("about", about(&[(&qid, "answers")]));
     assert_eq!(code(l.append(draft("claude-c1", 11, "claim", a.clone()))), "OK");
@@ -67,7 +67,7 @@ fn references_are_checked() {
 fn threads_stay_in_their_compartment() {
     let mut l = lab();
     let secret = claim_body("The supplier is Acme.", "decided", "true").with("compartment", Value::str("private"));
-    l.append(draft("alex", 10, "claim", secret.clone())).unwrap();
+    l.append(draft("john", 10, "claim", secret.clone())).unwrap();
     let sid = claim_id(&secret);
     // gpt cannot see it: refused exactly as if it did not exist.
     let probe = claim_body("Interesting.", "asserted", "true").with("about", about(&[(&sid, "replies")]));
@@ -76,7 +76,7 @@ fn threads_stay_in_their_compartment() {
     let a = l.append(draft("gpt-g1", 11, "claim", probe)).unwrap_err();
     let b = l.append(draft("gpt-g1", 11, "claim", missing)).unwrap_err();
     assert_eq!(a.code, b.code);
-    // alex sees both compartments, but a thread does not cross them.
+    // john sees both compartments, but a thread does not cross them.
     let cross = claim_body("Noted.", "asserted", "true").with("about", about(&[(&sid, "replies")]));
-    assert_eq!(code(l.append(draft("alex", 12, "claim", cross))), "E_REF");
+    assert_eq!(code(l.append(draft("john", 12, "claim", cross))), "E_REF");
 }
