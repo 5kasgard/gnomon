@@ -491,6 +491,13 @@ def _event_says(fact: list, ev: dict) -> bool:
     if rel == "writer":
         w, party, k = args
         return kind == "register" and body.get("writer") == w and body.get("party") == party and body.get("kind") == k
+    if rel == "bound":
+        e, label, w = args
+        return kind == "episode" and eid == e and body.get("bindings", {}).get(label) == w
+    if rel == "identity":
+        w, key, val = args
+        return kind == "register" and body.get("writer") == w \
+            and key in ("name", "model", "operator", "surface", "session") and body.get(key) == val
     if rel == "capability":
         return kind == "register" and body.get("writer") == args[0] and args[1] in body.get("capabilities", [])
     if rel == "member":
@@ -615,6 +622,72 @@ class _Disputes:
 
 
 _GROUP = {"truth", "defeated", "resolution", "disputed"}
+_IDENTITY = {"group", "instance_of", "speaks_as"}
+
+
+class _Identity:
+    """Who is who, worked out from the log alone (as the core does, section
+    2a): each writer's registration and parent, and who each claim's speaker
+    is, settled when the claim was first recorded."""
+
+    def __init__(self, events: list[dict]):
+        self.reg: dict[str, dict] = {}        # writer -> its register event
+        self.parent: dict[str, str] = {}      # instance -> the writer that started it
+        self.speaker: dict[str, tuple] = {}   # claim id -> (writer, {cited event ids})
+        episodes: dict[str, dict] = {}
+        for ev in events:
+            kind, b = ev["kind"], ev["body"]
+            if kind == "register":
+                w = b.get("writer")
+                if w in self.reg:
+                    continue
+                by = self.reg.get(ev["writer"])
+                if by is not None and "owner" not in by["body"].get("capabilities", []):
+                    self.parent[w] = ev["writer"]
+                self.reg[w] = ev
+            elif kind == "episode":
+                episodes[ev["event_id"]] = ev
+            elif kind == "claim":
+                cid = _claim_id(b)
+                if cid in self.speaker:
+                    continue
+                sp, src = b.get("speaker"), b.get("source_episode")
+                who = None
+                if src is not None:
+                    ep = episodes.get(src)
+                    if ep is not None and sp in ep["body"].get("bindings", {}):
+                        who = (ep["body"]["bindings"][sp], {ev["event_id"], src})
+                elif sp in self.reg:
+                    who = (sp, {ev["event_id"], self.reg[sp]["event_id"]})
+                else:
+                    author = self.reg.get(ev["writer"])
+                    if author is not None and author["body"].get("name") == sp:
+                        who = (ev["writer"], {ev["event_id"], author["event_id"]})
+                self.speaker[cid] = who
+
+    def group(self, w: str) -> tuple[str, set]:
+        cited = {self.reg[w]["event_id"]}
+        while w in self.parent:
+            w = self.parent[w]
+            cited.add(self.reg[w]["event_id"])
+        b = self.reg[w]["body"]
+        k, m = b.get("kind"), b.get("model")
+        g = f"{k}:{m.lower()}" if k in ("model", "tool") and m is not None else f"{k}:{w}"
+        return g, cited
+
+    def establishes(self, fact: list, cited: set) -> bool:
+        rel, args = fact[0], fact[1:]
+        if rel == "group":
+            w, g = args
+            return w in self.reg and self.group(w) == (g, cited)
+        if rel == "instance_of":
+            w, p = args
+            return self.parent.get(w) == p and cited == {self.reg[w]["event_id"], self.reg[p]["event_id"]}
+        if rel == "speaks_as":
+            c, w = args
+            who = self.speaker.get(c)
+            return who is not None and who[0] == w and who[1] == cited
+        return False
 
 
 def _visible(events: list[dict], compartments: set) -> list[bool]:
@@ -732,6 +805,7 @@ def check(result: dict, program: str, views: str = "", log: Optional[str | Path]
         hidden = set()
     events = {ev["event_id"]: ev for ev in ordered if ev["event_id"] not in hidden}
     disputes: Optional[_Disputes] = None
+    identity: Optional[_Identity] = None
 
     nodes = result.get("nodes", {})
     table = result.get("rules", {})
@@ -761,10 +835,15 @@ def check(result: dict, program: str, views: str = "", log: Optional[str | Path]
                     problems.append(f"{nid}: cited event {s.get('event')} is not in the log with that hash")
                 elif as_of is not None and ev["record_time"] > as_of:
                     problems.append(f"{nid}: cited event {s.get('event')} is later than as_of")
-                elif fact[0] not in _GROUP and not _event_says(fact, ev):
+                elif fact[0] not in _GROUP | _IDENTITY and not _event_says(fact, ev):
                     problems.append(f"{nid}: event {s.get('event')} does not state {fact}")
                 else:
                     cited.append(ev)
+            if fact[0] in _IDENTITY and cited and len(cited) == len(sources):
+                if identity is None:
+                    identity = _Identity(ordered)
+                if not identity.establishes(fact, {ev["event_id"] for ev in cited}):
+                    problems.append(f"{nid}: the log does not establish {fact} from {[s.get('event') for s in sources]}")
             if fact[0] in _GROUP and cited and len(cited) == len(sources):
                 if disputes is None:
                     disputes = _Disputes(ordered)

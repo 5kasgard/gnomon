@@ -25,7 +25,22 @@ pub fn draft(writer: &str, minute: u32, kind: &str, body: Value) -> Draft {
     }
 }
 
+/// Models and tools act for alex; each model instance runs its own model
+/// (by its writer id) unless a test says otherwise.
 pub fn register_body(writer: &str, party: &str, kind: &str, caps: &[&str], comps: &[&str]) -> Value {
+    let mut v = register_plain(writer, party, kind, caps, comps);
+    if kind != "human" {
+        if let Value::Object(o) = &mut v {
+            o.push(("operator".to_string(), Value::str("alex")));
+            if kind == "model" {
+                o.push(("model".to_string(), Value::str(writer)));
+            }
+        }
+    }
+    v
+}
+
+pub fn register_plain(writer: &str, party: &str, kind: &str, caps: &[&str], comps: &[&str]) -> Value {
     Value::obj(vec![
         ("writer", Value::str(writer)),
         ("party", Value::str(party)),
@@ -50,7 +65,7 @@ pub fn lab() -> Ledger {
         "alex",
         0,
         "register",
-        register_body("alex", "alex", "human", &["owner"], &["lab", "private"]),
+        register_body("alex", "alex", "human", &["owner"], &["lab", "private"]).with("schema_version", Value::Int(2)),
     ))
     .unwrap();
     for (i, (w, p)) in [
