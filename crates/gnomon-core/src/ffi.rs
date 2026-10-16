@@ -268,6 +268,99 @@ pub unsafe extern "C" fn gn_state(
     })
 }
 
+/// Answer a Datalog query over the memory as `reader` sees it: only the
+/// reader's compartments, as of `as_of` (null = latest).
+///
+/// # Safety
+/// Non-null arguments must be valid NUL-terminated strings.
+#[no_mangle]
+pub unsafe extern "C" fn gn_query(
+    path: *const c_char,
+    as_of: *const c_char,
+    reader: *const c_char,
+    program: *const c_char,
+) -> *mut c_char {
+    guarded(|| {
+        let (path, reader, program) = match (arg(path), arg(reader), arg(program)) {
+            (Ok(p), Ok(r), Ok(q)) => (p, r, q),
+            (Err(e), _, _) | (_, Err(e), _) | (_, _, Err(e)) => return e,
+        };
+        let as_of = if as_of.is_null() {
+            None
+        } else {
+            match arg(as_of) {
+                Ok(t) if crate::schema::is_timestamp(t) => Some(t.to_string()),
+                Ok(_) => return fail("E_TIME_FORMAT", "as_of must be YYYY-MM-DDTHH:MM:SSZ"),
+                Err(e) => return e,
+            }
+        };
+        let result = store::with_ledger(Path::new(path), |full| {
+            // The reader's current compartments decide what it may see, at
+            // any moment it asks about.
+            let comps = match full.state.writers.get(reader) {
+                Some(w) => w.compartments.clone(),
+                None => return fail("E_REF", format!("writer '{reader}' does not exist")),
+            };
+            let view;
+            let ledger = match &as_of {
+                Some(t) => {
+                    view = full.as_of(t);
+                    &view
+                }
+                None => full,
+            };
+            match crate::query::run(ledger, &comps, program, crate::datalog::Limits::default()) {
+                Ok(v) => {
+                    // The moment the result describes: the one asked for, or
+                    // else the time of the last event in the reader's view.
+                    let view_time = v.get("through").and_then(|t| t.get("time")).cloned();
+                    let at = as_of.clone().map(Value::str).or(view_time).unwrap_or(Value::Null);
+                    // Whose view this is, so a checker can tell which events
+                    // the reader could see (the reader's own compartments).
+                    let view = Value::obj(vec![
+                        ("reader", Value::str(reader)),
+                        ("compartments", Value::Array(comps.iter().map(|c| Value::str(c.clone())).collect())),
+                    ]);
+                    ok(vec![("result", v.with("as_of", at).with("view", view))])
+                }
+                Err(e) => fail(e.code, e.message),
+            }
+        });
+        result.unwrap_or_else(store_fail)
+    })
+}
+
+/// The built-in views, as Datalog source, so anyone can read and re-check
+/// exactly what each one means.
+#[no_mangle]
+pub extern "C" fn gn_views() -> *mut c_char {
+    guarded(|| {
+        let schema = crate::query::schema()
+            .into_iter()
+            .map(|(n, a)| Value::Array(vec![Value::str(n), Value::Int(a as i64)]))
+            .collect();
+        ok(vec![("views", Value::str(crate::query::VIEWS)), ("schema", Value::Array(schema))])
+    })
+}
+
+/// Run a self-contained Datalog program (facts written as clauses).
+///
+/// # Safety
+/// `program` must be a valid NUL-terminated string.
+#[no_mangle]
+pub unsafe extern "C" fn gn_datalog(program: *const c_char) -> *mut c_char {
+    guarded(|| {
+        let program = match arg(program) {
+            Ok(p) => p,
+            Err(e) => return e,
+        };
+        match crate::datalog::run_program(program, crate::datalog::Limits::default()) {
+            Ok(v) => ok(vec![("result", v)]),
+            Err(e) => fail(e.code, e.message),
+        }
+    })
+}
+
 /// Check the log still contains the checkpoint `count`/`head`.
 ///
 /// # Safety
