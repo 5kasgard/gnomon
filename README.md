@@ -54,6 +54,15 @@ happens. This repository is the first milestone: **the record itself.**
   for current and older MCP clients) gives a model tools to remember,
   record conversations, query with checked proofs, and verify others'
   claims, always as one writer fixed by whoever configured it.
+- **Recall without a model** (M5): ranked search over everything said, in
+  plain words: BM25 with stemming, speaker awareness, answers found through
+  their questions, and relative dates ("last Friday") resolved by the
+  calendar against when they were said. Every hit carries its source event
+  and hash. On the LoCoMo benchmark's held-out conversations it finds the
+  evidence for a question in its top 5 more often than DRAGON, the trained
+  neural retriever reported in the LoCoMo paper (63.9% vs 58.8%; top 10:
+  71.8% vs 67.5%), in under 20 ms per question on one core. Method,
+  caveats and full numbers are in the [spec](spec/claim-protocol-v0.1.md#11-recall-m5).
 - **Native checkers as verifiers:** arithmetic is checked with exact
   fractions and dates against the real calendar. Checkers are their own
   parties, so their verdicts pass through the same rules as anyone else's.
@@ -75,6 +84,13 @@ that re-derives disputes from the log itself.
 The MCP server (M4) had its own security review (10 findings, now tests in
 `python/tests/test_mcp.py`), is fuzzed with thousands of malformed messages,
 and is exercised in CI by the official MCP Python SDK as a real client.
+
+Recall (M5) was tuned on half of LoCoMo and measured on the other half,
+which was not looked at while choosing anything; a technique that did not
+help there (pseudo-relevance feedback) is off by default. Its review found
+7 issues (among them a stemmer that could be made slow, and neighbours
+counted across a filter), each now a test in `tests/recall.rs` or
+`python/tests/test_recall.py`.
 
 ## Build and test
 
@@ -113,6 +129,10 @@ from gnomon import proofs
 r = m.query("alex", "?- decision(C), statement(C, S).")
 print(proofs.explain(r))        # the rules used, down to log events
 print(proofs.check(r, "?- decision(C), statement(C, S).", gnomon.VIEWS, "memory.jsonl"))  # [] = checks out
+
+# Where was it said?
+for h in m.recall("alex", "what did we decide about the core language?", k=5)["hits"]:
+    print(h["time"], h["speaker"], h["text"], h["source"]["hash"][:12])
 ```
 
 ## Use from any AI model (MCP)
@@ -139,21 +159,22 @@ For a host configured with JSON (e.g. Claude Desktop):
   "env": {"PYTHONPATH": "/path/to/gnomon/python"}}}}
 ```
 
-The model can then remember, query ("which decisions still stand?") and
-explain answers, but only as `claude-c1` and only in its compartments.
+The model can then remember, recall ("where did we discuss the budget?"),
+query ("which decisions still stand?") and explain answers, but only as `claude-c1` and only in its compartments.
 `python -m gnomon query --log ~/memory.jsonl --reader alex "?- decision(C), statement(C, S)."`
 shows you the same answers with their proofs.
 
 ## Layout
 
 ```
-crates/gnomon-core/       Rust core: json, sha256, schema, ledger, store, ffi
+crates/gnomon-core/       Rust core: json, sha256, schema, ledger, store, datalog, query, recall, ffi
   tests/incidents.rs      past failures from earlier projects, as tests
   tests/log.rs            rebuild, tamper, torn write, checkpoint, as-of
   tests/appeals.rs        dispute flags and the three ways back
   tests/review1-6.rs      every confirmed finding from independent review
   tests/vectors.rs        shared vectors every implementation must match
   tests/query.rs          the query engine, views and proofs
+  tests/recall.rs         stemmer, calendar and recall requests
 python/gnomon/            Python package (ctypes binding)
   ingest.py               exact parsing and rule-based extraction
   checkers.py             arithmetic and calendar verifiers
@@ -161,6 +182,7 @@ python/gnomon/            Python package (ctypes binding)
   mcp.py                  MCP server (stdio, both protocol eras)
   __main__.py             command line: init, register, verify, query
 python/tests/             oracle, end-to-end and multi-process tests
+bench/locomo.py           recall measured on LoCoMo (dataset not included)
 spec/                     claim protocol v0.1
 tests/vectors/            shared canonical-JSON vectors
 scripts/                  build and vector generation
@@ -168,9 +190,11 @@ scripts/                  build and vector generation
 
 ## Status and what's next
 
-Milestones M0–M4 of the v1 plan: the record, ingestion, queries with
-proofs, and an MCP server so any model can use it. Next is a benchmark
-against the best existing memory systems. Open design
+Milestones M0–M5 of the v1 plan: the record, ingestion, queries with
+proofs, an MCP server so any model can use it, and recall measured against
+a published benchmark. Next: end-to-end question answering on LoCoMo and
+LongMemEval, and benchmarks for what those leave out (lineage, correction,
+poisoning, isolation). Open design
 questions are listed in the [spec](spec/claim-protocol-v0.1.md).
 
 ## Licence

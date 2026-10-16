@@ -124,40 +124,8 @@ impl<'a> Builder<'a> {
         self.visible.iter().any(|c| c == compartment)
     }
 
-    /// Can the reader see this event? Its compartment decides: a claim's,
-    /// an episode's, a verdict's claim's, a dispute's, an appeal's; a
-    /// registration is visible if the writer shares a compartment with the
-    /// reader; a schema change belongs to everyone.
-    fn event_visible(&self, e: &Value) -> bool {
-        let st = &self.ledger.state;
-        let id = e.get("event_id").and_then(|v| v.as_str()).unwrap_or("");
-        let body = e.get("body");
-        let field = |k: &str| body.and_then(|b| b.get(k)).and_then(|v| v.as_str()).unwrap_or("");
-        let claim_seen = |c: &str| st.claims.get(c).map(|c| self.sees(&c.compartment)).unwrap_or(false);
-        match e.get("kind").and_then(|v| v.as_str()).unwrap_or("") {
-            "claim" => body.map(|b| claim_seen(&claim_id(b))).unwrap_or(false),
-            "episode" => st.episodes.get(id).map(|x| self.sees(&x.compartment)).unwrap_or(false),
-            "verdict" => st.verdicts.get(id).map(|v| claim_seen(&v.claim)).unwrap_or(false),
-            "supersede" => st.supersessions.get(id).map(|x| self.sees(&x.compartment)).unwrap_or(false),
-            "appeal" => st.appeals.get(id).map(|x| self.sees(&x.compartment)).unwrap_or(false),
-            "resolve" => {
-                let d = field("dispute");
-                st.supersessions.get(d).map(|x| self.sees(&x.compartment)).unwrap_or(false)
-                    || st.appeals.get(d).map(|x| self.sees(&x.compartment)).unwrap_or(false)
-            }
-            "register" => st
-                .writers
-                .get(field("writer"))
-                .map(|w| w.compartments.iter().any(|c| self.sees(c)))
-                .unwrap_or(false),
-            _ => true,
-        }
-    }
-
-    /// The last event the reader can see: where its view of the log ends.
-    /// Every event that can bear on a visible fact is at or before it.
     fn last_visible(&self) -> Option<usize> {
-        (0..self.ledger.events.len()).rev().find(|&i| self.event_visible(&self.ledger.events[i]))
+        last_visible(self.ledger, self.visible)
     }
 
     fn event_ref(&self, seq: usize) -> Value {
@@ -359,4 +327,57 @@ impl<'a> Builder<'a> {
         }
         Ok(())
     }
+}
+
+/// Can the reader see this event? Its compartment decides: a claim's,
+/// an episode's, a verdict's claim's, a dispute's, an appeal's; a
+/// registration is visible if the writer shares a compartment with the
+/// reader; a schema change belongs to everyone.
+pub fn event_visible(ledger: &Ledger, visible: &[String], e: &Value) -> bool {
+    let st = &ledger.state;
+    let sees = |c: &str| visible.iter().any(|x| x == c);
+    let id = e.get("event_id").and_then(|v| v.as_str()).unwrap_or("");
+    let body = e.get("body");
+    let field = |k: &str| body.and_then(|b| b.get(k)).and_then(|v| v.as_str()).unwrap_or("");
+    let claim_seen = |c: &str| st.claims.get(c).map(|c| sees(&c.compartment)).unwrap_or(false);
+    match e.get("kind").and_then(|v| v.as_str()).unwrap_or("") {
+        "claim" => body.map(|b| claim_seen(&claim_id(b))).unwrap_or(false),
+        "episode" => st.episodes.get(id).map(|x| sees(&x.compartment)).unwrap_or(false),
+        "verdict" => st.verdicts.get(id).map(|v| claim_seen(&v.claim)).unwrap_or(false),
+        "supersede" => st.supersessions.get(id).map(|x| sees(&x.compartment)).unwrap_or(false),
+        "appeal" => st.appeals.get(id).map(|x| sees(&x.compartment)).unwrap_or(false),
+        "resolve" => {
+            let d = field("dispute");
+            st.supersessions.get(d).map(|x| sees(&x.compartment)).unwrap_or(false)
+                || st.appeals.get(d).map(|x| sees(&x.compartment)).unwrap_or(false)
+        }
+        "register" => st
+            .writers
+            .get(field("writer"))
+            .map(|w| w.compartments.iter().any(|c| sees(c)))
+            .unwrap_or(false),
+        _ => true,
+    }
+}
+
+/// The last event the reader can see: where its view of the log ends.
+/// Every event that can bear on a visible fact is at or before it.
+pub fn last_visible(ledger: &Ledger, visible: &[String]) -> Option<usize> {
+(0..ledger.events.len()).rev().find(|&i| event_visible(ledger, visible, &ledger.events[i]))
+}
+
+/// Where the reader's view ends, as an event reference with its time.
+pub fn view_end(ledger: &Ledger, visible: &[String]) -> Value {
+match last_visible(ledger, visible) {
+    None => Value::Null,
+    Some(seq) => {
+        let e = &ledger.events[seq];
+        Value::obj(vec![
+            ("event", e.get("event_id").cloned().unwrap_or(Value::Null)),
+            ("kind", e.get("kind").cloned().unwrap_or(Value::Null)),
+            ("hash", e.get("hash").cloned().unwrap_or(Value::Null)),
+            ("time", e.get("record_time").cloned().unwrap_or(Value::Null)),
+        ])
+    }
+}
 }
