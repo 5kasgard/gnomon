@@ -108,6 +108,8 @@ pub struct ClaimInfo {
     /// State::speaker_of); None if the speaker is only a name.
     pub speaker_is: Option<String>,
     pub first_event: String,
+    /// Position of its first event in the log.
+    pub seq: usize,
     pub record_time: String,
     pub corroborated_by: Vec<String>,
     /// Parties of the author and every corroborator: none may verify it.
@@ -180,6 +182,16 @@ pub struct VerdictInfo {
 }
 
 #[derive(Clone, Debug)]
+pub struct HandoffInfo {
+    pub seq: usize,
+    pub compartment: String,
+    pub frame: String,
+    pub writer: String,
+    pub record_time: String,
+    pub body: Value,
+}
+
+#[derive(Clone, Debug)]
 pub struct AppealInfo {
     pub claim: String,
     pub compartment: String,
@@ -215,6 +227,7 @@ pub struct State {
     pub supersessions: BTreeMap<String, SupersessionInfo>,
     pub verdicts: BTreeMap<String, VerdictInfo>,
     pub appeals: BTreeMap<String, AppealInfo>,
+    pub handoffs: BTreeMap<String, HandoffInfo>,
     /// Appeal ids by claim, in log order (an index; not part of the view).
     pub appeals_by_claim: BTreeMap<String, Vec<String>>,
     pub schema_version: i64,
@@ -353,6 +366,7 @@ pub enum Change {
     Supersede { event: String, info: SupersessionInfo, closes: Vec<(String, String)> },
     Resolve { supersession: String, event: String, outcome: String, party: String },
     Appeal { event: String, info: AppealInfo },
+    Handoff { event: String, info: HandoffInfo },
     ResolveAppeal { appeal: String, event: String, outcome: String, party: String },
     SchemaVersion(i64),
 }
@@ -472,7 +486,8 @@ fn commit(st: &mut State, checked: Checked, seq: usize) {
         Change::Episode { id, info } => {
             st.episodes.insert(id, info);
         }
-        Change::NewClaim { id, info } => {
+        Change::NewClaim { id, mut info } => {
+            info.seq = seq;
             st.claims.insert(id, info);
         }
         Change::Corroborate { id, writer, party } => {
@@ -511,6 +526,10 @@ fn commit(st: &mut State, checked: Checked, seq: usize) {
         Change::Resolve { supersession, event, outcome, party } => {
             st.supersessions.get_mut(&supersession).expect("checked").resolution =
                 Some(Resolution { event, outcome, party, seq, by_refutation: false });
+        }
+        Change::Handoff { event, mut info } => {
+            info.seq = seq;
+            st.handoffs.insert(event, info);
         }
         Change::Appeal { event, mut info } => {
             info.seq = seq;
@@ -938,6 +957,11 @@ fn check(
             need(w, "write")?;
             let c = schema::claim(body)?;
             need_compartment(w, c.compartment)?;
+            if st.schema_version >= 2 {
+                if let Some(fr) = body.get("frame").and_then(|v| v.as_str()) {
+                    schema::one_line(fr, "claim: 'frame'")?;
+                }
+            }
             // References point at claims the writer can see, in the same
             // compartment (a thread never crosses one); "answers" points at
             // a question. Missing and elsewhere are refused alike.
@@ -1087,6 +1111,7 @@ fn check(
                         author: writer.to_string(),
                         speaker_is,
                         first_event: event_id.to_string(),
+                        seq: 0,
                         record_time: record_time.to_string(),
                         corroborated_by: Vec::new(),
                         parties: vec![w.party.clone()],
@@ -1503,6 +1528,46 @@ fn check(
             })
         }
 
+        "handoff" => {
+            need(w, "write")?;
+            let c = schema::handoff(body)?;
+            need_compartment(w, c.compartment)?;
+            // What it rests on is in its own compartment; missing and
+            // elsewhere are refused alike.
+            for id in &c.refs {
+                let comp = st
+                    .claims
+                    .get(*id)
+                    .map(|x| x.compartment.as_str())
+                    .or_else(|| st.episodes.get(*id).map(|x| x.compartment.as_str()))
+                    .or_else(|| st.handoffs.get(*id).map(|x| x.compartment.as_str()));
+                if comp != Some(c.compartment) {
+                    return Err(not_found("claim, episode or handoff", id));
+                }
+            }
+            if let Some(prev) = c.follows {
+                match st.handoffs.get(prev) {
+                    Some(p) if p.compartment == c.compartment => {
+                        if p.frame != c.frame {
+                            return Err(err("E_REFERENCE", "a handoff follows one in the same frame"));
+                        }
+                    }
+                    _ => return Err(not_found("handoff", prev)),
+                }
+            }
+            done(Change::Handoff {
+                event: event_id.to_string(),
+                info: HandoffInfo {
+                    seq: 0,
+                    compartment: c.compartment.to_string(),
+                    frame: c.frame.to_string(),
+                    writer: writer.to_string(),
+                    record_time: record_time.to_string(),
+                    body: body.clone(),
+                },
+            })
+        }
+
         "schema_change" => {
             need(w, "govern")?;
             let v = schema::schema_change(body)?;
@@ -1647,6 +1712,21 @@ impl State {
     /// A restricted view contains nothing from other compartments, not even
     /// their names.
     pub fn to_value(&self, compartments: Option<&[String]>) -> Value {
+        // The order in which visible claims and handoffs were recorded, as a
+        // rank among them: it says what came first without saying how many
+        // hidden events lie between.
+        let order: BTreeMap<usize, i64> = {
+            let seen = |c: &str| compartments.map(|cs| cs.iter().any(|x| x == c)).unwrap_or(true);
+            let mut seqs: Vec<usize> = self
+                .claims
+                .values()
+                .filter(|c| seen(&c.compartment))
+                .map(|c| c.seq)
+                .chain(self.handoffs.values().filter(|h| seen(&h.compartment)).map(|h| h.seq))
+                .collect();
+            seqs.sort_unstable();
+            seqs.into_iter().enumerate().map(|(i, s)| (s, i as i64)).collect()
+        };
         let visible = |c: &str| compartments.map(|cs| cs.iter().any(|x| x == c)).unwrap_or(true);
         let strs = |v: &[String]| Value::Array(v.iter().map(|x| Value::str(x.clone())).collect());
 
@@ -1661,6 +1741,7 @@ impl State {
                         ("body", c.body.clone()),
                         ("author", Value::str(c.author.clone())),
                         ("first_event", Value::str(c.first_event.clone())),
+                        ("order", Value::Int(order[&c.seq])),
                         ("record_time", Value::str(c.record_time.clone())),
                         // Who recorded the source the claim quotes: turns are
                         // that writer's attribution, so readers see it.
@@ -1739,6 +1820,23 @@ impl State {
             })
             .collect();
 
+        let handoffs: Vec<(String, Value)> = self
+            .handoffs
+            .iter()
+            .filter(|(_, c)| visible(&c.compartment))
+            .map(|(id, c)| {
+                (
+                    id.clone(),
+                    Value::obj(vec![
+                        ("body", c.body.clone()),
+                        ("writer", Value::str(c.writer.clone())),
+                        ("record_time", Value::str(c.record_time.clone())),
+                        ("order", Value::Int(order[&c.seq])),
+                    ]),
+                )
+            })
+            .collect();
+
         let appeals: Vec<(String, Value)> = self
             .appeals
             .iter()
@@ -1804,6 +1902,7 @@ impl State {
             ("claims", Value::Object(claims)),
             ("supersessions", Value::Object(supersessions)),
             ("appeals", Value::Object(appeals)),
+            ("handoffs", Value::Object(handoffs)),
         ])
     }
 
