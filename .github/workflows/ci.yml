@@ -46,4 +46,9 @@ jobs:
       - name: Install the official MCP SDK (this job only)
         run: python -m pip install mcp
       - name: Official client talks to the Gnomon MCP server
-        run: python -m unittest python/tests/test_mcp_sdk.py -v
+        env:
+          GNOMON_REQUIRE_MCP_SDK: "1"
+        run: |
+          python -c "import importlib.metadata as m; print('mcp SDK', m.version('mcp'))"
+          python -m unittest python/tests/test_mcp_sdk.py -v 2>&1 | tee sdk.txt
+          grep -q "^OK$" sdk.txt && ! grep -q "skipped" sdk.txt
