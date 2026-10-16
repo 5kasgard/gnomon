@@ -80,6 +80,8 @@ impl WriterInfo {
 
 #[derive(Clone, Debug)]
 pub struct EpisodeInfo {
+    /// Position in the log.
+    pub seq: usize,
     pub compartment: String,
     pub writer: String,
     pub record_time: String,
@@ -483,7 +485,8 @@ fn commit(st: &mut State, checked: Checked, seq: usize) {
                 st.schema_version = v;
             }
         }
-        Change::Episode { id, info } => {
+        Change::Episode { id, mut info } => {
+            info.seq = seq;
             st.episodes.insert(id, info);
         }
         Change::NewClaim { id, mut info } => {
@@ -941,6 +944,7 @@ fn check(
             done(Change::Episode {
                 id: event_id.to_string(),
                 info: EpisodeInfo {
+                    seq: 0,
                     compartment: e.compartment.to_string(),
                     writer: writer.to_string(),
                     record_time: record_time.to_string(),
@@ -1723,6 +1727,7 @@ impl State {
                 .filter(|c| seen(&c.compartment))
                 .map(|c| c.seq)
                 .chain(self.handoffs.values().filter(|h| seen(&h.compartment)).map(|h| h.seq))
+                .chain(self.episodes.values().filter(|e| seen(&e.compartment)).map(|e| e.seq))
                 .collect();
             seqs.sort_unstable();
             seqs.into_iter().enumerate().map(|(i, s)| (s, i as i64)).collect()
@@ -1788,6 +1793,7 @@ impl State {
                         ("writer", Value::str(e.writer.clone())),
                         ("record_time", Value::str(e.record_time.clone())),
                         ("hidden_chars", Value::Bool(e.hidden_chars)),
+                        ("order", Value::Int(order[&e.seq])),
                     ]),
                 )
             })

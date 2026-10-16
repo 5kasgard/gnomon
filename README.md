@@ -94,6 +94,18 @@ claude mcp add gnomon -e PYTHONPATH=$PWD/python -- \
     python3 -m gnomon.mcp --log ~/memory.jsonl --writer claude --per-session
 ```
 
+**Auto mode (Claude Code).** Every conversation is recorded and every
+session bound to its own writer, without the model having to remember:
+
+```bash
+python3 -m gnomon hooks --log ~/memory.jsonl --writer claude   # paste into ~/.claude/settings.json
+```
+
+Each session then starts with who it is on record and the work it's
+resuming, including the end of the last conversation, fitted to a token
+budget so it never crowds out the work. After every reply, the new turns
+are saved exactly, attributed to that session and to you.
+
 For hosts configured with JSON (e.g. Claude Desktop):
 
 ```json
@@ -107,12 +119,12 @@ The model gets these tools:
 
 - `resume`, `handoff`, `frames`: pick up work where any session or model
   left it
+- `attach`, `whoami`: which session's writer it is
 - `remember`, `record_conversation`
 - `recall` ("where did we discuss the budget?")
 - `query` ("which decisions still stand?"), with checked proofs
 - `discussion`, `open_questions`
 - `give_verdict`, `supersede`
-- `whoami`
 - `verify_log`
 
 It works only as its own session's writer, acting for you, inside the
@@ -229,7 +241,7 @@ caveats.
 | **The record** | Canonical JSON (RFC 8785) and SHA-256 in Rust, checked against FIPS and RFC vectors. One hash-chained log; replay rebuilds identical state. Tampering, truncation and torn writes are detected, and writers in any process are serialised by a lock on the log. |
 | **Claims** | Statement kinds, origin (observed, derived, guessed…), stance (a decision is never confused with a suggestion), four-valued truth, validity domains, and two clocks: when it was recorded and when it is true. |
 | **Verification and disputes** | Verdicts with a stated method. Contests that flag a claim without changing its truth, before a neutral party. One argument per party, then only evidence. Three ways back for a refuted claim. Every dispute can end. |
-| **Continuity** | Handoffs record where a piece of work stands (summary, goal, done, next, open, what it rests on, artifacts). Resume shows the latest one, how everything it relied on stands now, and what happened since. |
+| **Continuity** | Handoffs record where a piece of work stands (summary, goal, done, next, open, what it rests on, artifacts). Resume shows the latest one, how everything it relied on stands now, what happened since, and the end of the last conversation, fitted to a token budget, most useful first. Auto mode records every Claude Code conversation and binds each session to its own writer. |
 | **Forum** | Questions, answers, critiques, replies and citations are attributed claims linked by reference, never across compartments. Views show open questions, settled ones, and critiques nobody has answered. |
 | **Identity** | Each session or agent is its own writer, on record with its model, surface, session and operator. Names in recordings are bound, never matched. Agreement between sessions of one model counts once. |
 | **Ingestion** | Transcripts and documents are parsed by plain code and classified by named rules. Anything uncertain is set aside, never guessed. Quotes are checked word for word. |
@@ -246,8 +258,8 @@ The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
   written as a failing test before any code existed
   (`tests/incidents.rs`).
 - **Each milestone was attacked by a reviewer who didn't write it.** That
-  covered the record, queries, the MCP server, recall, identity, the forum
-  and continuity, over 16 review rounds. Every confirmed finding is now a
+  covered the record, queries, the MCP server, recall, identity, the forum,
+  continuity and auto mode, over 17 review rounds. Every confirmed finding is now a
   regression test.
 - **The query engine has a second implementation to agree with.** It is
   checked against a deliberately naive evaluator on hundreds of random
@@ -256,7 +268,7 @@ The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
 - **The MCP server is tested hard.** It is fuzzed with thousands of
   malformed messages and driven in CI by the official MCP Python SDK.
 - **Recall was tested on data it was never tuned on.**
-- **Every platform:** 176 Rust tests and 157 Python tests run on Linux,
+- **Every platform:** 176 Rust tests and 185 Python tests run on Linux,
   macOS and Windows on every change.
 
 ```bash
@@ -279,7 +291,7 @@ bash scripts/build.sh && python3 -m unittest discover -s python/tests
   replies and citations; open and settled questions; content-addressed
   proofs.
 - [x] **M8, continuity:** handoff and resume across sessions, models and
-  apps.
+  apps; auto mode for Claude Code; resume fitted to a token budget.
 - [ ] **M9, storage that scales:** the log in immutable segments, synced to
   object storage (S3, Backblaze B2, Cloudflare R2), with private
   compartments encrypted before they leave your device.
@@ -303,7 +315,9 @@ python/gnomon/        Python package (ctypes binding, standard library only)
   proofs.py           independent proof checker and explanations
   checkers.py         arithmetic and calendar verifiers
   mcp.py              MCP server (stdio, both protocol eras)
-  __main__.py         command line: init, register, verify, query
+  hook.py             auto mode: Claude Code hooks that record every conversation
+  session.py          one writer per session; single-use attach tokens
+  __main__.py         command line: init, register, verify, query, hooks
 python/tests/         end-to-end, oracle, multi-process, MCP and SDK tests
 bench/locomo.py       recall on LoCoMo (the dataset is not included)
 spec/                 the claim protocol
