@@ -172,3 +172,35 @@ fn rejected_appends_leave_the_log_untouched() {
     assert!(unregistered.is_err());
     assert_eq!(fs::read(&path).unwrap(), before);
 }
+
+/// The envelope hash worked out from a canonical line (the line minus its
+/// top-level hash member) is exactly the hash of the event without it,
+/// even when the body itself holds a member called "hash".
+#[test]
+fn line_hashes_equal_envelope_hashes() {
+    use gnomon_core::ledger::envelope_hash;
+    let dir = std::env::temp_dir().join(format!("gn-linehash-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("m.jsonl");
+    let _ = std::fs::remove_file(&path);
+    let mut l = lab();
+    let tricky = claim_body("The file's hash is listed below.", "asserted", "true")
+        .with("observed", Value::str(",\"hash\":\"00\""));
+    l.append(draft("claude-c1", 10, "claim", tricky)).unwrap();
+    let text: String = l.events.iter().map(|e| gnomon_core::json::canonical(e) + "\n").collect();
+    std::fs::write(&path, &text).unwrap();
+    // Reading it back goes through the line-hash path; it must accept the
+    // log and agree with envelope_hash on every event.
+    gnomon_core::store::with_ledger(&path, |r| {
+        assert_eq!(r.events.len(), l.events.len());
+        for e in &r.events {
+            assert_eq!(e.get("hash").and_then(|h| h.as_str()).unwrap(), envelope_hash(e));
+        }
+    })
+    .unwrap();
+    // A changed body is still caught.
+    let bad = text.replacen("The file", "A file", 1);
+    std::fs::write(&path, bad).unwrap();
+    assert!(gnomon_core::store::with_ledger(&path, |_| ()).is_err());
+    std::fs::remove_dir_all(&dir).unwrap();
+}

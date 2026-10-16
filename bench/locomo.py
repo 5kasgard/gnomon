@@ -133,6 +133,8 @@ def main() -> int:
     p.add_argument("--split", choices=["all", "dev", "test"], default="all",
                    help="dev = conversations 0-4 (where choices were made), test = 5-9 (held out)")
     p.add_argument("--ablation", action="store_true", help="each ranking technique on and off")
+    p.add_argument("--tuning", help="JSON tuning to evaluate, e.g. '{\"session\": 300}'")
+    p.add_argument("--grid", help="JSON {knob: [values,...]}: evaluate each value of each knob alone")
     a = p.parse_args()
     if a.data:
         path = Path(a.data)
@@ -156,7 +158,19 @@ def main() -> int:
             row = evaluate(data, ks, tuning=tuning)["all (1-4)"]
             print(f"{name:<22}" + "".join(f"{row[f'recall@{k}']:>8}" for k in ks))
         return 0
-    res = evaluate(data, ks)
+    if a.grid:
+        grid = json.loads(a.grid)
+        base = json.loads(a.tuning) if a.tuning else {}
+        print(f"{'setting':<28}" + "".join(f"{'R@' + str(k):>8}" for k in ks))
+        row = evaluate(data, ks, tuning=base or None)["all (1-4)"]
+        print(f"{'base ' + json.dumps(base):<28}" + "".join(f"{row[f'recall@{k}']:>8}" for k in ks))
+        for knob, values in grid.items():
+            for v in values:
+                t = dict(base, **{knob: v})
+                row = evaluate(data, ks, tuning=t)["all (1-4)"]
+                print(f"{knob + '=' + str(v):<28}" + "".join(f"{row[f'recall@{k}']:>8}" for k in ks), flush=True)
+        return 0
+    res = evaluate(data, ks, tuning=json.loads(a.tuning) if a.tuning else None)
     if a.json:
         print(json.dumps(res, indent=1))
         return 0
