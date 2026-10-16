@@ -10,7 +10,7 @@ use std::panic::{catch_unwind, AssertUnwindSafe};
 use std::path::Path;
 
 use crate::json::{self, canonical, Value};
-use crate::ledger::{claim_id, Draft, Ledger, VerifyStatus};
+use crate::ledger::{claim_id, Draft, VerifyStatus};
 use crate::sha256::hex_digest;
 use crate::store::{self, StoreError};
 
@@ -181,12 +181,12 @@ pub unsafe extern "C" fn gn_verify(path: *const c_char, budget: i64) -> *mut c_c
             Ok(p) => p,
             Err(e) => return e,
         };
-        let events = match store::read_events(Path::new(path)) {
-            Ok(ev) => ev,
+        let budget = if budget < 0 { None } else { Some(budget as usize) };
+        let status = match store::audit(Path::new(path), budget) {
+            Ok(st) => st,
             Err(e) => return store_fail(e),
         };
-        let budget = if budget < 0 { None } else { Some(budget as usize) };
-        match Ledger::verify(&events, budget).0 {
+        match status {
             VerifyStatus::Ok { count, head } => ok(vec![
                 ("status", Value::str("ok")),
                 ("count", Value::Int(count as i64)),
@@ -280,11 +280,46 @@ pub unsafe extern "C" fn gn_query(
     reader: *const c_char,
     program: *const c_char,
 ) -> *mut c_char {
+    gn_query_opts(path, as_of, reader, program, std::ptr::null())
+}
+
+/// As gn_query, with options as JSON: {"proofs": n} gives proofs for the
+/// first n answers only (the rest carry a null proof).
+///
+/// # Safety
+/// Non-null arguments must be valid NUL-terminated strings.
+#[no_mangle]
+pub unsafe extern "C" fn gn_query_opts(
+    path: *const c_char,
+    as_of: *const c_char,
+    reader: *const c_char,
+    program: *const c_char,
+    opts: *const c_char,
+) -> *mut c_char {
     guarded(|| {
         let (path, reader, program) = match (arg(path), arg(reader), arg(program)) {
             (Ok(p), Ok(r), Ok(q)) => (p, r, q),
             (Err(e), _, _) | (_, Err(e), _) | (_, _, Err(e)) => return e,
         };
+        let mut lim = crate::datalog::Limits::default();
+        if !opts.is_null() {
+            let o = match arg(opts).map(crate::json::parse) {
+                Ok(Ok(v)) => v,
+                Ok(Err(_)) => return fail("E_ARG", "options must be JSON"),
+                Err(e) => return e,
+            };
+            for (k, _) in o.as_object().unwrap_or(&[]) {
+                if k != "proofs" {
+                    return fail("E_ARG", format!("unknown option '{k}'"));
+                }
+            }
+            if let Some(n) = o.get("proofs") {
+                match n.as_int() {
+                    Some(n) if n >= 0 => lim.max_proofs = n as usize,
+                    _ => return fail("E_ARG", "'proofs' must be a non-negative integer"),
+                }
+            }
+        }
         let as_of = if as_of.is_null() {
             None
         } else {
@@ -309,7 +344,7 @@ pub unsafe extern "C" fn gn_query(
                 }
                 None => full,
             };
-            match crate::query::run(ledger, &comps, program, crate::datalog::Limits::default()) {
+            match crate::query::run(ledger, &comps, program, lim.clone()) {
                 Ok(v) => {
                     // The moment the result describes: the one asked for, or
                     // else the time of the last event in the reader's view.
@@ -437,6 +472,147 @@ pub unsafe extern "C" fn gn_checkpoint(path: *const c_char, count: i64, head: *c
         }
         match store::verify_checkpoint(Path::new(path), count as usize, head) {
             Ok(()) => ok(vec![]),
+            Err(e) => store_fail(e),
+        }
+    })
+}
+
+/// The reader's compartments and the ledger as of `as_of` (or latest).
+fn reader_view<T>(
+    path: &str,
+    as_of: Option<String>,
+    reader: &str,
+    f: impl FnOnce(&crate::ledger::Ledger, &[String]) -> T,
+) -> Result<Result<T, Value>, crate::store::StoreError> {
+    store::with_ledger(Path::new(path), |full| {
+        let comps = match full.state.writers.get(reader) {
+            Some(w) => w.compartments.clone(),
+            None => return Err(fail("E_UNKNOWN_WRITER", format!("reader '{reader}' is not registered"))),
+        };
+        let view;
+        let ledger = match &as_of {
+            Some(t) => {
+                view = full.as_of(t);
+                &view
+            }
+            None => full,
+        };
+        Ok(f(ledger, &comps))
+    })
+}
+
+unsafe fn opt_time(as_of: *const c_char) -> Result<Option<String>, Value> {
+    if as_of.is_null() {
+        return Ok(None);
+    }
+    match arg(as_of) {
+        Ok(t) if crate::schema::is_timestamp(t) => Ok(Some(t.to_string())),
+        Ok(_) => Err(fail("E_TIME_FORMAT", "as_of must be YYYY-MM-DDTHH:MM:SSZ")),
+        Err(e) => Err(e),
+    }
+}
+
+/// The pieces of work the reader can see, most recently active first.
+///
+/// # Safety
+/// Non-null arguments must be valid NUL-terminated strings.
+#[no_mangle]
+pub unsafe extern "C" fn gn_frames(path: *const c_char, as_of: *const c_char, reader: *const c_char) -> *mut c_char {
+    guarded(|| {
+        let (path, reader) = match (arg(path), arg(reader)) {
+            (Ok(p), Ok(r)) => (p, r),
+            (Err(e), _) | (_, Err(e)) => return e,
+        };
+        let as_of = match opt_time(as_of) {
+            Ok(t) => t,
+            Err(e) => return e,
+        };
+        match reader_view(path, as_of, reader, |l, comps| l.state.frames(comps)) {
+            Ok(Ok(v)) => ok(vec![("frames", v)]),
+            Ok(Err(e)) => e,
+            Err(e) => store_fail(e),
+        }
+    })
+}
+
+/// Just the state that resuming a frame needs (see State::resume_selection),
+/// as the reader sees it. `frame` may be null (the most recently active).
+///
+/// # Safety
+/// Non-null arguments must be valid NUL-terminated strings.
+#[no_mangle]
+pub unsafe extern "C" fn gn_resume_state(
+    path: *const c_char,
+    as_of: *const c_char,
+    reader: *const c_char,
+    frame: *const c_char,
+    turns: i64,
+) -> *mut c_char {
+    guarded(|| {
+        let (path, reader) = match (arg(path), arg(reader)) {
+            (Ok(p), Ok(r)) => (p, r),
+            (Err(e), _) | (_, Err(e)) => return e,
+        };
+        let frame = if frame.is_null() {
+            None
+        } else {
+            match arg(frame) {
+                Ok(f) => Some(f.to_string()),
+                Err(e) => return e,
+            }
+        };
+        let as_of = match opt_time(as_of) {
+            Ok(t) => t,
+            Err(e) => return e,
+        };
+        let turns = turns.clamp(0, 1000) as usize;
+        match reader_view(path, as_of, reader, |l, comps| {
+            let (sel, fr) = l.state.resume_selection(comps, frame.as_deref(), turns);
+            (l.state.to_value_sel(Some(comps), Some(&sel)), fr)
+        }) {
+            Ok(Ok((st, fr))) => ok(vec![("state", st), ("frame", fr.map(Value::str).unwrap_or(Value::Null))]),
+            Ok(Err(e)) => e,
+            Err(e) => store_fail(e),
+        }
+    })
+}
+
+/// The full id of the one claim the reader can see whose id starts with
+/// `prefix` (at least "c:" and 8 hex digits): a short id, as models are
+/// shown them, resolved. Missing, hidden and ambiguous are refused alike
+/// unless ambiguous among visible claims.
+///
+/// # Safety
+/// Non-null arguments must be valid NUL-terminated strings.
+#[no_mangle]
+pub unsafe extern "C" fn gn_resolve(path: *const c_char, reader: *const c_char, prefix: *const c_char) -> *mut c_char {
+    guarded(|| {
+        let (path, reader, prefix) = match (arg(path), arg(reader), arg(prefix)) {
+            (Ok(p), Ok(r), Ok(x)) => (p, r, x),
+            (Err(e), _, _) | (_, Err(e), _) | (_, _, Err(e)) => return e,
+        };
+        let hex = prefix.strip_prefix("c:").unwrap_or("");
+        if hex.len() < 8 || hex.len() > 64 || !hex.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)) {
+            return fail("E_REF", "a claim id is c: and at least 8 lower-case hex digits");
+        }
+        match reader_view(path, None, reader, |l, comps| {
+            let st = &l.state;
+            let found: Vec<&String> = st
+                .claims
+                .range(prefix.to_string()..)
+                .take_while(|(id, _)| id.starts_with(prefix))
+                .filter(|(_, c)| comps.iter().any(|x| *x == c.compartment))
+                .map(|(id, _)| id)
+                .take(2)
+                .collect();
+            match found.as_slice() {
+                [one] => ok(vec![("id", Value::str((*one).clone()))]),
+                [] => fail("E_REF", format!("no claim '{prefix}' that you can see")),
+                _ => fail("E_REF", format!("'{prefix}' names more than one claim: give more of its id")),
+            }
+        }) {
+            Ok(Ok(v)) => v,
+            Ok(Err(e)) => e,
             Err(e) => store_fail(e),
         }
     })

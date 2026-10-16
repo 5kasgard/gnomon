@@ -747,22 +747,40 @@ and each can be switched off (`tuning`) to measure it:
    list, and Porter's 1980 stemmer (words over 48 letters are left alone).
 2. *Joins* (on). Adjacent words are also indexed joined, so "road trip"
    meets "roadtrip" and "de-stress" meets "destress".
-3. *BM25* with k1 = 1.2 and b = 0.75.
+3. *BM25* with k1 = 1.2 and b = 0.4.
 4. *Speakers* (on). A speaker named in the question by their whole name, or
    by their first name with a capital, is who spoke: their turns score
-   ×1.3 and the name stops counting as a word to find (people are mostly
+   ×2.5 and the name stops counting as a word to find (people are mostly
    named when addressed), unless the question is nothing but names.
-5. *Neighbours* (on). A turn gains half the score of the turn just before
+5. *Neighbours* (on). A turn gains the whole score of the turn just before
    it when that turn is a question, otherwise a quarter, and a quarter of
    the turn after it. The gain is listed among its matches as
    `(neighbours)`.
-6. *Dates in the question.* With `now`, relative dates in the question are
-   resolved and anything said, or dated, within them scores ×1.5.
-7. *Feedback* (off). RM3-style expansion from the first results. It is
+6. *Conversations* (×1.2). A turn gains from its whole conversation
+   matching: it scores × (1 + 1.2 · s / s_max), where s is the sum of its
+   conversation's turn scores over the square root of its length, and
+   s_max the highest such value. Evidence for one question often spans a
+   session.
+7. *When* (×1.5). If the question asks when (it begins "when", or asks
+   "what date", "what time" or "how long"), a turn that holds a date scores
+   ×1.5.
+8. *Dates in the question.* With `now`, relative dates in the question are
+   resolved, and anything said or dated within them scores ×1.5.
+9. *Feedback* (off). RM3-style expansion from the first results. It is
    implemented but off by default because it hurt the top of the ranking
    on the development conversations (see below).
 
-A hit's `score` is the sum of its `matched` shares times its `boosts`. Ties
+Every weight is a `tuning` value in thousandths:
+
+- k1, b
+- prop_q and prop_n (the neighbour shares)
+- speaker, window, session and when
+
+`bench/locomo.py --grid` measures any of them. The defaults were chosen
+there, on conversations 0–4 only.
+
+A hit's `score` is the sum of its `matched` shares times its `boosts`. The
+boosts list every multiplier applied, with its reason and size. Ties
 go to what was recorded first. The output is identical for identical
 inputs.
 
@@ -793,16 +811,27 @@ conversations 5–9 were held out. `bench/locomo.py` reproduces every number.
 | Held out (conversations 5–9) | R@1 | R@5 | R@10 | R@25 | R@50 |
 |---|---|---|---|---|---|
 | BM25 alone, categories 1–4 | 26.4 | 49.2 | 57.2 | 65.5 | 71.3 |
-| Gnomon recall, categories 1–4 | 34.3 | 61.4 | 68.8 | 77.0 | 82.9 |
-| Gnomon recall, all questions | 34.6 | 63.9 | 71.8 | 79.5 | 85.4 |
+| Gnomon recall (M5), categories 1–4 | 34.3 | 61.4 | 68.8 | 77.0 | 82.9 |
+| **Gnomon recall (now), categories 1–4** | **40.6** | **66.3** | **73.0** | **80.1** | **84.6** |
+| **Gnomon recall (now), all questions** | **35.8** | **65.4** | **74.2** | **82.3** | **86.5** |
 | DRAGON, as reported in the LoCoMo paper, all questions | – | 58.8 | 67.5 | 79.9 | 84.8 |
 
 DRAGON is a trained neural retriever; its numbers are from the LoCoMo paper
 over the whole dataset, possibly another release of it, while Gnomon's are
-on the held-out half only, so the comparison is indicative, not exact. Over
-all ten conversations Gnomon scores 64.7 / 73.1 / 80.9 / 86.2 at 5 / 10 /
-25 / 50. Median time per question is under
-20 ms on one core, with no model and no network.
+on the held-out half only, so the comparison is indicative, not exact.
+
+- **Over all ten conversations:** Gnomon scores 67.5 / 75.1 / 83.2 / 87.2 at
+  5 / 10 / 25 / 50.
+- **Time:** the median per question is under 2 ms on one core, with no model
+  and no network.
+
+**Speed at scale.** Turns and claims are analysed once (words, stems,
+dates), cached by content (the hash of the event that recorded them, or the
+claim's id and recording time), and indexed by term. Scoring a question
+touches only the entries holding its terms. Gathering what the reader can
+see is still a pass over the visible memory, but a cheap one with nothing
+re-analysed. The cache is held for the whole of a question, so concurrent
+questions never see it change. `bench/scale.py` measures it.
 
 ## 12. The record as a forum (M7)
 
@@ -950,7 +979,57 @@ The MCP server tells models to `resume` at the start of work and to
 is its own writer (section 2a), so a resumed piece of work shows exactly
 which session and model left it, and for whom.
 
-## 14. Not yet in v0.1
+## 14. Speed, and what a model reads
+
+**Speed.**
+
+- **Verifying a log:** lines are parsed, checked to be canonical and hashed in
+  parallel. Each event's hash is worked out once, from its exact line minus
+  its top-level hash member. They are then replayed through the gate in
+  order.
+- **In a long-lived process** (the MCP server), a verified log is cached:
+  - A log that has only grown, from any process, has just its new lines
+    checked, through the same gate.
+  - Any other change forces a full replay.
+- **Queries** load only the relations they can reach, and make event
+  references only for the sources a proof shows.
+- **Proofs** are most of a result's cost: `proofs` (Python `Memory.query`,
+  MCP `query`, or `gn_query_opts`) limits them to the first n answers. The
+  others carry a null proof, and `proved` says how many were proved.
+  - `gnomon.proofs.check` fails any answer without a proof, unless the
+    caller says how many proofs it asked for (`proofs_requested`). Even
+    then, exactly that many must be proved, and the unproven answers must
+    come after them.
+  - The MCP server proves and checks the first 100 by default and reports
+    the rest as unproven, never as checked.
+- **The independent checker** re-reads only what was appended to a log since
+  it last read it. It checks those lines itself and remembers each claim's
+  id.
+- **Resume** reads only the part of the state it needs, worked out natively:
+  - the frame's handoffs and claims, and what they rest on;
+  - claims from elsewhere that refer to them;
+  - enough of the latest conversation.
+
+  It runs one combined query for open questions, decisions and unanswered
+  critiques.
+
+**What a model reads.** MCP text is written for a reader that pays per
+token:
+
+- **Claim ids** are shown short (`c:` and 16 hex digits, 64 bits, far too
+  many to forge a look-alike). Every tool takes them back, query programs
+  included, resolved to the one claim the writer can see that starts that
+  way. Missing, hidden and ambiguous ids are refused.
+- **Times** are written `2026-10-16 10:15`.
+- **Stance and truth** are written as codes (`[D T]` is decided, true) with a
+  one-line legend whenever codes appear.
+- **A writer** is named only when it is not the speaker.
+- **Structured results** for recall and resume carry ids and scores, not the
+  text again.
+
+`bench/tokens.py` measures the cost per item shown.
+
+## 15. Not yet in v0.1
 
 Signatures (writer identity is by registration only), multi-writer merge of
 independently written logs, storage in immutable segments with sync to

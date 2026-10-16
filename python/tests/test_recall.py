@@ -147,7 +147,13 @@ class ReviewM5(unittest.TestCase):
         r = self.m.recall("john", "noon", speaker="Mel", kinds=["turns"], context=1)
         ids = [h["id"] for h in r["hits"]]
         self.assertEqual(ids, [f"{ep}#1"])  # the reply to turn 0, not turn 3
-        self.assertIn(["(neighbours)", r["hits"][0]["score"]], r["hits"][0]["matched"])
+        h = r["hits"][0]
+        self.assertEqual([t for t, _ in h["matched"]], ["(neighbours)"])
+        # The score is its matched shares times its boosts, as listed.
+        product = 1.0
+        for b in h["boosts"]:
+            product *= b["times_thousandths"] / 1000
+        self.assertAlmostEqual(sum(x for _, x in h["matched"]) * product / h["score"], 1.0, places=2)
         self.assertEqual([c["turn"] for c in r["hits"][0]["context"]], [0, 2])
 
     def test_hidden_characters_are_flagged(self):

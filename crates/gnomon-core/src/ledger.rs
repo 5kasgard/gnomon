@@ -40,6 +40,8 @@ pub fn envelope_hash(env: &Value) -> String {
 
 #[derive(Clone, Debug)]
 pub struct WriterInfo {
+    /// Position of its registration in the log.
+    pub seq: usize,
     pub party: String,
     pub kind: String,
     pub capabilities: Vec<String>,
@@ -112,6 +114,9 @@ pub struct ClaimInfo {
     pub first_event: String,
     /// Position of its first event in the log.
     pub seq: usize,
+    /// Every event that asserted it (author first, then corroborators):
+    /// (writer, position in the log).
+    pub assertions: Vec<(String, usize)>,
     pub record_time: String,
     pub corroborated_by: Vec<String>,
     /// Parties of the author and every corroborator: none may verify it.
@@ -181,6 +186,18 @@ pub struct VerdictInfo {
     pub result: String,
     pub writer: String,
     pub seq: usize,
+}
+
+/// A part of the state (see State::resume_selection).
+#[derive(Default, Debug)]
+pub struct Selection {
+    pub claims: std::collections::HashSet<String>,
+    pub episodes: std::collections::HashSet<String>,
+    pub handoffs: std::collections::HashSet<String>,
+}
+
+fn c_later<T>(seq: usize, cur: Option<(usize, T)>) -> bool {
+    cur.map(|(s, _)| seq > s).unwrap_or(true)
 }
 
 #[derive(Clone, Debug)]
@@ -304,7 +321,13 @@ impl Ledger {
     /// The write gate: check every rule, then commit. State is untouched on
     /// any error.
     pub fn apply(&mut self, env: Value) -> GateResult<()> {
-        let checked = check(&self.state, &env, self.events.len(), &self.head(), self.events.last())?;
+        self.apply_hashed(env, None)
+    }
+
+    /// `apply`, given the envelope hash already worked out from the exact
+    /// canonical line (see store::parse_events): the same check, done once.
+    pub fn apply_hashed(&mut self, env: Value, computed: Option<String>) -> GateResult<()> {
+        let checked = check(&self.state, &env, self.events.len(), &self.head(), self.events.last(), computed)?;
         commit(&mut self.state, checked, self.events.len());
         self.events.push(env);
         Ok(())
@@ -479,7 +502,8 @@ fn visible_item_compartment<'a>(st: &'a State, w: &WriterInfo, id: &str) -> Gate
 
 fn commit(st: &mut State, checked: Checked, seq: usize) {
     match checked.change {
-        Change::Register { writer, info, version } => {
+        Change::Register { writer, mut info, version } => {
+            info.seq = seq;
             st.writers.insert(writer, info);
             if let Some(v) = version {
                 st.schema_version = v;
@@ -491,10 +515,12 @@ fn commit(st: &mut State, checked: Checked, seq: usize) {
         }
         Change::NewClaim { id, mut info } => {
             info.seq = seq;
+            info.assertions.push((info.author.clone(), seq));
             st.claims.insert(id, info);
         }
         Change::Corroborate { id, writer, party } => {
             let c = st.claims.get_mut(&id).expect("checked");
+            c.assertions.push((writer.clone(), seq));
             c.corroborated_by.push(writer);
             if !c.parties.contains(&party) {
                 c.parties.push(party);
@@ -760,12 +786,13 @@ fn check(
     expected_seq: usize,
     expected_prev: &str,
     last: Option<&Value>,
+    computed: Option<String>,
 ) -> GateResult<Checked> {
     check_envelope_shape(env)?;
 
     // --- chain integrity
     let hash = s(env, "hash")?;
-    if !schema::is_hex64(hash) || envelope_hash(env) != hash {
+    if !schema::is_hex64(hash) || computed.unwrap_or_else(|| envelope_hash(env)) != hash {
         return Err(err("E_HASH", "hash does not match envelope content"));
     }
     if n(env, "seq")? != expected_seq as i64 {
@@ -1116,6 +1143,7 @@ fn check(
                         speaker_is,
                         first_event: event_id.to_string(),
                         seq: 0,
+                        assertions: Vec::new(),
                         record_time: record_time.to_string(),
                         corroborated_by: Vec::new(),
                         parties: vec![w.party.clone()],
@@ -1588,6 +1616,7 @@ fn check(
 fn writer_info(r: &schema::Register) -> WriterInfo {
     let own = |x: Option<&str>| x.map(|s| s.to_string());
     WriterInfo {
+        seq: 0,
         party: r.party.to_string(),
         kind: r.kind.to_string(),
         capabilities: r.capabilities.iter().map(|c| c.to_string()).collect(),
@@ -1716,6 +1745,118 @@ impl State {
     /// A restricted view contains nothing from other compartments, not even
     /// their names.
     pub fn to_value(&self, compartments: Option<&[String]>) -> Value {
+        self.to_value_sel(compartments, None)
+    }
+
+    /// The pieces of work (frames) visible through `compartments`, most
+    /// recently active first: last activity, counts, latest handoff.
+    pub fn frames(&self, compartments: &[String]) -> Value {
+        let seen = |c: &str| compartments.iter().any(|x| x == c);
+        // frame -> (last seq, last time, claims, handoffs, latest handoff)
+        let mut f: BTreeMap<&str, (usize, &str, i64, i64, Option<(usize, &str)>)> = BTreeMap::new();
+        for c in self.claims.values().filter(|c| seen(&c.compartment)) {
+            let fr = c.body.get("frame").and_then(|v| v.as_str()).unwrap_or("");
+            let e = f.entry(fr).or_insert((0, "", 0, 0, None));
+            e.2 += 1;
+            if c.seq >= e.0 {
+                e.0 = c.seq;
+                e.1 = &c.record_time;
+            }
+        }
+        for (id, h) in self.handoffs.iter().filter(|(_, h)| seen(&h.compartment)) {
+            let e = f.entry(h.frame.as_str()).or_insert((0, "", 0, 0, None));
+            e.3 += 1;
+            if c_later(h.seq, e.4) {
+                e.4 = Some((h.seq, id.as_str()));
+            }
+            if h.seq >= e.0 {
+                e.0 = h.seq;
+                e.1 = &h.record_time;
+            }
+        }
+        let mut rows: Vec<_> = f.into_iter().collect();
+        rows.sort_by(|a, b| b.1 .0.cmp(&a.1 .0));
+        Value::Array(
+            rows.into_iter()
+                .map(|(fr, (_, t, nc, nh, lh))| {
+                    Value::obj(vec![
+                        ("frame", Value::str(fr)),
+                        ("last_activity", Value::str(t)),
+                        ("claims", Value::Int(nc)),
+                        ("handoffs", Value::Int(nh)),
+                        ("latest_handoff", lh.map(|(_, id)| Value::str(id)).unwrap_or(Value::Null)),
+                    ])
+                })
+                .collect(),
+        )
+    }
+
+    /// What resuming a frame needs, and only that: its handoffs and claims,
+    /// what its handoffs rest on, and the latest conversation (that of the
+    /// latest handoff's writer, else of the latest conversation's), enough
+    /// episodes for `turns` turns. Returns the selection and the frame (the
+    /// most recently active one if none is given).
+    pub fn resume_selection(&self, compartments: &[String], frame: Option<&str>, turns: usize) -> (Selection, Option<String>) {
+        let seen = |c: &str| compartments.iter().any(|x| x == c);
+        let frame: Option<String> = match frame {
+            Some(f) => Some(f.to_string()),
+            None => {
+                let a = self
+                    .claims
+                    .values()
+                    .filter(|c| seen(&c.compartment))
+                    .map(|c| (c.seq, c.body.get("frame").and_then(|v| v.as_str()).unwrap_or("").to_string()));
+                let b = self.handoffs.values().filter(|h| seen(&h.compartment)).map(|h| (h.seq, h.frame.clone()));
+                a.chain(b).max_by_key(|x| x.0).map(|x| x.1)
+            }
+        };
+        let mut sel = Selection::default();
+        let mut latest: Option<(usize, &str)> = None;
+        if let Some(fr) = frame.as_deref() {
+            for (id, h) in self.handoffs.iter().filter(|(_, h)| seen(&h.compartment) && h.frame == fr) {
+                sel.handoffs.insert(id.clone());
+                if c_later(h.seq, latest) {
+                    latest = Some((h.seq, h.writer.as_str()));
+                }
+                for r in h.body.get("refs").and_then(|v| v.as_array()).unwrap_or(&[]) {
+                    if let Some(r) = r.as_str() {
+                        sel.claims.insert(r.to_string());
+                        sel.episodes.insert(r.to_string());
+                        sel.handoffs.insert(r.to_string());
+                    }
+                }
+            }
+            for (id, c) in self.claims.iter().filter(|(_, c)| seen(&c.compartment)) {
+                if c.body.get("frame").and_then(|v| v.as_str()) == Some(fr) {
+                    sel.claims.insert(id.clone());
+                }
+            }
+            // And what refers to them from elsewhere (a critique, an answer
+            // filed under another frame).
+            for (id, c) in self.claims.iter().filter(|(_, c)| seen(&c.compartment)) {
+                let refs = c.body.get("about").and_then(|v| v.as_array()).unwrap_or(&[]);
+                if refs.iter().any(|r| r.get("claim").and_then(|v| v.as_str()).is_some_and(|t| sel.claims.contains(t))) {
+                    sel.claims.insert(id.clone());
+                }
+            }
+        }
+        let mut eps: Vec<(&String, &EpisodeInfo)> = self.episodes.iter().filter(|(_, e)| seen(&e.compartment)).collect();
+        eps.sort_by_key(|(_, e)| std::cmp::Reverse(e.seq));
+        let writer = latest.map(|x| x.1.to_string()).or_else(|| eps.first().map(|(_, e)| e.writer.clone()));
+        let mut got = 0;
+        for (id, e) in eps {
+            if got >= turns {
+                break;
+            }
+            if Some(&e.writer) == writer.as_ref() {
+                sel.episodes.insert(id.clone());
+                got += e.turns.len().max(1);
+            }
+        }
+        (sel, frame)
+    }
+
+    pub fn to_value_sel(&self, compartments: Option<&[String]>, sel: Option<&Selection>) -> Value {
         // The order in which visible claims and handoffs were recorded, as a
         // rank among them: it says what came first without saying how many
         // hidden events lie between.
@@ -1738,7 +1879,7 @@ impl State {
         let claims: Vec<(String, Value)> = self
             .claims
             .iter()
-            .filter(|(_, c)| visible(&c.compartment))
+            .filter(|(id, c)| visible(&c.compartment) && sel.map_or(true, |s| s.claims.contains(*id)))
             .map(|(id, c)| {
                 (
                     id.clone(),
@@ -1784,7 +1925,7 @@ impl State {
         let episodes: Vec<(String, Value)> = self
             .episodes
             .iter()
-            .filter(|(_, e)| visible(&e.compartment))
+            .filter(|(id, e)| visible(&e.compartment) && sel.map_or(true, |s| s.episodes.contains(*id)))
             .map(|(id, e)| {
                 (
                     id.clone(),
@@ -1802,7 +1943,7 @@ impl State {
         let supersessions: Vec<(String, Value)> = self
             .supersessions
             .iter()
-            .filter(|(_, sp)| visible(&sp.compartment))
+            .filter(|(_, sp)| visible(&sp.compartment) && sel.is_none())
             .map(|(id, sp)| {
                 let resolution = match &sp.resolution {
                     None => Value::Null,
@@ -1829,7 +1970,7 @@ impl State {
         let handoffs: Vec<(String, Value)> = self
             .handoffs
             .iter()
-            .filter(|(_, c)| visible(&c.compartment))
+            .filter(|(id, c)| visible(&c.compartment) && sel.map_or(true, |s| s.handoffs.contains(*id)))
             .map(|(id, c)| {
                 (
                     id.clone(),
@@ -1846,7 +1987,7 @@ impl State {
         let appeals: Vec<(String, Value)> = self
             .appeals
             .iter()
-            .filter(|(_, a)| visible(&a.compartment))
+            .filter(|(_, a)| visible(&a.compartment) && sel.is_none())
             .map(|(id, a)| {
                 let resolution = match &a.resolution {
                     None => Value::Null,

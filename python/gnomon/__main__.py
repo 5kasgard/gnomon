@@ -96,7 +96,7 @@ def main(argv=None) -> int:
             print(f"ok: {r['count']} events, head {r['head']}")
         elif a.cmd == "query":
             r = m.query(a.reader, a.program, a.as_of)
-            problems = proofs.check(r, a.program, VIEWS, a.log, require_hashes=True)
+            problems = proofs.check(r, a.program, VIEWS, a.log, require_hashes=True)  # every answer proved
             if a.json:
                 print(json.dumps(r, ensure_ascii=False, indent=1))
             else:
