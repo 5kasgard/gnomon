@@ -19,12 +19,12 @@ from gnomon.ingest import (  # noqa: E402
     parse_transcript, record_document, record_messages, record_transcript, split_sentences,
 )
 
-PEOPLE = ["Alex", "Claude"]
+PEOPLE = ["John", "Claude"]
 CHAT = (
-    "Alex: Let's use Rust for the core. Maybe Python on top?\n"
+    "John: Let's use Rust for the core. Maybe Python on top?\n"
     "Claude: I'd suggest Python for the bindings. Café support matters, e.g. accents.\n"
-    "Alex: Agreed.\n"
-    "Alex: I think 2 + 2 = 4. The meeting was at 10:30 today.\n"
+    "John: Agreed.\n"
+    "John: I think 2 + 2 = 4. The meeting was at 10:30 today.\n"
     "Claude: I'll send the plan tomorrow. If we use Datalog, queries get simpler.\n"
     "Claude: 14 October 2026 is a Wednesday.\n"
 )
@@ -34,7 +34,7 @@ def t(minute: int) -> str:
     return f"2026-10-14T{10 + minute // 60:02d}:{minute % 60:02d}:00Z"
 
 
-def s(text: str, speaker: str = "Alex") -> Sentence:
+def s(text: str, speaker: str = "John") -> Sentence:
     return Sentence(speaker, text, 0)
 
 
@@ -47,63 +47,63 @@ class Parsing(unittest.TestCase):
     def test_turns_and_offsets_are_exact(self):
         turns, unattributed = parse_transcript(CHAT, PEOPLE)
         self.assertEqual(unattributed, [])
-        self.assertEqual([x.speaker for x in turns], ["Alex", "Claude", "Alex", "Alex", "Claude", "Claude"])
+        self.assertEqual([x.speaker for x in turns], ["John", "Claude", "John", "John", "Claude", "Claude"])
         for turn in turns:
             self.assertEqual(CHAT[turn.start:turn.start + len(turn.text)], turn.text)
         self.assertIn("10:30", turns[3].text)  # a time, not a speaker
 
     def test_only_participants_are_speakers(self):
         # Review M2, finding 2: "Step 1:" or "Note:" lines started new speakers.
-        turns, _ = parse_transcript("Alex: Plan below.\nStep 1: we will use Postgres.\nNote: fine.", PEOPLE)
-        self.assertEqual([x.speaker for x in turns], ["Alex"])
+        turns, _ = parse_transcript("John: Plan below.\nStep 1: we will use Postgres.\nNote: fine.", PEOPLE)
+        self.assertEqual([x.speaker for x in turns], ["John"])
 
     def test_every_line_break_and_common_layouts(self):
         # Review M2, finding 3: \r, U+2028, NEL, markdown bold, name on its
         # own line and timestamps all misattributed the next speaker.
         for text in [
-            "Alex: Let's use Rust for core.\rClaude: We will use Python for it.\r",
-            f"Alex: Let's use Rust for core.{chr(0x2028)}Claude: We will use Python for it.",
-            "Alex: Let's use Rust for core.\x85Claude: We will use Python for it.",
-            "**Alex:** Let's use Rust for core.\n**Claude:** We will use Python for it.",
-            "Alex:\nLet's use Rust for core.\nClaude:\nWe will use Python for it.",
-            "[10:30] Alex: Let's use Rust for core.\n[10:31] Claude: We will use Python for it.",
+            "John: Let's use Rust for core.\rClaude: We will use Python for it.\r",
+            f"John: Let's use Rust for core.{chr(0x2028)}Claude: We will use Python for it.",
+            "John: Let's use Rust for core.\x85Claude: We will use Python for it.",
+            "**John:** Let's use Rust for core.\n**Claude:** We will use Python for it.",
+            "John:\nLet's use Rust for core.\nClaude:\nWe will use Python for it.",
+            "[10:30] John: Let's use Rust for core.\n[10:31] Claude: We will use Python for it.",
         ]:
             got, _ = speakers_of(text)
-            self.assertEqual(got, [("Alex", "Let's use Rust for core."), ("Claude", "We will use Python for it.")], repr(text))
+            self.assertEqual(got, [("John", "Let's use Rust for core."), ("Claude", "We will use Python for it.")], repr(text))
 
     def test_unknown_speakers_are_never_absorbed(self):
-        # Review M2 round 2, finding 3: Bob's line became Alex's words.
-        for text in ["Alex: We will use Rust for the core.\nBob: We will delete the production database tonight.",
-                     "Alex: We will use Rust for the core.\nClaude (assistant): We will delete the production database tonight.",
-                     "Alex: We will use Rust for the core.\nSam (PM): We will delete the production database tonight."]:
+        # Review M2 round 2, finding 3: Bob's line became John's words.
+        for text in ["John: We will use Rust for the core.\nBob: We will delete the production database tonight.",
+                     "John: We will use Rust for the core.\nClaude (assistant): We will delete the production database tonight.",
+                     "John: We will use Rust for the core.\nSam (PM): We will delete the production database tonight."]:
             got, residue = speakers_of(text)
-            self.assertEqual(got, [("Alex", "We will use Rust for the core.")], text)
+            self.assertEqual(got, [("John", "We will use Rust for the core.")], text)
             self.assertTrue(any("production database" in r.sentence.text and r.reason == "no known speaker"
                                 for r in residue), text)
 
     def test_names_that_look_alike_are_refused(self):
         # Review M2 round 2, findings 6 and 7.
-        for people in [["Alex", "ALEX"], [f"Zo{chr(0x00eb)}", f"Zoe{chr(0x0308)}"], [f"Zoe{chr(0x0308)}"], ["Alex\nClaude"]]:
+        for people in [["John", "JOHN"], [f"Zo{chr(0x00eb)}", f"Zoe{chr(0x0308)}"], [f"Zoe{chr(0x0308)}"], ["John\nClaude"]]:
             with self.assertRaises(ValueError, msg=repr(people)):
-                parse_transcript("Alex: hi there", people)
+                parse_transcript("John: hi there", people)
         with self.assertRaises(ValueError):
-            parse_transcript("Alex: hi there", [f"Stra{chr(0x00df)}e", "STRASSE"])
+            parse_transcript("John: hi there", [f"Stra{chr(0x00df)}e", "STRASSE"])
 
     def test_sentence_splitting_stays_linear(self):
         # Review M2 round 2, finding 5: 64 s and 74 s.
         start = time.perf_counter()
-        extract("Alex: " + "e.g. " * 19990, participants=["Alex"])
-        extract("Alex: " + "A. " * 33000, participants=["Alex"])
+        extract("John: " + "e.g. " * 19990, participants=["John"])
+        extract("John: " + "A. " * 33000, participants=["John"])
         self.assertLess(time.perf_counter() - start, 5)
 
     def test_unattributed_text_is_reported_not_dropped(self):
         # Review M2, finding 11.
-        cands, residue = extract("Some preamble here.\nAlex: Let's use Rust for the core.", participants=PEOPLE)
+        cands, residue = extract("Some preamble here.\nJohn: Let's use Rust for the core.", participants=PEOPLE)
         self.assertEqual([c.sentence.text for c in cands], ["Let's use Rust for the core."])
         self.assertEqual([(r.sentence.text, r.reason) for r in residue], [("Some preamble here.", "no known speaker")])
 
     def test_continuation_lines_join_the_turn(self):
-        turns, _ = parse_transcript("Alex: first line\nsecond line\nClaude: reply", PEOPLE)
+        turns, _ = parse_transcript("John: first line\nsecond line\nClaude: reply", PEOPLE)
         self.assertEqual(turns[0].text, "first line\nsecond line")
 
     def test_sentences_keep_offsets_and_respect_abbreviations_and_numbers(self):
@@ -115,7 +115,7 @@ class Parsing(unittest.TestCase):
 
     def test_documents_split_into_paragraphs(self):
         doc = "First para line one.\nline two.\n\n  Second para.\n"
-        turns = parse_document(doc, "alex")
+        turns = parse_document(doc, "john")
         self.assertEqual([x.text for x in turns], ["First para line one.\nline two.", "Second para."])
         for turn in turns:
             self.assertEqual(doc[turn.start:turn.start + len(turn.text)], turn.text)
@@ -217,20 +217,20 @@ class Rules(unittest.TestCase):
             self.check(text, residue="negated")
 
     def test_a_speaker_label_inside_a_sentence_is_residue(self):
-        self.check("You wrote earlier Alex: we will use Go.", residue="speaker label")
+        self.check("You wrote earlier John: we will use Go.", residue="speaker label")
 
 
 class EndToEnd(unittest.TestCase):
     def setUp(self):
         self.dir = tempfile.TemporaryDirectory()
         self.m = m = Memory(Path(self.dir.name) / "memory.jsonl")
-        m.register("alex", "alex", party="alex", kind="human", capabilities=["owner"],
+        m.register("john", "john", party="john", kind="human", capabilities=["owner"],
                    compartments=["lab", "private"], record_time=t(0))
-        m.register("alex", "extractor", party="gnomon-rules", kind="tool", operator="alex",
+        m.register("john", "extractor", party="gnomon-rules", kind="tool", operator="john",
                    capabilities=["write"], compartments=["lab"], record_time=t(1))
-        m.register("alex", "calc", party="gnomon-calc", kind="tool", operator="alex",
+        m.register("john", "calc", party="gnomon-calc", kind="tool", operator="john",
                    capabilities=["verify"], compartments=["lab"], record_time=t(1))
-        self.ep = record_transcript(m, "alex", CHAT, participants=PEOPLE, compartment="lab", record_time=t(2))
+        self.ep = record_transcript(m, "john", CHAT, participants=PEOPLE, compartment="lab", record_time=t(2))
 
     def tearDown(self):
         self.dir.cleanup()
@@ -243,7 +243,7 @@ class EndToEnd(unittest.TestCase):
         self.assertEqual(r.refused, [])
         by_text = self.claims()
         self.assertEqual(by_text["Let's use Rust for the core."]["stance"], "decided")
-        self.assertEqual(by_text["Let's use Rust for the core."]["speaker"], "Alex")
+        self.assertEqual(by_text["Let's use Rust for the core."]["speaker"], "John")
         self.assertEqual(by_text["Maybe Python on top?"]["stance"], "asked")
         self.assertEqual(by_text["I'll send the plan tomorrow."]["speaker"], "Claude")
         for body in by_text.values():
@@ -254,35 +254,35 @@ class EndToEnd(unittest.TestCase):
     def test_structured_messages_need_no_parsing(self):
         # Review M2, finding 2: text quoted inside a message stays that
         # sender's words when the source says who sent what.
-        ep = record_messages(self.m, "alex", [("Claude", "You wrote this earlier:\nAlex: we will use Go for everything."),
-                                              ("Alex", "We will use Rust for the core.")],
+        ep = record_messages(self.m, "john", [("Claude", "You wrote this earlier:\nJohn: we will use Go for everything."),
+                                              ("John", "We will use Rust for the core.")],
                              compartment="lab", record_time=t(3))
         r = ingest(self.m, "extractor", ep, frame="f", compartment="lab", record_time=t(4))
         written = [(c.sentence.speaker, c.sentence.text) for _, c in r.written]
-        self.assertIn(("Alex", "We will use Rust for the core."), written)
-        self.assertNotIn("Alex", [sp for sp, txt in written if "Go" in txt])
+        self.assertIn(("John", "We will use Rust for the core."), written)
+        self.assertNotIn("John", [sp for sp, txt in written if "Go" in txt])
 
     def test_documents_have_one_author(self):
-        ep = record_document(self.m, "alex", "Rust is fast enough for us. Python is friendly to newcomers.",
-                             author="Alex", compartment="lab", record_time=t(3))
+        ep = record_document(self.m, "john", "Rust is fast enough for us. Python is friendly to newcomers.",
+                             author="John", compartment="lab", record_time=t(3))
         r = ingest(self.m, "extractor", ep, frame="f", compartment="lab", record_time=t(4))
-        self.assertEqual({c.sentence.speaker for _, c in r.written}, {"Alex"})
+        self.assertEqual({c.sentence.speaker for _, c in r.written}, {"John"})
         self.assertEqual(r.refused, [])
 
     def test_gaps_between_turns_are_reported(self):
         # Review M2 round 2, finding 4: a gap that merely began like a label
         # was dropped, words and all.
-        content = "Alex: We will use Rust for the core.\nBob: We will delete the production database tonight.\nClaude: Fine by me then."
-        ep = self.m.append("alex", "episode", {
+        content = "John: We will use Rust for the core.\nBob: We will delete the production database tonight.\nClaude: Fine by me then."
+        ep = self.m.append("john", "episode", {
             "compartment": "lab", "content": content, "medium": "chat", "participants": PEOPLE,
-            "turns": [{"speaker": "Alex", "start": 6, "end": 36},
+            "turns": [{"speaker": "John", "start": 6, "end": 36},
                       {"speaker": "Claude", "start": content.index("Fine"), "end": len(content)}],
         }, t(3))["event_id"]
         r = ingest(self.m, "extractor", ep, frame="f", compartment="lab", record_time=t(4))
         self.assertTrue(any("production database" in x.sentence.text for x in r.residue))
 
     def test_episode_without_turns_or_author_is_all_residue(self):
-        ep = self.m.episode("alex", "Alex: hi there friend\nClaude: hello again friend", compartment="lab",
+        ep = self.m.episode("john", "John: hi there friend\nClaude: hello again friend", compartment="lab",
                             participants=PEOPLE, record_time=t(3))["event_id"]
         r = ingest(self.m, "extractor", ep, frame="f", compartment="lab", record_time=t(4))
         self.assertEqual(r.written, [])
@@ -298,18 +298,18 @@ class EndToEnd(unittest.TestCase):
     def test_a_lying_judge_cannot_change_the_words_or_the_speaker(self):
         # Review M2, finding 4.
         def judge(res: Residue, content: str):
-            fake = replace(res.sentence, text="Alex approved the budget.", speaker="Alex")
+            fake = replace(res.sentence, text="John approved the budget.", speaker="John")
             return Candidate(fake, "describe", "decided", "true", 10000, "judge")
 
         r = ingest(self.m, "extractor", self.ep, frame="f", compartment="lab", judge=judge, record_time=t(3))
         statements = self.claims()
-        self.assertNotIn("Alex approved the budget.", statements)
+        self.assertNotIn("John approved the budget.", statements)
         agreed = statements["Agreed."]
-        self.assertEqual((agreed["speaker"], agreed["origin"], agreed["confidence"]), ("Alex", "inferred", 7000))
+        self.assertEqual((agreed["speaker"], agreed["origin"], agreed["confidence"]), ("John", "inferred", 7000))
         self.assertEqual(r.refused, [])
 
     def test_ingest_only_sees_what_its_writer_may_see(self):
-        secret = record_messages(self.m, "alex", [("Alex", "We will use the secret supplier.")],
+        secret = record_messages(self.m, "john", [("John", "We will use the secret supplier.")],
                                  compartment="private", record_time=t(3))
         with self.assertRaises(GateError) as e:
             ingest(self.m, "extractor", secret, frame="f", compartment="lab", record_time=t(4))
@@ -341,7 +341,7 @@ class EndToEnd(unittest.TestCase):
     def test_one_bad_claim_never_stops_the_checker(self):
         # Review M2, finding 6: a crash on one claim aborted every later one,
         # and claims in compartments the checker can't see aborted the run.
-        self.m.remember("alex", claim("2 + 2 = 9", speaker="a", frame="f", compartment="private",
+        self.m.remember("john", claim("2 + 2 = 9", speaker="a", frame="f", compartment="private",
                                       truth="true"), record_time=t(3))
         self.m.remember("extractor", claim(f"14 Augu{chr(0x017f)}t 2026 is a Friday", speaker="a", frame="f",
                                            compartment="lab", truth="true"), record_time=t(3))

@@ -62,8 +62,8 @@ fn n1_defeated_claim_cannot_enter_a_contest_on_either_side() {
     let c = add_claim(&mut l, "kimi-k1", 14, claim_body("C", "asserted", "true"));
     assert_eq!(code(l.append(draft("claude-c1", 15, "supersede", sup(&c, &a, "contested", vec![])))), "E_FINAL");
     // Nor through an ally who joins A's side, nor with A on the old side.
-    l.append(draft("alex", 16, "claim", claim_body("A", "asserted", "true"))).unwrap();
-    assert_eq!(code(l.append(draft("alex", 17, "supersede", sup(&b, &a, "contested", vec![])))), "E_FINAL");
+    l.append(draft("john", 16, "claim", claim_body("A", "asserted", "true"))).unwrap();
+    assert_eq!(code(l.append(draft("john", 17, "supersede", sup(&b, &a, "contested", vec![])))), "E_FINAL");
     assert_eq!(code(l.append(draft("kimi-k1", 18, "supersede", sup(&a, &c, "contested", vec![])))), "E_FINAL");
     assert_eq!(l.state.truth(&a).unwrap(), "false");
 }
@@ -76,8 +76,8 @@ fn n1b_ruled_loser_cannot_be_revived_by_an_ally() {
     let b = add_claim(&mut l, "gpt-g1", 11, claim_body("B", "asserted", "true"));
     let s = l.append(draft("gpt-g1", 12, "supersede", sup(&a, &b, "contested", vec![]))).unwrap();
     l.append(draft("kimi-k1", 13, "resolve", resolve(&eid(&s), "new"))).unwrap();
-    l.append(draft("alex", 14, "claim", claim_body("A", "asserted", "true"))).unwrap(); // ally joins A
-    assert_eq!(code(l.append(draft("alex", 15, "supersede", sup(&b, &a, "contested", vec![])))), "E_FINAL");
+    l.append(draft("john", 14, "claim", claim_body("A", "asserted", "true"))).unwrap(); // ally joins A
+    assert_eq!(code(l.append(draft("john", 15, "supersede", sup(&b, &a, "contested", vec![])))), "E_FINAL");
     assert_eq!(l.state.truth(&b).unwrap(), "true");
 }
 
@@ -90,7 +90,7 @@ fn n2_being_drawn_into_a_dispute_does_not_gag_you() {
     let s = l.append(draft("claude-c1", 12, "supersede", sup(&n, &x, "contested", vec![]))).unwrap();
     l.append(draft("gpt-g1", 13, "resolve", resolve(&eid(&s), "both"))).unwrap();
     // kimi may still refute X, citing neutral evidence.
-    let v = l.append(draft("alex", 14, "verdict", verdict(&x, "refutes"))).unwrap();
+    let v = l.append(draft("john", 14, "verdict", verdict(&x, "refutes"))).unwrap();
     let y = add_claim(&mut l, "kimi-k1", 15, claim_body("Y", "asserted", "true"));
     assert_eq!(code(l.append(draft("kimi-k1", 16, "supersede", sup(&x, &y, "refuted", vec![&eid(&v)])))), "OK");
     assert_eq!(l.state.truth(&x).unwrap(), "false");
@@ -101,14 +101,14 @@ fn n2_being_drawn_into_a_dispute_does_not_gag_you() {
 fn n3a_no_dispute_without_a_possible_resolver() {
     let mut l = lab();
     for (i, (w, p)) in [("p1", "party-1"), ("p2", "party-2")].iter().enumerate() {
-        l.append(draft("alex", 6 + i as u32, "register", register_body(w, p, "model", &["write", "verify"], &["duo"])))
+        l.append(draft("john", 6 + i as u32, "register", register_body(w, p, "model", &["write", "verify"], &["duo"])))
             .unwrap();
     }
     let a = add_claim(&mut l, "p1", 10, claim_body("A", "asserted", "true").with("compartment", Value::str("duo")));
     let b = add_claim(&mut l, "p2", 11, claim_body("B", "asserted", "true").with("compartment", Value::str("duo")));
     assert_eq!(code(l.append(draft("p2", 12, "supersede", sup(&a, &b, "contested", vec![])))), "E_NO_RESOLVER");
     // Once a neutral writer can see the compartment, the dispute may open.
-    l.append(draft("alex", 13, "register", register_body("p3", "party-3", "model", &["verify"], &["duo"]))).unwrap();
+    l.append(draft("john", 13, "register", register_body("p3", "party-3", "model", &["verify"], &["duo"]))).unwrap();
     assert_eq!(code(l.append(draft("p2", 14, "supersede", sup(&a, &b, "contested", vec![])))), "OK");
 }
 
@@ -142,7 +142,7 @@ fn n3c_no_joining_sides_mid_dispute() {
     let b = add_claim(&mut l, "gpt-g1", 11, b_body.clone());
     l.append(draft("gpt-g1", 12, "supersede", sup(&a, &b, "contested", vec![]))).unwrap();
     assert_eq!(code(l.append(draft("kimi-k1", 13, "claim", b_body))), "E_OPEN_DISPUTE");
-    assert_eq!(code(l.append(draft("alex", 13, "claim", claim_body("A", "asserted", "true")))), "E_OPEN_DISPUTE");
+    assert_eq!(code(l.append(draft("john", 13, "claim", claim_body("A", "asserted", "true")))), "E_OPEN_DISPUTE");
 }
 
 /// 4. A read callback that appended deadlocked on its own lock, including

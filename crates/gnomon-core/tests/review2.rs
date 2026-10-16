@@ -126,9 +126,9 @@ fn r2b_loser_cannot_overturn_the_winner() {
     assert_eq!(code(l.append(draft("claude-c1", 15, "supersede", sup(&b, &a, "refuted", vec![&eid(&v)])))), "E_EVIDENCE");
     // An outsider can't conscript the loser's claim as the opposing side
     // (consent), and with its own claim can't use the loser's verdict either.
-    assert_eq!(code(l.append(draft("alex", 16, "supersede", sup(&b, &a, "refuted", vec![&eid(&v)])))), "E_CONSENT");
-    let own = add_claim(&mut l, "alex", 17, claim_body("alex's view", "asserted", "true"));
-    assert_eq!(code(l.append(draft("alex", 18, "supersede", sup(&b, &own, "refuted", vec![&eid(&v)])))), "E_EVIDENCE");
+    assert_eq!(code(l.append(draft("john", 16, "supersede", sup(&b, &a, "refuted", vec![&eid(&v)])))), "E_CONSENT");
+    let own = add_claim(&mut l, "john", 17, claim_body("john's view", "asserted", "true"));
+    assert_eq!(code(l.append(draft("john", 18, "supersede", sup(&b, &own, "refuted", vec![&eid(&v)])))), "E_EVIDENCE");
     assert_eq!(l.state.truth(&b).unwrap(), "true");
 }
 
@@ -208,7 +208,7 @@ fn r7_empty_log_is_not_found() {
     fs::write(&p, "").unwrap();
     assert!(matches!(store::open(&p, None), Err(StoreError::NotFound)));
     // And an empty file can still start a new log.
-    store::append(&p, draft("alex", 0, "register", register_body("alex", "alex", "human", &["owner"], &["lab"]))).unwrap();
+    store::append(&p, draft("john", 0, "register", register_body("john", "john", "human", &["owner"], &["lab"]))).unwrap();
     assert_eq!(store::open(&p, None).unwrap().events.len(), 1);
 }
 

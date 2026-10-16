@@ -52,14 +52,14 @@ fn b1_refutation_reaches_a_disputed_claim_and_ends_the_dispute() {
     let dispute = &l.state.supersessions[&eid(&s)];
     assert!(dispute.resolution.is_some());
     // A later 'resolution' of that dispute is no longer possible.
-    assert_eq!(code(l.append(draft("alex", 16, "resolve", resolve(&eid(&s), "new")))), "E_RESOLVE");
+    assert_eq!(code(l.append(draft("john", 16, "resolve", resolve(&eid(&s), "new")))), "E_RESOLVE");
 }
 
 /// B2. A challenger with only `write` could not withdraw.
 #[test]
 fn b2_write_only_challenger_can_withdraw() {
     let mut l = lab();
-    l.append(draft("alex", 6, "register", register_body("scribe", "scribe-co", "model", &["write"], &["lab"])))
+    l.append(draft("john", 6, "register", register_body("scribe", "scribe-co", "model", &["write"], &["lab"])))
         .unwrap();
     let a = add_claim(&mut l, "claude-c1", 10, claim_body("A", "asserted", "true"));
     let b = add_claim(&mut l, "scribe", 11, claim_body("B", "asserted", "true"));
@@ -80,7 +80,7 @@ fn b5_withdrawal_is_not_a_resolution() {
     let s = l.append(draft("gpt-g1", 12, "supersede", sup(&a, &b, "contested", vec![]))).unwrap();
     l.append(draft("gpt-g1", 13, "resolve", resolve(&eid(&s), "withdrawn"))).unwrap();
     // The other gpt identity may still corroborate B after the withdrawal.
-    l.append(draft("alex", 14, "register", register_body("gpt-g2", "openai", "model", &["write"], &["lab"])))
+    l.append(draft("john", 14, "register", register_body("gpt-g2", "openai", "model", &["write"], &["lab"])))
         .unwrap();
     assert_eq!(code(l.append(draft("gpt-g2", 15, "claim", claim_body("B", "asserted", "true")))), "OK");
 }

@@ -49,9 +49,9 @@ fn eid(env: &Value) -> String {
 /// lab() plus mistral-m1 (party mistral) and judge (party judge-co, verify only).
 fn world() -> Ledger {
     let mut l = lab();
-    l.append(draft("alex", 6, "register", register_body("mistral-m1", "mistral", "model", &["write", "verify"], &["lab"])))
+    l.append(draft("john", 6, "register", register_body("mistral-m1", "mistral", "model", &["write", "verify"], &["lab"])))
         .unwrap();
-    l.append(draft("alex", 7, "register", register_body("judge", "judge-co", "model", &["verify"], &["lab"])))
+    l.append(draft("john", 7, "register", register_body("judge", "judge-co", "model", &["verify"], &["lab"])))
         .unwrap();
     l
 }
@@ -117,8 +117,8 @@ fn route2_appeal_on_the_balance_of_verdicts() {
     assert_eq!(l.state.truth(&t).unwrap(), "false");
     // No new evidence, but two parties support and one refutes: a hearing is earned.
     let a = l.append(draft("claude-c1", 16, "appeal", appeal(&t, vec![&eid(&s1)]))).unwrap();
-    // The decider must be neutral: alex (owner) has no stake.
-    assert_eq!(code(l.append(draft("alex", 17, "resolve", decide(&eid(&a), "upheld")))), "OK");
+    // The decider must be neutral: john (owner) has no stake.
+    assert_eq!(code(l.append(draft("john", 17, "resolve", decide(&eid(&a), "upheld")))), "OK");
     assert_eq!(l.state.truth(&t).unwrap(), "false", "upheld: stays refuted");
 }
 
@@ -140,7 +140,7 @@ fn appeal_evidence_must_be_outside_support() {
     let (t, _k, v) = refuted_t(&mut l);
     // The refuting verdict isn't support; a refuter's party can't support it later.
     assert_eq!(code(l.append(draft("claude-c1", 20, "appeal", appeal(&t, vec![&v])))), "E_EVIDENCE");
-    l.append(draft("alex", 21, "register", register_body("kimi-k2", "moonshot", "model", &["verify"], &["lab"])))
+    l.append(draft("john", 21, "register", register_body("kimi-k2", "moonshot", "model", &["verify"], &["lab"])))
         .unwrap();
     let s = l.append(draft("kimi-k2", 22, "verdict", verdict(&t, "supports")));
     // One verdict per party: moonshot already refuted, so this is refused anyway.
@@ -164,16 +164,16 @@ fn one_appeal_at_a_time_and_once_per_party() {
     let s = l.append(draft("mistral-m1", 20, "verdict", verdict(&t, "supports"))).unwrap();
     let a = l.append(draft("claude-c1", 21, "appeal", appeal(&t, vec![&eid(&s)]))).unwrap();
     // While open: no second appeal, no corroboration, no supersession.
-    assert_eq!(code(l.append(draft("alex", 22, "appeal", appeal(&t, vec![&eid(&s)])))), "E_OPEN_DISPUTE");
-    assert_eq!(code(l.append(draft("alex", 22, "claim", claim_body("T", "asserted", "true")))), "E_OPEN_DISPUTE");
+    assert_eq!(code(l.append(draft("john", 22, "appeal", appeal(&t, vec![&eid(&s)])))), "E_OPEN_DISPUTE");
+    assert_eq!(code(l.append(draft("john", 22, "claim", claim_body("T", "asserted", "true")))), "E_OPEN_DISPUTE");
     // Withdrawal is the appellant's alone, needs only write, and uses up its appeal.
     assert_eq!(code(l.append(draft("judge", 23, "resolve", decide(&eid(&a), "withdrawn")))), "E_CAPABILITY");
-    assert_eq!(code(l.append(draft("alex", 23, "resolve", decide(&eid(&a), "withdrawn")))), "E_RESOLVE_PARTY");
+    assert_eq!(code(l.append(draft("john", 23, "resolve", decide(&eid(&a), "withdrawn")))), "E_RESOLVE_PARTY");
     assert_eq!(code(l.append(draft("claude-c2", 24, "resolve", decide(&eid(&a), "withdrawn")))), "OK");
     assert_eq!(code(l.append(draft("claude-c1", 25, "appeal", appeal(&t, vec![&eid(&s)])))), "E_FINAL");
     assert_eq!(l.state.truth(&t).unwrap(), "false");
     // Contest outcomes don't apply to appeals, and vice versa.
-    let a2 = l.append(draft("alex", 26, "appeal", appeal(&t, vec![&eid(&s)]))).unwrap();
+    let a2 = l.append(draft("john", 26, "appeal", appeal(&t, vec![&eid(&s)]))).unwrap();
     assert_eq!(code(l.append(draft("judge", 27, "resolve", decide(&eid(&a2), "new")))), "E_RESOLVE");
 }
 
@@ -193,7 +193,7 @@ fn after_reinstatement_only_fresh_outside_evidence_refutes_again() {
     let jv = l.state.claims[&t].refutes.last().unwrap().clone();
     assert_eq!(code(l.append(draft("gpt-g1", 26, "supersede", sup(&t, &k2, "refuted", vec![&jv])))), "E_EVIDENCE");
     // A fresh verdict from a party with no stake can.
-    l.append(draft("alex", 27, "register", register_body("auditor", "audit-co", "model", &["verify"], &["lab"])))
+    l.append(draft("john", 27, "register", register_body("auditor", "audit-co", "model", &["verify"], &["lab"])))
         .unwrap();
     let fresh = l.append(draft("auditor", 28, "verdict", verdict(&t, "refutes"))).unwrap();
     assert_eq!(code(l.append(draft("gpt-g1", 29, "supersede", sup(&t, &k2, "refuted", vec![&eid(&fresh)])))), "OK");
@@ -206,7 +206,7 @@ fn after_reinstatement_only_fresh_outside_evidence_refutes_again() {
 #[test]
 fn stale_uncited_refutation_cannot_undo_a_reinstatement() {
     let mut l = world();
-    l.append(draft("alex", 8, "register", register_body("auditor", "audit-co", "model", &["verify"], &["lab"])))
+    l.append(draft("john", 8, "register", register_body("auditor", "audit-co", "model", &["verify"], &["lab"])))
         .unwrap();
     let t = add_claim(&mut l, "claude-c1", 10, claim_body("T", "asserted", "true"));
     let k = add_claim(&mut l, "gpt-g1", 11, claim_body("K", "asserted", "true"));
@@ -233,28 +233,28 @@ fn route3_restating_as_a_new_claim_is_always_open() {
 #[test]
 fn appeals_need_a_neutral_decider() {
     let mut l = lab();
-    // Only alex is outside the stake here, and alex is the claim's author.
-    let t = add_claim(&mut l, "alex", 10, claim_body("T", "asserted", "true"));
+    // Only john is outside the stake here, and john is the claim's author.
+    let t = add_claim(&mut l, "john", 10, claim_body("T", "asserted", "true"));
     let k = add_claim(&mut l, "gpt-g1", 11, claim_body("K", "asserted", "true"));
     let v = l.append(draft("kimi-k1", 12, "verdict", verdict(&t, "refutes"))).unwrap();
     l.append(draft("gpt-g1", 13, "supersede", sup(&t, &k, "refuted", vec![&eid(&v)]))).unwrap();
     let s = l.append(draft("claude-c1", 14, "verdict", verdict(&t, "supports"))).unwrap();
-    assert_eq!(code(l.append(draft("alex", 15, "appeal", appeal(&t, vec![&eid(&s)])))), "E_NO_RESOLVER");
+    assert_eq!(code(l.append(draft("john", 15, "appeal", appeal(&t, vec![&eid(&s)])))), "E_NO_RESOLVER");
 }
 
 #[test]
 fn filtered_view_hides_other_compartments_appeals() {
     let mut l = world();
-    l.append(draft("alex", 8, "register", register_body("bridge", "bridge-co", "model", &["write", "verify"], &["private"])))
+    l.append(draft("john", 8, "register", register_body("bridge", "bridge-co", "model", &["write", "verify"], &["private"])))
         .unwrap();
-    l.append(draft("alex", 9, "register", register_body("p-judge", "pj", "model", &["verify"], &["private"])))
+    l.append(draft("john", 9, "register", register_body("p-judge", "pj", "model", &["verify"], &["private"])))
         .unwrap();
-    l.append(draft("alex", 9, "register", register_body("p-ref", "pr", "model", &["write", "verify"], &["private"])))
+    l.append(draft("john", 9, "register", register_body("p-ref", "pr", "model", &["write", "verify"], &["private"])))
         .unwrap();
     let priv_ = |s: &str| claim_body(s, "asserted", "true").with("compartment", Value::str("private"));
     let t = add_claim(&mut l, "bridge", 10, priv_("secret T"));
     let k = add_claim(&mut l, "p-ref", 11, priv_("secret K"));
-    let v = l.append(draft("alex", 12, "verdict", verdict(&t, "refutes"))).unwrap();
+    let v = l.append(draft("john", 12, "verdict", verdict(&t, "refutes"))).unwrap();
     l.append(draft("p-ref", 13, "supersede", sup(&t, &k, "refuted", vec![&eid(&v)]))).unwrap();
     let s = l.append(draft("p-judge", 14, "verdict", verdict(&t, "supports"))).unwrap();
     l.append(draft("bridge", 15, "appeal", appeal(&t, vec![&eid(&s)]))).unwrap_err();

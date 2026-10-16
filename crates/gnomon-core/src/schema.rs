@@ -322,7 +322,7 @@ pub struct Register<'a> {
     pub kind: &'a str,
     pub capabilities: Vec<&'a str>,
     pub compartments: Vec<&'a str>,
-    /// How to address it ("Alex Duff", "Claude").
+    /// How to address it ("John Doe", "Claude").
     pub name: Option<&'a str>,
     /// Models: the model it runs, as its runtime reports it. Tools: their
     /// version, if any. Instances of one model make correlated mistakes.

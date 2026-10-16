@@ -90,7 +90,7 @@ class CanonicalOracle(unittest.TestCase):
             gnomon.canonicalize({"x": float("nan")})  # stopped before the core
 
     def test_claim_id_is_hash_of_canonical_body(self):
-        body = claim("x", speaker="alex", frame="f", compartment="lab")
+        body = claim("x", speaker="john", frame="f", compartment="lab")
         expected = "c:" + hashlib.sha256(jcs_reference.canonical(body).encode("utf-8")).hexdigest()
         self.assertEqual(gnomon.claim_id(body), expected)
 
@@ -101,11 +101,11 @@ class EndToEnd(unittest.TestCase):
         self.path = Path(self.dir.name) / "memory.jsonl"
         self.m = Memory(self.path)
         m = self.m
-        m.register("alex", "alex", party="alex", kind="human", capabilities=["owner"],
+        m.register("john", "john", party="john", kind="human", capabilities=["owner"],
                    compartments=["lab", "private"], record_time=t(0))
-        m.register("alex", "claude-c1", party="anthropic", kind="model", model="claude-c1", operator="alex",
+        m.register("john", "claude-c1", party="anthropic", kind="model", model="claude-c1", operator="john",
                    capabilities=["write", "verify"], compartments=["lab"], record_time=t(1))
-        m.register("alex", "gpt-g1", party="openai", kind="model", model="gpt-g1", operator="alex",
+        m.register("john", "gpt-g1", party="openai", kind="model", model="gpt-g1", operator="john",
                    capabilities=["write", "verify"], compartments=["lab"], record_time=t(2))
 
     def tearDown(self):
@@ -113,10 +113,10 @@ class EndToEnd(unittest.TestCase):
 
     def test_memory_round_trip_and_rebuild(self):
         m = self.m
-        ep = m.episode("claude-c1", "Alex: let's build it in Rust and Python.",
-                       compartment="lab", participants=["alex", "claude-c1"], record_time=t(3))
+        ep = m.episode("claude-c1", "John: let's build it in Rust and Python.",
+                       compartment="lab", participants=["john", "claude-c1"], record_time=t(3))
         decided = m.remember("claude-c1", claim(
-            "Core is written in Rust with Python on top", speaker="alex", frame="substrate stack",
+            "Core is written in Rust with Python on top", speaker="john", frame="substrate stack",
             compartment="lab", stance="decided", truth="true", confidence=7000,
             origin="manual", source_episode=ep["event_id"]), record_time=t(4))
         suggested = m.remember("claude-c1", claim(
@@ -130,7 +130,7 @@ class EndToEnd(unittest.TestCase):
         claims = s1["state"]["claims"]
         self.assertEqual(claims[decided]["body"]["stance"], "decided")
         self.assertEqual(claims[suggested]["body"]["stance"], "suggested")
-        self.assertEqual(claims[decided]["body"]["speaker"], "alex")
+        self.assertEqual(claims[decided]["body"]["speaker"], "john")
 
     def test_as_of(self):
         m = self.m
@@ -153,11 +153,11 @@ class EndToEnd(unittest.TestCase):
 
     def test_dispute_flag_and_appeal(self):
         m = self.m
-        m.register("alex", "kimi-k1", party="moonshot", kind="model", model="kimi-k1", operator="alex",
+        m.register("john", "kimi-k1", party="moonshot", kind="model", model="kimi-k1", operator="john",
                    capabilities=["write", "verify"], compartments=["lab"], record_time=t(3))
-        m.register("alex", "judge", party="judge-co", kind="model", model="judge", operator="alex",
+        m.register("john", "judge", party="judge-co", kind="model", model="judge", operator="john",
                    capabilities=["verify"], compartments=["lab"], record_time=t(3))
-        m.register("alex", "mistral-m1", party="mistral", kind="model", model="mistral-m1", operator="alex",
+        m.register("john", "mistral-m1", party="mistral", kind="model", model="mistral-m1", operator="john",
                    capabilities=["write", "verify"], compartments=["lab"], record_time=t(3))
         T = m.remember("claude-c1", claim("T", speaker="c", frame="f", compartment="lab",
                                           truth="true"), record_time=t(10))
@@ -185,8 +185,8 @@ class EndToEnd(unittest.TestCase):
 
     def test_compartment_filter_on_read(self):
         m = self.m
-        m.remember("alex", claim("private thought", speaker="alex", frame="f", compartment="private"), record_time=t(10))
-        m.remember("alex", claim("shared thought", speaker="alex", frame="f", compartment="lab"), record_time=t(11))
+        m.remember("john", claim("private thought", speaker="john", frame="f", compartment="private"), record_time=t(10))
+        m.remember("john", claim("shared thought", speaker="john", frame="f", compartment="lab"), record_time=t(11))
         visible = json.dumps(m.state(compartments=["lab"])["state"])
         self.assertNotIn("private thought", visible)
         self.assertIn("shared thought", visible)
@@ -197,11 +197,11 @@ class EndToEnd(unittest.TestCase):
         for secret in ["merger Friday", "merger Monday"]:
             with tempfile.TemporaryDirectory() as d:
                 m = Memory(Path(d) / "m.jsonl")
-                m.register("alex", "alex", party="alex", kind="human", capabilities=["owner"],
+                m.register("john", "john", party="john", kind="human", capabilities=["owner"],
                            compartments=["lab", "private"], record_time=t(0))
-                m.remember("alex", claim("shared", speaker="alex", frame="f", compartment="lab"),
+                m.remember("john", claim("shared", speaker="john", frame="f", compartment="lab"),
                            record_time=t(1))
-                m.episode("alex", secret, compartment="private", record_time=t(2))
+                m.episode("john", secret, compartment="private", record_time=t(2))
                 view = m.state(compartments=["lab"])
                 self.assertNotIn("count", view)
                 self.assertNotIn("head", view)
@@ -232,11 +232,11 @@ class Concurrency(unittest.TestCase):
         import threading
         with tempfile.TemporaryDirectory() as d:
             m = Memory(Path(d) / "memory.jsonl")
-            m.register("alex", "alex", party="alex", kind="human", capabilities=["owner"],
+            m.register("john", "john", party="john", kind="human", capabilities=["owner"],
                        compartments=["lab"], record_time=t(0))
             writers = ["w1", "w2", "w3", "w4"]
             for i, w in enumerate(writers):
-                m.register("alex", w, party=f"p{i}", kind="model", model=w, operator="alex", capabilities=["write"],
+                m.register("john", w, party=f"p{i}", kind="model", model=w, operator="john", capabilities=["write"],
                            compartments=["lab"], record_time=t(1))
             errors = []
 
@@ -262,11 +262,11 @@ class Concurrency(unittest.TestCase):
         with tempfile.TemporaryDirectory() as d:
             real = Path(d) / "memory.jsonl"
             m = Memory(real)
-            m.register("alex", "alex", party="alex", kind="human", capabilities=["owner"],
+            m.register("john", "john", party="john", kind="human", capabilities=["owner"],
                        compartments=["lab"], record_time=t(0))
             writers = [f"w{i}" for i in range(6)]
             for i, w in enumerate(writers):
-                m.register("alex", w, party=f"p{i}", kind="model", model=w, operator="alex", capabilities=["write"],
+                m.register("john", w, party=f"p{i}", kind="model", model=w, operator="john", capabilities=["write"],
                            compartments=["lab"], record_time=t(1))
             script = (
                 "import sys; sys.path.insert(0, sys.argv[1]);"

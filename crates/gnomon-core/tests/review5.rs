@@ -58,7 +58,7 @@ fn world() -> Ledger {
     .iter()
     .enumerate()
     {
-        l.append(draft("alex", 6 + i as u32, "register", register_body(w, p, "model", &["write", "verify"], &["lab"])))
+        l.append(draft("john", 6 + i as u32, "register", register_body(w, p, "model", &["write", "verify"], &["lab"])))
             .unwrap();
     }
     l

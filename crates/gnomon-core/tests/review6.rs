@@ -57,7 +57,7 @@ const MODELS: &[(&str, &str)] = &[
 fn world() -> Ledger {
     let mut l = lab();
     for (i, (w, p)) in MODELS.iter().enumerate() {
-        l.append(draft("alex", 6 + i as u32, "register", register_body(w, p, "model", &["write", "verify"], &["lab"])))
+        l.append(draft("john", 6 + i as u32, "register", register_body(w, p, "model", &["write", "verify"], &["lab"])))
             .unwrap();
     }
     l
@@ -82,7 +82,7 @@ fn g1_well_supported_claim_can_still_be_appealed() {
     }
     let ap = l.append(draft("claude-c1", 30, "appeal", appeal(&a, vec![&first]))).unwrap();
     // No ordinary neutral remains, so the owner (no stake) decides.
-    assert_eq!(code(l.append(draft("alex", 31, "resolve", decide(&eid(&ap), "reinstated")))), "OK");
+    assert_eq!(code(l.append(draft("john", 31, "resolve", decide(&eid(&ap), "reinstated")))), "OK");
     assert_eq!(l.state.truth(&a).unwrap(), "true");
 }
 
@@ -92,10 +92,10 @@ fn backstop_only_when_needed() {
     let mut l = world();
     let a = add_claim(&mut l, "claude-c1", 10, claim_body("A", "asserted", "true"));
     let b = add_claim(&mut l, "gpt-g1", 11, claim_body("B", "asserted", "true"));
-    l.append(draft("alex", 12, "verdict", verdict(&a, "supports"))).unwrap();
+    l.append(draft("john", 12, "verdict", verdict(&a, "supports"))).unwrap();
     let s = l.append(draft("gpt-g1", 13, "supersede", sup(&a, &b, "contested", vec![]))).unwrap();
-    // alex gave a verdict on A, and neutral parties exist: alex cannot rule.
-    assert_eq!(code(l.append(draft("alex", 14, "resolve", decide(&eid(&s), "new")))), "E_RESOLVE_PARTY");
+    // john gave a verdict on A, and neutral parties exist: john cannot rule.
+    assert_eq!(code(l.append(draft("john", 14, "resolve", decide(&eid(&s), "new")))), "E_RESOLVE_PARTY");
     assert_eq!(code(l.append(draft("qwen-q1", 15, "resolve", decide(&eid(&s), "old")))), "OK");
 }
 
@@ -124,7 +124,7 @@ fn g3_late_verdicts_cannot_strand_a_contest() {
     for (i, (w, _)) in MODELS.iter().enumerate() {
         l.append(draft(w, 14 + i as u32, "verdict", verdict(&a, "supports"))).unwrap();
     }
-    assert_eq!(code(l.append(draft("alex", 30, "resolve", decide(&eid(&s), "old")))), "OK");
+    assert_eq!(code(l.append(draft("john", 30, "resolve", decide(&eid(&s), "old")))), "OK");
     assert!(!l.state.disputed(&a));
 }
 
