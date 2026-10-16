@@ -50,7 +50,12 @@ pub fn schema() -> Schema {
         ("appeal", 3),
         ("episode", 3),
         ("participant", 2),
+        ("bound", 3),
         ("writer", 3),
+        ("identity", 3),
+        ("group", 2),
+        ("instance_of", 2),
+        ("speaks_as", 2),
         ("capability", 2),
         ("member", 2),
     ]
@@ -74,6 +79,15 @@ asserted_by_party(C, P) :- asserted_by(C, W), writer(W, P, _).
 % A narrower or more general claim New stands in for Old within its domain.
 refined(Old, New) :- supersession(_, Old, New, "narrowed", _).
 refined(Old, New) :- supersession(_, Old, New, "generalised", _).
+% The groups whose agreement claim C has: every instance of one model is
+% one group (shared weights, shared mistakes); each person is their own.
+asserted_group(C, G) :- asserted_by(C, W), group(W, G).
+% Asserted by at least two independent groups, not just two sessions.
+independently_asserted(C) :- asserted_group(C, G1), asserted_group(C, G2), G1 != G2.
+% Two writers that are instances of the same model.
+same_model(W1, W2) :- identity(W1, "model", M), identity(W2, "model", M), writer(W1, _, "model"), writer(W2, _, "model"), W1 != W2.
+% Who a model or tool acts for.
+acts_for(W, H) :- identity(W, "operator", H).
 "#;
 
 /// Run `program` against `ledger`, showing only `compartments`.
@@ -299,6 +313,9 @@ impl<'a> Builder<'a> {
             for p in &e.participants {
                 self.add(eng, "participant", vec![s(eid), s(p)], src)?;
             }
+            for (label, w) in &e.bindings {
+                self.add(eng, "bound", vec![s(eid), s(label), s(w)], src)?;
+            }
         }
 
         // Writers who share a compartment with the reader, from their
@@ -318,12 +335,50 @@ impl<'a> Builder<'a> {
             }
             let src = self.src_seq(registered[wid.as_str()]);
             self.add(eng, "writer", vec![s(wid), s(&w.party), s(&w.kind)], src)?;
+            for (k, v) in [("name", &w.name), ("model", &w.model), ("operator", &w.operator), ("surface", &w.surface), ("session", &w.session)] {
+                if let Some(v) = v {
+                    self.add(eng, "identity", vec![s(wid), s(k), s(v)], src)?;
+                }
+            }
+            // Its group: an instance's is its parent's, so the facts come
+            // from every registration up the line.
+            let mut line = vec![src];
+            let mut cur = w;
+            while let Some(p) = cur.instance_of.as_deref() {
+                let pseq = registered[p];
+                line.push(self.src_seq(pseq));
+                if line.len() == 2 {
+                    self.add_all(eng, "instance_of", vec![s(wid), s(p)], line.clone())?;
+                }
+                cur = &st.writers[p];
+            }
+            self.add_all(eng, "group", vec![s(wid), s(&st.group(wid))], line)?;
             for cap in &w.capabilities {
                 self.add(eng, "capability", vec![s(wid), s(cap)], src)?;
             }
             for c in shared {
                 self.add(eng, "member", vec![s(wid), s(c)], src)?;
             }
+        }
+        // Who each visible claim's speaker is, as settled when it was first
+        // recorded: from the claim and the episode that binds the name, or
+        // the registration that names the writer. Only writers the reader
+        // can see are named.
+        for (id, c) in &st.claims {
+            let Some(who) = c.speaker_is.as_deref() else { continue };
+            if !self.sees(&c.compartment) {
+                continue;
+            }
+            let Some(wi) = st.writers.get(who) else { continue };
+            if !wi.compartments.iter().any(|x| self.sees(x)) {
+                continue;
+            }
+            let first = self.src(&c.first_event);
+            let second = match c.body.get("source_episode").and_then(|v| v.as_str()) {
+                Some(ep) => self.src(ep),
+                None => self.src_seq(registered[who]),
+            };
+            self.add_all(eng, "speaks_as", vec![s(id), s(who)], vec![first, second])?;
         }
         Ok(())
     }

@@ -134,24 +134,43 @@ class Memory:
         capabilities: Iterable[str],
         compartments: Iterable[str],
         record_time: Optional[str] = None,
+        name: Optional[str] = None,
+        model: Optional[str] = None,
+        operator: Optional[str] = None,
+        surface: Optional[str] = None,
+        session: Optional[str] = None,
     ) -> dict:
+        """Register a writer: one person, or one running instance of a model
+        or tool (each session or agent is its own writer). A model names the
+        model it runs, as its runtime reports it, and its `operator`, the
+        registered human it acts for; a tool names its operator."""
         body = {
             "writer": writer,
             "party": party,
             "kind": kind,
             "capabilities": list(capabilities),
             "compartments": list(compartments),
+            **{k: v for k, v in (("name", name), ("model", model), ("operator", operator),
+                                 ("surface", surface), ("session", session)) if v is not None},
         }
+        # A new memory starts at the current protocol version.
+        if by == writer and (not Path(self.path).exists() or Path(self.path).stat().st_size == 0):
+            body["schema_version"] = SCHEMA_VERSION
         return self.append(by, "register", body, record_time)
 
     def episode(self, writer: str, content: str, *, compartment: str, medium: str = "chat",
-                participants: Iterable[str] = (), record_time: Optional[str] = None) -> dict:
+                participants: Iterable[str] = (), record_time: Optional[str] = None,
+                bindings: Optional[dict] = None) -> dict:
+        """Record an episode. `bindings` says which registered writer each
+        participant's name refers to ({"Claude": "claude-c1"})."""
         body = {
             "compartment": compartment,
             "content": content,
             "medium": medium,
             "participants": list(participants),
         }
+        if bindings:
+            body["bindings"] = dict(bindings)
         return self.append(writer, "episode", body, record_time)
 
     def remember(self, writer: str, body: dict, record_time: Optional[str] = None) -> str:
@@ -231,6 +250,31 @@ class Memory:
 
     def check_checkpoint(self, count: int, head: str) -> None:
         _unwrap(_native.call("gn_checkpoint", self.path, count, head))
+
+
+#: The protocol version new memories start at (see the spec, section 2a).
+SCHEMA_VERSION = 2
+
+
+def title(writers: dict, wid: str) -> str:
+    """How to name a writer so it cannot be mistaken for another: its name,
+    the model it runs and where (for an instance, its session), its id, and
+    who it acts for. `writers` is state()["state"]["writers"].
+
+    >>> title(ws, "claude-c1-2")
+    'Claude (claude-opus-5-5, claude-code, session 7f3a) [claude-c1-2] for Alex Duff [alex]'
+    """
+    w = writers.get(wid)
+    if w is None:
+        return f"{wid} (not a registered writer)"
+    details = [x for x in (w.get("model"), w.get("surface"),
+                           f"session {w['session']}" if w.get("session") else None) if x]
+    out = (w.get("name") or wid) + (f" ({', '.join(details)})" if details else "") + f" [{wid}]"
+    op = w.get("operator")
+    if op:
+        opname = (writers.get(op) or {}).get("name")
+        out += f" for {opname} [{op}]" if opname else f" for {op}"
+    return out
 
 
 #: The built-in views, as Datalog source (each line says what it means).

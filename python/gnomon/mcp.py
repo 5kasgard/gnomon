@@ -24,7 +24,10 @@ import sys
 import traceback
 from typing import Any, Callable, Optional
 
-from . import GateError, Memory, VIEWS, __version__, _native, claim, checkers, proofs
+import os
+import uuid
+
+from . import GateError, Memory, VIEWS, __version__, _native, claim, checkers, proofs, title
 from .ingest import ingest, record_messages
 
 MODERN = ["2026-07-28"]
@@ -39,6 +42,9 @@ Gnomon is a verifiable memory. Everything is an append-only, hash-chained log; \
 nothing is ever overwritten. Use it to remember what was said and decided, and \
 to answer questions with proofs.
 
+- Each session is its own writer: call `whoami` to see who you are on \
+record. When recording a conversation, pass `me` (your name in it) so your \
+own words are bound to you, not to any other session of the same model.
 - Write with `remember` (one claim) or `record_conversation` (a whole \
 conversation; sentences are extracted by plain rules, uncertain ones are \
 returned as residue rather than guessed).
@@ -109,6 +115,11 @@ TOOLS: list[dict] = [
             "compartment": S,
             "frame": {"type": "string", "description": "What the conversation is about."},
             "extract": {"type": "boolean", "description": "Extract claims (default true)."},
+            "me": {"type": "string", "description": "The speaker name used for you in these messages: your "
+                   "registered name or writer id (see `whoami`). It is bound to your writer, so your own words "
+                   "are recorded as yours."},
+            "operator_name": {"type": "string", "description": "The speaker name used for the person you act "
+                              "for (e.g. \"Alex\"). It is bound to them, as your account of who they are."},
         }, ["messages", "compartment", "frame"]),
         "annotations": {"readOnlyHint": False, "destructiveHint": False, "idempotentHint": False,
                         "openWorldHint": False},
@@ -211,6 +222,17 @@ TOOLS: list[dict] = [
                         "openWorldHint": False},
     },
     {
+        "name": "whoami",
+        "title": "Who am I in this memory",
+        "description": (
+            "Your identity here: your writer id (this session's own), the model and surface recorded "
+            "for you, who you act for, your compartments and capabilities, and how you are named in "
+            "records. Every session or agent is a separate writer, even on the same model."
+        ),
+        "inputSchema": {"type": "object", "additionalProperties": False},
+        "annotations": {"readOnlyHint": True, "openWorldHint": False},
+    },
+    {
         "name": "verify_log",
         "title": "Verify the log",
         "description": "Replay the whole log through every rule and check its hash chain (pass or fail).",
@@ -226,19 +248,57 @@ class ToolError(Exception):
 
 
 class Server:
-    def __init__(self, log: str, writer: str, checker: Optional[str] = None):
+    def __init__(self, log: str, writer: str, checker: Optional[str] = None, per_session: bool = False,
+                 session: Optional[str] = None):
         self.memory = Memory(log)
         self.log = log
         self.writer = writer
         self.checker = checker
+        # Per session: `writer` is a template with 'spawn'; this process
+        # starts its own instance on first use, so two sessions never share
+        # a writer, however they are configured.
+        self.parent: Optional[str] = writer if per_session else None
+        self.session = session
         self.legacy: Optional[str] = None  # negotiated legacy version for this stdio process
         self.tools = [t for t in TOOLS if t["name"] != "run_checkers" or checker]
         self.tool_names = {t["name"] for t in self.tools}
 
     # -------------------------------------------------------- tool bodies
     def tool(self, name: str, args: dict) -> tuple[str, Any]:
+        if self.parent is not None and self.writer == self.parent:
+            self._start_instance()
         fn: Callable[[dict], tuple[str, Any]] = getattr(self, "t_" + name)
         return fn(args)
+
+    def _start_instance(self) -> None:
+        writers = self.memory.state()["state"]["writers"]
+        p = writers[self.parent]
+        # A session that already has its instance (the host resumed it, or
+        # restarted this server) carries on as that writer.
+        if self.session:
+            for wid, w in writers.items():
+                if (wid.startswith(self.parent + "-") and w.get("session") == self.session
+                        and w.get("model") == p.get("model")):
+                    self.writer = wid
+                    return
+        session = self.session or uuid.uuid4().hex[:16]
+        for n in range(1, 1_000_000):
+            wid = f"{self.parent}-{n}"
+            if wid not in writers:
+                break
+        if len(wid) > 32:
+            raise ToolError(f"'{self.parent}' is too long a writer id to start instances of (ids are at most 32 "
+                            "characters, and an instance's is its parent's plus '-<n>')")
+        caps = [c for c in p["capabilities"] if c not in ("owner", "govern", "spawn")]
+        try:
+            self.memory.register(self.parent, wid, party=p["party"], kind=p["kind"], capabilities=caps,
+                                 compartments=p["compartments"], name=p.get("name"), model=p.get("model"),
+                                 operator=p.get("operator"), surface=p.get("surface"), session=session)
+        except GateError as e:
+            if e.code != "E_DUPLICATE":
+                raise
+            return self._start_instance()  # another session took that id first
+        self.writer = wid
 
     def t_remember(self, a: dict) -> tuple[str, Any]:
         optional = {k: a[k] for k in ("validity_domain", "valid_from", "valid_to") if k in a}
@@ -259,7 +319,17 @@ class Server:
 
     def t_record_conversation(self, a: dict) -> tuple[str, Any]:
         msgs = [(m["speaker"], m["text"]) for m in a["messages"]]
-        ep = record_messages(self.memory, self.writer, msgs, compartment=a["compartment"])
+        bindings = {}
+        if "me" in a:
+            bindings[a["me"]] = self.writer
+        if "me" in a and a.get("operator_name") == a["me"]:
+            raise ToolError("'me' and 'operator_name' must be different speakers")
+        if "operator_name" in a:
+            op = self.memory.state()["state"]["writers"].get(self.writer, {}).get("operator")
+            if not op:
+                raise ToolError("you have no operator on record to bind operator_name to")
+            bindings[a["operator_name"]] = op
+        ep = record_messages(self.memory, self.writer, msgs, compartment=a["compartment"], bindings=bindings)
         out: dict[str, Any] = {"episode": ep, "claims": [], "residue": [], "refused": []}
         if a.get("extract", True):
             rep = ingest(self.memory, self.writer, ep, frame=a["frame"], compartment=a["compartment"])
@@ -355,6 +425,19 @@ class Server:
         out = {"verdicts": [{"claim": c, "result": r, "note": n} for c, r, n in rep.verdicts],
                "failures": [{"claim": c, "error": e} for c, e in rep.failures]}
         return f"{len(rep.verdicts)} verdict(s) recorded, {len(rep.failures)} claim(s) could not be checked.", out
+
+    def t_whoami(self, a: dict) -> tuple[str, Any]:
+        full = self.memory.state()["state"]["writers"]
+        # Only what this writer may see: others are named as far as they
+        # share a compartment with it.
+        writers = self.memory.state(compartments=full[self.writer]["compartments"])["state"]["writers"]
+        me = dict(writers.get(self.writer, {}))
+        me.pop("last_seq", None)
+        out = {"writer": self.writer, "title": title(writers, self.writer), **me}
+        text = (f"You are {out['title']}.\nWriter id: {self.writer} (this session's own; other sessions, even of "
+                f"the same model, are other writers).\nCompartments: {', '.join(me.get('compartments', []))}; "
+                f"capabilities: {', '.join(me.get('capabilities', []))}.")
+        return text, out
 
     def t_verify_log(self, a: dict) -> tuple[str, Any]:
         # Only pass or fail: the whole log's size would reveal how much the
@@ -605,8 +688,12 @@ def main(argv: Optional[list[str]] = None) -> int:
     p.add_argument("--log", required=True, help="the memory's log file")
     p.add_argument("--writer", required=True, help="the registered writer this server acts as")
     p.add_argument("--checker", help="a registered verifier writer for run_checkers (optional)")
+    p.add_argument("--per-session", action="store_true",
+                   help="start a new writer for this session, as an instance of --writer (which needs 'spawn')")
+    p.add_argument("--session", help="this session's id, if the host has one (default: random)")
     a = p.parse_args(argv)
-    server = Server(a.log, a.writer, a.checker)
+    server = Server(a.log, a.writer, a.checker, per_session=a.per_session,
+                    session=a.session or os.environ.get("GNOMON_SESSION"))
     try:
         writers = server.memory.state()["state"]["writers"]
     except GateError as e:
@@ -616,6 +703,9 @@ def main(argv: Optional[list[str]] = None) -> int:
         if w not in writers:
             print(f"gnomon: writer '{w}' is not registered in {a.log}", file=sys.stderr)
             return 2
+    if a.per_session and "spawn" not in writers[a.writer]["capabilities"]:
+        print(f"gnomon: --per-session needs '{a.writer}' to have the 'spawn' capability", file=sys.stderr)
+        return 2
     print(f"gnomon MCP server: {a.log} as {a.writer}", file=sys.stderr)
     serve(server)
     return 0

@@ -226,9 +226,9 @@ class EndToEnd(unittest.TestCase):
         self.m = m = Memory(Path(self.dir.name) / "memory.jsonl")
         m.register("alex", "alex", party="alex", kind="human", capabilities=["owner"],
                    compartments=["lab", "private"], record_time=t(0))
-        m.register("alex", "extractor", party="gnomon-rules", kind="tool",
+        m.register("alex", "extractor", party="gnomon-rules", kind="tool", operator="alex",
                    capabilities=["write"], compartments=["lab"], record_time=t(1))
-        m.register("alex", "calc", party="gnomon-calc", kind="tool",
+        m.register("alex", "calc", party="gnomon-calc", kind="tool", operator="alex",
                    capabilities=["verify"], compartments=["lab"], record_time=t(1))
         self.ep = record_transcript(m, "alex", CHAT, participants=PEOPLE, compartment="lab", record_time=t(2))
 

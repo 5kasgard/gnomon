@@ -103,9 +103,9 @@ class EndToEnd(unittest.TestCase):
         m = self.m
         m.register("alex", "alex", party="alex", kind="human", capabilities=["owner"],
                    compartments=["lab", "private"], record_time=t(0))
-        m.register("alex", "claude-c1", party="anthropic", kind="model",
+        m.register("alex", "claude-c1", party="anthropic", kind="model", model="claude-c1", operator="alex",
                    capabilities=["write", "verify"], compartments=["lab"], record_time=t(1))
-        m.register("alex", "gpt-g1", party="openai", kind="model",
+        m.register("alex", "gpt-g1", party="openai", kind="model", model="gpt-g1", operator="alex",
                    capabilities=["write", "verify"], compartments=["lab"], record_time=t(2))
 
     def tearDown(self):
@@ -153,11 +153,11 @@ class EndToEnd(unittest.TestCase):
 
     def test_dispute_flag_and_appeal(self):
         m = self.m
-        m.register("alex", "kimi-k1", party="moonshot", kind="model",
+        m.register("alex", "kimi-k1", party="moonshot", kind="model", model="kimi-k1", operator="alex",
                    capabilities=["write", "verify"], compartments=["lab"], record_time=t(3))
-        m.register("alex", "judge", party="judge-co", kind="model",
+        m.register("alex", "judge", party="judge-co", kind="model", model="judge", operator="alex",
                    capabilities=["verify"], compartments=["lab"], record_time=t(3))
-        m.register("alex", "mistral-m1", party="mistral", kind="model",
+        m.register("alex", "mistral-m1", party="mistral", kind="model", model="mistral-m1", operator="alex",
                    capabilities=["write", "verify"], compartments=["lab"], record_time=t(3))
         T = m.remember("claude-c1", claim("T", speaker="c", frame="f", compartment="lab",
                                           truth="true"), record_time=t(10))
@@ -236,7 +236,7 @@ class Concurrency(unittest.TestCase):
                        compartments=["lab"], record_time=t(0))
             writers = ["w1", "w2", "w3", "w4"]
             for i, w in enumerate(writers):
-                m.register("alex", w, party=f"p{i}", kind="model", capabilities=["write"],
+                m.register("alex", w, party=f"p{i}", kind="model", model=w, operator="alex", capabilities=["write"],
                            compartments=["lab"], record_time=t(1))
             errors = []
 
@@ -266,7 +266,7 @@ class Concurrency(unittest.TestCase):
                        compartments=["lab"], record_time=t(0))
             writers = [f"w{i}" for i in range(6)]
             for i, w in enumerate(writers):
-                m.register("alex", w, party=f"p{i}", kind="model", capabilities=["write"],
+                m.register("alex", w, party=f"p{i}", kind="model", model=w, operator="alex", capabilities=["write"],
                            compartments=["lab"], record_time=t(1))
             script = (
                 "import sys; sys.path.insert(0, sys.argv[1]);"
