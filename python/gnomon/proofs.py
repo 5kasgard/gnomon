@@ -423,14 +423,25 @@ def _instance_ok(rule: Rule, fact: list, premises: list[list], absent: list[list
     return _unify(rule.head.args, fact[1:], env) is not None
 
 
+_LOG_CACHE: dict = {}  # resolved path -> (bytes read, events, problems, last hash)
+
+
 def _load_log(path) -> tuple[list, list[str]]:
     """The log's events in order, up to the first whose hash or chain link
-    does not check out."""
+    does not check out. Each line is checked here, independently of the
+    core. A log that has only grown since it was last read here has just its
+    new lines checked; any other change is read again in full."""
+    key = str(Path(path).resolve())
+    data = Path(path).read_bytes()
+    cached = _LOG_CACHE.get(key)
+    if cached and not cached[2] and data.startswith(cached[0]) and (not cached[0] or cached[0].endswith(b"\n")):
+        start, events, prev = len(cached[0]), list(cached[1]), cached[3]
+    else:
+        start, events, prev = 0, [], "0" * 64
     problems: list[str] = []
-    events: list[dict] = []
-    prev = "0" * 64
-    text = Path(path).read_text(encoding="utf-8")
-    for n, line in enumerate(text.split("\n")[:-1]):
+    text = data[start:].decode("utf-8")
+    base = len(events)
+    for n, line in enumerate(text.split("\n")[:-1], base):
         ev = json.loads(line)
         if canonical(ev) != line:
             problems.append(f"log line {n} is not in canonical form")
@@ -442,11 +453,24 @@ def _load_log(path) -> tuple[list, list[str]]:
             break
         prev = h
         events.append(ev)
+    if len(_LOG_CACHE) > 16:
+        _LOG_CACHE.clear()
+    _LOG_CACHE[key] = (data, events, list(problems), prev)
     return events, problems
 
 
+_CID: dict = {}  # id(body) -> (body, claim id): bodies of cached log events
+
+
 def _claim_id(body) -> str:
-    return "c:" + hashlib.sha256(canonical(body).encode("utf-8")).hexdigest()
+    hit = _CID.get(id(body))
+    if hit is not None and hit[0] is body:
+        return hit[1]
+    cid = "c:" + hashlib.sha256(canonical(body).encode("utf-8")).hexdigest()
+    if len(_CID) > 2_000_000:
+        _CID.clear()
+    _CID[id(body)] = (body, cid)
+    return cid
 
 
 _FIELD = {
@@ -747,7 +771,7 @@ def _establishes(fact: list, cited: set, d: _Disputes) -> bool:
 
 
 def check(result: dict, program: str, views: str = "", log: Optional[str | Path] = None,
-          require_hashes: bool = False) -> list[str]:
+          require_hashes: bool = False, proofs_requested: Optional[int] = None) -> list[str]:
     """Check every proof in a query result. Returns the problems found (an
     empty list means every proof checks out). `program` is the query that
     was run, `views` the built-in views (gnomon.VIEWS) when querying a
@@ -860,7 +884,24 @@ def check(result: dict, program: str, views: str = "", log: Optional[str | Path]
                     problems.append(f"{nid}: the log does not establish {fact} from {[s.get('event') for s in sources]}")
 
     problems.extend(_check_hashes(result, require_hashes))
-    for i, ans in enumerate(result.get("answers", [])):
+    answers = result.get("answers", [])
+    proved = sum(1 for a in answers if a.get("proof") is not None)
+    unproven = len(answers) - proved
+    if unproven:
+        # Answers without a proof pass only if the caller asked for proofs
+        # of just the first `proofs_requested`: then exactly those are
+        # proved, the rest come after them, and the result says so. Anything
+        # else is an answer nobody can check.
+        expected = None if proofs_requested is None else min(proofs_requested, len(answers))
+        if expected is None or proved != expected:
+            problems.append(f"{unproven} answer(s) carry no proof")
+        elif any(a.get("proof") is not None for a in answers[proved:]) or result.get("proved") != proved:
+            problems.append("answers without a proof are not the result's trailing, declared unproven answers")
+    if require_hashes and answers and not proved and proofs_requested != 0:
+        problems.append("the proof is not fully content-addressed")
+    for i, ans in enumerate(answers):
+        if ans.get("proof") is None:
+            continue
         node = nodes.get(ans["proof"])
         if node is None or node["fact"] != ["?"] + ans["values"]:
             problems.append(f"answer {i}: its proof does not prove it")
@@ -880,7 +921,7 @@ def _check_hashes(result: dict, required: bool = False) -> list[str]:
     problems: list[str] = []
     rules, nodes = result.get("rules", {}), result.get("nodes", {})
     marked = ["hash" in x for x in list(rules.values()) + list(nodes.values())]
-    marked += ["proof_hash" in a for a in result.get("answers", [])]
+    marked += ["proof_hash" in a for a in result.get("answers", []) if a.get("proof") is not None]
     if (any(marked) or required) and not all(marked):
         problems.append("the proof is not fully content-addressed" if required and not any(marked)
                         else "some of the proof is content-addressed and some is not")

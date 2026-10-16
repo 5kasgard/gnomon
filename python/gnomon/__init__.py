@@ -265,27 +265,7 @@ class Memory:
         """Every piece of work (frame) the reader can see, most recently
         active first: its last activity, how many claims and handoffs it
         has, and its latest handoff."""
-        st = self.state(as_of=as_of, compartments=self._compartments(reader))["state"]
-        frames: dict[str, dict] = {}
-
-        def entry(f):
-            return frames.setdefault(f, {"frame": f, "last_activity": "", "last_order": -1, "claims": 0,
-                                         "handoffs": 0, "latest_handoff": None})
-        for c in st["claims"].values():
-            e = entry(c["body"]["frame"])
-            e["claims"] += 1
-            if c["order"] > e["last_order"]:
-                e["last_order"], e["last_activity"] = c["order"], c["record_time"]
-        for hid, h in sorted(st["handoffs"].items(), key=lambda kv: kv[1]["order"]):
-            e = entry(h["body"]["frame"])
-            e["handoffs"] += 1
-            e["latest_handoff"] = hid
-            if h["order"] > e["last_order"]:
-                e["last_order"], e["last_activity"] = h["order"], h["record_time"]
-        out = sorted(frames.values(), key=lambda e: e["last_order"], reverse=True)
-        for e in out:
-            del e["last_order"]
-        return out
+        return _unwrap(_native.call("gn_frames", self.path, as_of, reader))["frames"]
 
     def resume(self, reader: str, frame: Optional[str] = None, as_of: Optional[str] = None,
                limit: int = 20, turns: int = 12) -> dict:
@@ -298,17 +278,22 @@ class Memory:
         to a budget (marked "cut"), and lists to the `limit` most recent."""
         limit = max(1, min(int(limit), 200))
         turns = max(0, min(int(turns), 200))
-        st = self.state(as_of=as_of, compartments=self._compartments(reader))["state"]
+        asked = frame
+        if frame is not None and not _plain_text(frame, 2000):
+            frame = "\x00"  # no frame can have that name: an empty resume, below
+        # Only the part of the state this needs, worked out natively.
+        got = _unwrap(_native.call("gn_resume_state", self.path, as_of, reader,
+                                   None if frame is None else frame, turns))
+        st = got["state"]
         empty = {"frame": frame, "handoff": None, "earlier_handoffs": [], "rests_on": [],
                  "since": {"claims": [], "more": 0}, "decisions": [], "open_questions": [],
                  "unanswered_critiques": [], "recent_turns": self._recent_turns(st, None, turns)}
         if frame is None:
-            fs = self.frames(reader, as_of)
-            if not fs:
+            frame = got["frame"]
+            if frame is None:
                 return dict(empty, frames=[])
-            frame = fs[0]["frame"]
-        if not _plain_text(frame, 2000):
-            return dict(empty, frame=frame)  # no frame can have that name
+        if frame == "\x00":
+            return dict(empty, frame=asked)
         hs = sorted(((hid, h) for hid, h in st["handoffs"].items() if h["body"]["frame"] == frame),
                     key=lambda kv: kv[1]["order"])
         latest = hs[-1] if hs else None
@@ -337,13 +322,21 @@ class Memory:
                        key=lambda cid: claims[cid]["order"])
         fq = json.dumps(frame, ensure_ascii=False)
 
-        def ask(program: str) -> list:
-            rows = [a["values"] for a in self.query(reader, program, as_of)["answers"]]
-            return sorted(rows, key=lambda v: claims[v[0]]["order"] if v[0] in claims else -1)
-        open_qs = [standing(v[0]) for v in ask(f"?- open_question(Q), frame(Q, {fq}).")]
-        decisions = [standing(v[0]) for v in ask(f"?- decision(C), frame(C, {fq}).")]
-        critiques = [{"critique": standing(k), "of": c} for k, c in
-                     ask(f"?- unanswered_critique(K, C), frame(C, {fq}).")]
+        # One query for all three (the memory is loaded once), answers only.
+        program = (f'r("open", Q, "") :- open_question(Q), frame(Q, {fq}).\n'
+                   f'r("decision", C, "") :- decision(C), frame(C, {fq}).\n'
+                   f'r("critique", K, C) :- unanswered_critique(K, C), frame(C, {fq}).\n'
+                   "?- r(T, A, B).")
+        rows: dict[str, list] = {"open": [], "decision": [], "critique": []}
+        for a in self.query(reader, program, as_of, proofs=0)["answers"]:
+            t_, x, y = a["values"]
+            if x in claims:
+                rows[t_].append((x, y))
+        for k in rows:
+            rows[k].sort(key=lambda v: claims[v[0]]["order"])
+        open_qs = [standing(x) for x, _ in rows["open"]]
+        decisions = [standing(x) for x, _ in rows["decision"]]
+        critiques = [{"critique": standing(k), "of": c} for k, c in rows["critique"]]
         h = None
         if latest:
             b = latest[1]["body"]
@@ -436,7 +429,8 @@ class Memory:
         comps = None if compartments is None else _dumps(list(compartments))
         return _unwrap(_native.call("gn_state", self.path, as_of, comps))
 
-    def query(self, reader: str, program: str, as_of: Optional[str] = None) -> dict:
+    def query(self, reader: str, program: str, as_of: Optional[str] = None,
+              proofs: Optional[int] = None) -> dict:
         """Answer a Datalog query over this memory as `reader` sees it (only
         its compartments), as of `as_of` (latest if None).
 
@@ -445,8 +439,14 @@ class Memory:
         rule and premises, every base fact the log events it comes from.
         Check them with gnomon.proofs.check, print them with
         gnomon.proofs.explain. Base relations and built-in views are listed
-        in the spec (and in gnomon.VIEWS)."""
-        return _unwrap(_native.call("gn_query", self.path, as_of, reader, program))["result"]
+        in the spec (and in gnomon.VIEWS). `proofs`: give proofs for the
+        first n answers only (the rest carry a null proof; `proved` counts
+        them): proofs are most of a result's cost, and 0 makes a query that
+        only needs answers fast."""
+        if proofs is None:
+            return _unwrap(_native.call("gn_query", self.path, as_of, reader, program))["result"]
+        opts = _dumps({"proofs": int(proofs)})
+        return _unwrap(_native.call("gn_query_opts", self.path, as_of, reader, program, opts))["result"]
 
     def recall(self, reader: str, query: str, *, k: int = 10, kinds: Optional[Iterable[str]] = None,
                speaker: Optional[str] = None, after: Optional[str] = None, before: Optional[str] = None,
