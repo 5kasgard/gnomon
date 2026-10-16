@@ -641,6 +641,8 @@ struct Unit {
     dates: Vec<(String, Span)>,
     /// Holds characters that do not show when printed (see schema).
     hidden: bool,
+    /// The registered writer the speaker is, when the record says so.
+    speaker_is: Option<String>,
     /// Passes the request's filters (speaker, after, before). Filters pick
     /// which hits are returned; everything the reader can see is still
     /// ranked, so a reply is found through the question before it.
@@ -688,6 +690,7 @@ fn units(ledger: &Ledger, visible: &[String], req: &Request, seq: &HashMap<&str,
                 let t = if req.tuning.joins { terms_joined(&text) } else { terms(&text) };
                 let dates = day.map(|z| resolve(&text, z)).unwrap_or_default();
                 let (speaker_words, question) = (words(&speaker), text.trim_end().ends_with('?'));
+                let speaker_name = speaker.clone();
                 out.push(Unit {
                     kind: "turn",
                     item: id.clone(),
@@ -702,6 +705,7 @@ fn units(ledger: &Ledger, visible: &[String], req: &Request, seq: &HashMap<&str,
                     question,
                     dates,
                     hidden,
+                    speaker_is: e.bound(&speaker_name).map(|w| w.to_string()),
                     wanted,
                 });
             }
@@ -734,6 +738,7 @@ fn units(ledger: &Ledger, visible: &[String], req: &Request, seq: &HashMap<&str,
                 question,
                 dates,
                 hidden: false, // claims cannot hold hidden characters
+                speaker_is: st.speaker_of(c),
                 wanted,
             });
         }
@@ -1002,6 +1007,7 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
             ("id", Value::str(if u.kind == "turn" { format!("{}#{}", u.item, u.turn) } else { u.item.clone() })),
             ("source", event_ref(&u.event)),
             ("speaker", Value::str(u.speaker.clone())),
+            ("speaker_is", u.speaker_is.clone().map(Value::str).unwrap_or(Value::Null)),
             ("time", Value::str(u.time.clone())),
             ("text", Value::str(u.text.clone())),
             // Scores as integers (millionths): JSON here has no fractions.

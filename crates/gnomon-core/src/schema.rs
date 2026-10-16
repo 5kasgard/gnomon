@@ -7,7 +7,11 @@
 
 use crate::json::Value;
 
-pub const SCHEMA_VERSION: i64 = 1;
+/// The current protocol version. Version 2 (M6) requires models and tools
+/// to state their model and operator and resolves speakers strictly (see
+/// section 2a of the spec); version 1 logs replay under the rules they were
+/// written with, and move to version 2 with a `schema_change`.
+pub const SCHEMA_VERSION: i64 = 2;
 
 pub const STATEMENT_KINDS: &[&str] = &["describe", "promise", "permit", "command", "ask", "imagine"];
 pub const ORIGINS: &[&str] = &[
@@ -27,7 +31,7 @@ pub const VERDICT_METHODS: &[&str] = &[
     "computed",
 ];
 pub const WRITER_KINDS: &[&str] = &["human", "model", "tool"];
-pub const CAPABILITIES: &[&str] = &["owner", "write", "verify", "govern"];
+pub const CAPABILITIES: &[&str] = &["owner", "write", "verify", "govern", "spawn"];
 pub const EVENT_KINDS: &[&str] = &[
     "register",
     "episode",
@@ -307,30 +311,117 @@ impl<'a> Fields<'a> {
 
 // ------------------------------------------------------- body definitions
 
+/// A writer is one acting identity: one person, or one running instance of
+/// a model or tool (a session, an agent). Two sessions of the same model
+/// are two writers: they say different things. What they share is recorded
+/// too, because it matters when they agree.
 pub struct Register<'a> {
     pub writer: &'a str,
     pub party: &'a str,
     pub kind: &'a str,
     pub capabilities: Vec<&'a str>,
     pub compartments: Vec<&'a str>,
+    /// How to address it ("Alex Duff", "Claude").
+    pub name: Option<&'a str>,
+    /// Models: the model it runs, as its runtime reports it. Tools: their
+    /// version, if any. Instances of one model make correlated mistakes.
+    pub model: Option<&'a str>,
+    /// Models and tools: the writer they act for (a registered human).
+    pub operator: Option<&'a str>,
+    /// Where it runs (e.g. "claude-code", "claude-app", "api").
+    pub surface: Option<&'a str>,
+    /// The runtime's own id for this session or agent, if it has one.
+    pub session: Option<&'a str>,
+    /// Genesis only: the protocol version the memory starts at (default 1).
+    pub schema_version: Option<i64>,
 }
 
-pub fn register(body: &Value) -> GateResult<Register<'_>> {
+/// An opaque identifier from outside (a model name, a session id): printable
+/// ASCII without spaces, 1-128 characters, so it shows exactly as it is.
+pub fn is_token(s: &str) -> bool {
+    !s.is_empty() && s.len() <= 128 && s.bytes().all(|b| b.is_ascii_graphic())
+}
+
+/// `strict`: the identity rules of version 2 apply. A genesis registration
+/// that starts the memory at version 2 is checked under them too.
+pub fn register(body: &Value, strict: bool) -> GateResult<Register<'_>> {
     let f = Fields::of(body, "register")?;
-    f.only(&["writer", "party", "kind", "capabilities", "compartments"])?;
+    f.only(&["writer", "party", "kind", "capabilities", "compartments", "name", "model", "operator", "surface", "session", "schema_version"])?;
+    let schema_version = if f.has("schema_version") { Some(f.int_in("schema_version", 1, SCHEMA_VERSION)?) } else { None };
+    let strict = strict || schema_version.unwrap_or(1) >= 2;
     let compartments = f.str_list("compartments", None, 1)?;
     for c in &compartments {
         if !is_ident(c) {
             return Err(body_err(format!("register: compartment '{c}' is not a valid identifier")));
         }
     }
+    let kind = f.one_of("kind", WRITER_KINDS)?;
+    let token = |key: &str| -> GateResult<Option<&str>> {
+        match f.opt_text(key, 128)? {
+            Some(t) if !is_token(t) => {
+                Err(body_err(format!("register: '{key}' must be printable ASCII without spaces")))
+            }
+            other => Ok(other),
+        }
+    };
+    let name = f.opt_text("name", 200)?;
+    if let Some(n) = name {
+        check_name(n, "register: name")?;
+    }
+    let model = token("model")?;
+    let operator = if f.has("operator") { Some(f.ident("operator")?) } else { None };
+    let surface = token("surface")?;
+    let session = token("session")?;
+    let capabilities = f.str_list("capabilities", Some(CAPABILITIES), 1)?;
+    match kind {
+        "human" => {
+            if model.is_some() || operator.is_some() || surface.is_some() || session.is_some() {
+                return Err(body_err("register: a human has no model, operator, surface or session"));
+            }
+            if capabilities.contains(&"spawn") {
+                return Err(body_err("register: a person has no instances: 'spawn' is for models and tools"));
+            }
+        }
+        _ if !strict => {}
+        _ => {
+            if operator.is_none() {
+                return Err(body_err(format!("register: a {kind} must name its 'operator', the human it acts for")));
+            }
+            if kind == "model" && model.is_none() {
+                return Err(body_err("register: a model must name its 'model', as its runtime reports it"));
+            }
+        }
+    }
     Ok(Register {
         writer: f.ident("writer")?,
         party: f.ident("party")?,
-        kind: f.one_of("kind", WRITER_KINDS)?,
-        capabilities: f.str_list("capabilities", Some(CAPABILITIES), 1)?,
+        kind,
+        capabilities,
         compartments,
+        name,
+        model,
+        operator,
+        surface,
+        session,
+        schema_version,
     })
+}
+
+/// A name must be told apart from other names by how it looks.
+fn check_name(p: &str, what: &str) -> GateResult<()> {
+    if p.is_empty() || p.chars().any(|c| c == '\n' || c == '\t' || c == '\r') {
+        return Err(body_err(format!("{what} {p:?} is empty or has a line break or tab")));
+    }
+    if p.trim() != p {
+        return Err(body_err(format!("{what} {p:?} has leading or trailing spaces")));
+    }
+    if p.chars().any(is_combining_mark) {
+        return Err(body_err(format!("{what} {p:?} has combining marks (use the composed form)")));
+    }
+    if mixes_scripts(p) {
+        return Err(body_err(format!("{what} {p:?} mixes Latin, Greek and Cyrillic letters")));
+    }
+    Ok(())
 }
 
 pub struct Episode<'a> {
@@ -340,6 +431,9 @@ pub struct Episode<'a> {
     /// Who said which part: (speaker, start, end) in code points, in order,
     /// not overlapping. Empty if the episode records no turn structure.
     pub turns: Vec<(&'a str, usize, usize)>,
+    /// Which registered writer each name refers to, as the recorder says.
+    /// A name without a binding is just a name.
+    pub bindings: Vec<(&'a str, &'a str)>,
 }
 
 /// Episodes are kept whole and losslessly: hidden characters are allowed in
@@ -373,24 +467,13 @@ fn fold(name: &str) -> String {
 
 pub fn episode(body: &Value) -> GateResult<Episode<'_>> {
     let f = Fields::of(body, "episode")?;
-    f.only(&["compartment", "content", "medium", "participants", "turns"])?;
+    f.only(&["compartment", "content", "medium", "participants", "turns", "bindings"])?;
     f.text("medium", MAX_SHORT, false)?;
     let participants = f.str_list("participants", None, 0)?;
     // Speakers must be told apart by more than letter case, and a name is a
     // name: no line breaks or tabs smuggling a second one in.
     for (i, p) in participants.iter().enumerate() {
-        if p.is_empty() || p.chars().any(|c| c == '\n' || c == '\t' || c == '\r') {
-            return Err(body_err(format!("episode: participant name {p:?} is empty or has a line break or tab")));
-        }
-        if p.trim() != *p {
-            return Err(body_err(format!("episode: participant name {p:?} has leading or trailing spaces")));
-        }
-        if p.chars().any(is_combining_mark) {
-            return Err(body_err(format!("episode: participant name {p:?} has combining marks (use the composed form)")));
-        }
-        if mixes_scripts(p) {
-            return Err(body_err(format!("episode: participant name {p:?} mixes Latin, Greek and Cyrillic letters")));
-        }
+        check_name(p, "episode: participant name")?;
         if participants[..i].iter().any(|q| fold(q) == fold(p)) {
             return Err(body_err(format!("episode: participants '{p}' differ only in letter case")));
         }
@@ -419,11 +502,26 @@ pub fn episode(body: &Value) -> GateResult<Episode<'_>> {
             turns.push((speaker, start, end));
         }
     }
+    let mut bindings = Vec::new();
+    if let Some(raw) = f.raw("bindings") {
+        let obj = raw.as_object().ok_or_else(|| body_err("episode: 'bindings' must be an object"))?;
+        for (label, w) in obj {
+            let w = w.as_str().ok_or_else(|| body_err("episode: each binding must name a writer"))?;
+            if !participants.contains(&label.as_str()) {
+                return Err(body_err(format!("episode: binding for '{label}', who is not a participant")));
+            }
+            if !is_ident(w) {
+                return Err(body_err(format!("episode: binding to '{w}', which is not a writer id")));
+            }
+            bindings.push((label.as_str(), w));
+        }
+    }
     Ok(Episode {
         compartment: f.ident("compartment")?,
         content,
         participants,
         turns,
+        bindings,
     })
 }
 

@@ -395,7 +395,8 @@ def _turn_records(turns: list[Turn]) -> list[dict]:
 
 
 def record_transcript(memory, writer: str, content: str, *, participants: Iterable[str], compartment: str,
-                      medium: str = "chat", record_time: Optional[str] = None) -> str:
+                      medium: str = "chat", record_time: Optional[str] = None,
+                      bindings: Optional[dict] = None) -> str:
     """Record a transcript as an episode with its turns; returns the event id.
 
     The content is kept whole. The turns say who said which part, and the
@@ -410,11 +411,14 @@ def record_transcript(memory, writer: str, content: str, *, participants: Iterab
         "participants": participants,
         "turns": _turn_records(turns),
     }
+    if bindings:
+        body["bindings"] = dict(bindings)  # the core refuses names that are not participants
     return memory.append(writer, "episode", body, record_time)["event_id"]
 
 
 def record_messages(memory, writer: str, messages: Iterable[tuple[str, str]], *, compartment: str,
-                    medium: str = "chat", record_time: Optional[str] = None) -> str:
+                    medium: str = "chat", record_time: Optional[str] = None,
+                    bindings: Optional[dict] = None) -> str:
     """Record structured messages [(speaker, text), ...] as an episode.
 
     Prefer this whenever the source already says who sent each message (chat
@@ -422,6 +426,9 @@ def record_messages(memory, writer: str, messages: Iterable[tuple[str, str]], *,
     what is parsed or guessed. In a plain-text transcript, a line such as
     "Alex: ..." quoted inside someone else's message is indistinguishable
     from Alex speaking.
+
+    `bindings` says which registered writer each name refers to ({"Claude":
+    "claude-c1"}); without one, a name is only a name.
     """
     messages = list(messages)
     _check_names(dict.fromkeys(sp for sp, _ in messages))
@@ -446,14 +453,20 @@ def record_messages(memory, writer: str, messages: Iterable[tuple[str, str]], *,
         "participants": participants,
         "turns": _turn_records(turns),
     }
+    if bindings:
+        body["bindings"] = dict(bindings)  # the core refuses names that are not participants
     return memory.append(writer, "episode", body, record_time)["event_id"]
 
 
 def record_document(memory, writer: str, content: str, *, author: str, compartment: str,
-                    medium: str = "document", record_time: Optional[str] = None) -> str:
-    """Record a document by one author (no turns needed); returns the event id."""
+                    medium: str = "document", record_time: Optional[str] = None,
+                    author_is: Optional[str] = None) -> str:
+    """Record a document by one author (no turns needed); returns the event
+    id. `author_is` binds the author's name to a registered writer."""
     _check_names([author])
     body = {"compartment": compartment, "content": content, "medium": medium, "participants": [author]}
+    if author_is:
+        body["bindings"] = {author: author_is}
     return memory.append(writer, "episode", body, record_time)["event_id"]
 
 

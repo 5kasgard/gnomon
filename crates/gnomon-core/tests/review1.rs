@@ -275,10 +275,10 @@ fn f11_owner_can_change_schema() {
         "alex",
         10,
         "schema_change",
-        Value::obj(vec![("version", Value::Int(2)), ("description", Value::str("v2"))]),
+        Value::obj(vec![("version", Value::Int(3)), ("description", Value::str("v3"))]),
     ));
     assert_eq!(code(r), "OK");
-    assert_eq!(l.state.schema_version, 2);
+    assert_eq!(l.state.schema_version, 3);
 }
 
 /// 12. Several invisible or reordering characters were accepted.

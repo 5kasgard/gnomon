@@ -63,6 +63,11 @@ happens. This repository is the first milestone: **the record itself.**
   neural retriever reported in the LoCoMo paper (63.9% vs 58.8%; top 10:
   71.8% vs 67.5%), in under 20 ms per question on one core. Method,
   caveats and full numbers are in the [spec](spec/claim-protocol-v0.1.md#11-recall-m5).
+- **Every session is its own speaker** (M6): a writer is one person or one
+  running instance of a model, with the model it runs, where it runs, its
+  session and the person it acts for on record. Names in a recording are
+  bound to writers, never matched by spelling, and two sessions of the same
+  model agreeing counts as one source, not two.
 - **Native checkers as verifiers:** arithmetic is checked with exact
   fractions and dates against the real calendar. Checkers are their own
   parties, so their verdicts pass through the same rules as anyone else's.
@@ -92,6 +97,12 @@ help there (pseudo-relevance feedback) is off by default. Its review found
 counted across a filter), each now a test in `tests/recall.rs` or
 `python/tests/test_recall.py`.
 
+Identity (M6) had its own review: 10 findings, among them a spawned
+instance taking its operator's name, agreement between tool instances
+looking independent, a shared name letting one writer repeat another's
+words as its own, and older logs no longer replaying. Each is fixed and
+tested in `tests/identity.rs` or `python/tests/test_identity.py`.
+
 ## Build and test
 
 Requires Rust (stable) and Python 3.10+. Nothing else.
@@ -110,10 +121,13 @@ import gnomon
 from gnomon import Memory, claim
 
 m = Memory("memory.jsonl")
-m.register("alex", "alex", party="alex", kind="human",
+m.register("alex", "alex", party="alex", kind="human", name="Alex Duff",
            capabilities=["owner"], compartments=["lab"])
-m.register("alex", "claude-c1", party="anthropic", kind="model",
-           capabilities=["write", "verify"], compartments=["lab"])
+m.register("alex", "claude-c1", party="anthropic", kind="model", name="Claude",
+           model="claude-opus-5-5", operator="alex", surface="claude-code",
+           session="7f3a", capabilities=["write", "verify"], compartments=["lab"])
+print(gnomon.title(m.state()["state"]["writers"], "claude-c1"))
+# Claude (claude-opus-5-5, claude-code, session 7f3a) [claude-c1] for Alex Duff [alex]
 
 cid = m.remember("alex", claim(
     "Core is written in Rust with Python on top",
@@ -142,12 +156,13 @@ Set up a memory, register the model, and point your MCP host at the server:
 ```bash
 export PYTHONPATH=/path/to/gnomon/python
 python -m gnomon init --log ~/memory.jsonl --owner alex --compartments lab,private
-python -m gnomon register --log ~/memory.jsonl --by alex --writer claude-c1 \
-    --party anthropic --kind model --capabilities write,verify --compartments lab
+python -m gnomon register --log ~/memory.jsonl --by alex --writer claude \
+    --party anthropic --kind model --model claude-opus-5-5 --name Claude \
+    --surface claude-code --capabilities write,verify,spawn --compartments lab
 
-# Claude Code:
+# Claude Code (each session becomes its own writer, an instance of `claude`):
 claude mcp add gnomon -e PYTHONPATH=/path/to/gnomon/python -- \
-    python3 -m gnomon.mcp --log ~/memory.jsonl --writer claude-c1
+    python3 -m gnomon.mcp --log ~/memory.jsonl --writer claude --per-session
 ```
 
 For a host configured with JSON (e.g. Claude Desktop):
@@ -155,12 +170,14 @@ For a host configured with JSON (e.g. Claude Desktop):
 ```json
 {"mcpServers": {"gnomon": {
   "command": "python3",
-  "args": ["-m", "gnomon.mcp", "--log", "/home/alex/memory.jsonl", "--writer", "claude-c1"],
+  "args": ["-m", "gnomon.mcp", "--log", "/home/alex/memory.jsonl", "--writer", "claude", "--per-session"],
   "env": {"PYTHONPATH": "/path/to/gnomon/python"}}}}
 ```
 
 The model can then remember, recall ("where did we discuss the budget?"),
-query ("which decisions still stand?") and explain answers, but only as `claude-c1` and only in its compartments.
+query ("which decisions still stand?") and explain answers, but only as its
+own session's writer (`claude-1`, `claude-2`, …: call `whoami`), acting
+for you, and only in its compartments.
 `python -m gnomon query --log ~/memory.jsonl --reader alex "?- decision(C), statement(C, S)."`
 shows you the same answers with their proofs.
 
@@ -175,6 +192,7 @@ crates/gnomon-core/       Rust core: json, sha256, schema, ledger, store, datalo
   tests/vectors.rs        shared vectors every implementation must match
   tests/query.rs          the query engine, views and proofs
   tests/recall.rs         stemmer, calendar and recall requests
+  tests/identity.rs       instances, models, operators, bound names
 python/gnomon/            Python package (ctypes binding)
   ingest.py               exact parsing and rule-based extraction
   checkers.py             arithmetic and calendar verifiers
@@ -190,11 +208,12 @@ scripts/                  build and vector generation
 
 ## Status and what's next
 
-Milestones M0–M5 of the v1 plan: the record, ingestion, queries with
-proofs, an MCP server so any model can use it, and recall measured against
-a published benchmark. Next: end-to-end question answering on LoCoMo and
-LongMemEval, and benchmarks for what those leave out (lineage, correction,
-poisoning, isolation). Open design
+Milestones M0–M6 of the v1 plan: the record, ingestion, queries with
+proofs, an MCP server so any model can use it, recall measured against a
+published benchmark, and identity down to the session. Next (M7): the record as a forum, not a store of
+truths: critiques, answers tied to questions, and references between
+claims. Then (M8) a shared public space: independent memories merging into
+a commons, with signed posts. Open design
 questions are listed in the [spec](spec/claim-protocol-v0.1.md).
 
 ## Licence

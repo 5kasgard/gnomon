@@ -252,13 +252,22 @@ fn hearsay_without_a_quote_is_never_near_certain() {
         assert_eq!(code(l.append(draft("gpt-g1", 11, "claim", hearsay(origin, 10_000)))), "E_ATTRIBUTION", "{origin}");
     }
     assert_eq!(code(l.append(draft("gpt-g1", 12, "claim", hearsay("inferred", 7_000)))), "OK");
-    // Alex recording Alex's own decision is not hearsay.
-    assert_eq!(code(l.append(draft("alex", 13, "claim", hearsay("manual", 10_000)))), "OK");
-    // Nor is a writer speaking for its own party (another identity of it).
-    let own = claim_body("We ship on Friday.", "decided", "true")
-        .with("speaker", Value::str("anthropic"))
-        .with("confidence", Value::Int(9_500));
-    assert_eq!(code(l.append(draft("claude-c2", 14, "claim", own))), "OK");
+    // M6: a name is only a name. "Alex" is not the writer alex unless alex
+    // registered that name.
+    assert_eq!(code(l.append(draft("alex", 13, "claim", hearsay("manual", 10_000)))), "E_ATTRIBUTION");
+    let mine = hearsay("manual", 10_000).with("speaker", Value::str("alex"));
+    assert_eq!(code(l.append(draft("alex", 13, "claim", mine))), "OK");
+    let named = register_body("ann", "ann", "human", &["write"], &["lab"]).with("name", Value::str("Alex"));
+    l.append(draft("alex", 14, "register", named)).unwrap();
+    assert_eq!(code(l.append(draft("ann", 15, "claim", hearsay("manual", 10_000)))), "OK");
+    // Nor does a writer speak with certainty for its party, or for another
+    // session of its own model: each instance is its own speaker.
+    for speaker in ["anthropic", "claude-c1"] {
+        let other = claim_body("We ship on Friday.", "decided", "true")
+            .with("speaker", Value::str(speaker))
+            .with("confidence", Value::Int(9_500));
+        assert_eq!(code(l.append(draft("claude-c2", 16, "claim", other))), "E_ATTRIBUTION", "{speaker}");
+    }
 }
 
 /// Review M2 round 3, finding 2: look-alike names the gate accepted.

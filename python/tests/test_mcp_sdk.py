@@ -43,7 +43,7 @@ class OfficialClient(unittest.TestCase):
             m = Memory(log)
             m.register("alex", "alex", party="alex", kind="human", capabilities=["owner"],
                        compartments=["lab"], record_time="2026-10-14T10:00:00Z")
-            m.register("alex", "claude-c1", party="anthropic", kind="model", capabilities=["write", "verify"],
+            m.register("alex", "claude-c1", party="anthropic", kind="model", model="claude-c1", operator="alex", capabilities=["write", "verify"],
                        compartments=["lab"], record_time="2026-10-14T10:01:00Z")
             asyncio.run(self.session(log))
 

@@ -75,11 +75,11 @@ class Fixture(unittest.TestCase):
         m = self.m = Memory(self.log)
         m.register("alex", "alex", party="alex", kind="human", capabilities=["owner"],
                    compartments=["lab", "private"], record_time=t(0))
-        m.register("alex", "claude-c1", party="anthropic", kind="model", capabilities=["write", "verify"],
+        m.register("alex", "claude-c1", party="anthropic", kind="model", model="claude-c1", operator="alex", capabilities=["write", "verify"],
                    compartments=["lab"], record_time=t(1))
-        m.register("alex", "gpt-g1", party="openai", kind="model", capabilities=["write", "verify"],
+        m.register("alex", "gpt-g1", party="openai", kind="model", model="gpt-g1", operator="alex", capabilities=["write", "verify"],
                    compartments=["lab"], record_time=t(1))
-        m.register("alex", "calc", party="gnomon-calc", kind="tool", capabilities=["verify"],
+        m.register("alex", "calc", party="gnomon-calc", kind="tool", operator="alex", capabilities=["verify"],
                    compartments=["lab"], record_time=t(1))
         m.remember("alex", claim("Supplier is Acme", speaker="alex", frame="f", compartment="private",
                                  stance="decided", truth="true", origin="manual"), record_time=t(2))
@@ -264,7 +264,7 @@ class ReviewM4(Fixture):
     def test_checkers_report_only_what_the_writer_can_see(self):
         # Finding 1: the checker saw `private`, and its results came back.
         self.s.close()
-        self.m.register("alex", "calc2", party="gnomon-calc2", kind="tool", capabilities=["verify"],
+        self.m.register("alex", "calc2", party="gnomon-calc2", kind="tool", operator="alex", capabilities=["verify"],
                         compartments=["lab", "private"])
         secret = self.m.remember("alex", claim("Secret budget: 1234 + 1 = 1236", speaker="alex", frame="f",
                                                compartment="private", truth="true", origin="manual"))
@@ -389,7 +389,15 @@ class CommandLine(unittest.TestCase):
             self.assertEqual(self.run_cli("init", "--log", log, "--owner", "eve", "--compartments", "lab").returncode, 1)
             r = self.run_cli("register", "--log", log, "--by", "alex", "--writer", "claude-c1", "--party", "anthropic",
                              "--kind", "model", "--capabilities", "write", "--compartments", "lab")
+            self.assertEqual(r.returncode, 1)  # M6: which model it runs must be said
+            self.assertIn("must name its 'model'", r.stderr)
+            r = self.run_cli("register", "--log", log, "--by", "alex", "--writer", "claude-c1", "--party", "anthropic",
+                             "--kind", "model", "--model", "claude-opus-5-5", "--surface", "claude-code",
+                             "--session", "session_01LL", "--name", "Claude", "--capabilities", "write",
+                             "--compartments", "lab")
             self.assertEqual(r.returncode, 0, r.stderr)
+            w = Memory(log).state()["state"]["writers"]["claude-c1"]
+            self.assertEqual((w["operator"], w["model"], w["group"]), ("alex", "claude-opus-5-5", "model:claude-opus-5-5"))
             r = self.run_cli("register", "--log", log, "--by", "claude-c1", "--writer", "evil", "--party", "x",
                              "--kind", "model", "--capabilities", "owner", "--compartments", "lab")
             self.assertEqual(r.returncode, 1)

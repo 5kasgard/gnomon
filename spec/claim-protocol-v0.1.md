@@ -39,8 +39,8 @@ Confidence is expressed as integer basis points (0–10000).
 
 | Kind | Who may write it | What it does |
 | --- | --- | --- |
-| `register` | the owner (and, at genesis, the owner registering itself) | adds a writer with a party, kind, capabilities and compartments |
-| `episode` | `write` | records raw material whole: a transcript, document or tool output |
+| `register` | the owner (and, at genesis, the owner registering itself); or a writer with `spawn`, for a new instance of itself (section 2a) | adds a writer with a party, kind, capabilities, compartments and identity |
+| `episode` | `write` | records raw material whole: a transcript, document or tool output, optionally binding its speakers' names to writers |
 | `claim` | `write` | records a claim; identical content from another writer is corroboration |
 | `verdict` | `verify`, never a writer or party that asserted the claim; one verdict per party | supports, refutes or abstains on a claim |
 | `supersede` | `write`; both claims in one compartment; neither in an open dispute | links an old claim to a new one: refuted, narrowed, generalised or contested |
@@ -49,6 +49,94 @@ Confidence is expressed as integer basis points (0–10000).
 | `schema_change` | `govern` | advances the schema version by exactly one |
 
 The `owner` capability implies the others.
+
+## 2a. Identity (M6)
+
+A writer is one acting identity: one person, or one running instance of a
+model or tool. Two sessions or agents on the same model are two writers,
+because they say different things. Three things are kept apart:
+
+* **The instance** (the writer): who said or wrote each thing.
+* **The model** it runs, as its runtime reports it. Instances of one model
+  share weights and so share mistakes: their agreement is not independent.
+* **The party** that answers for it: who has a stake in a dispute.
+
+**Versions.** These rules are protocol version 2. A memory's genesis
+registration may say `"schema_version": 2` (the Python package and command
+line always do for new memories); otherwise it is at version 1, and its
+log replays under the rules it was written with: models and tools may omit
+`model` and `operator`, and a claim's speaker counts as the writer's own if
+it matches the writer's id or party in any letter case. An owner moves a
+version 1 memory to version 2 with a `schema_change`; earlier events keep
+their meaning.
+
+`register` carries the identity:
+
+| Field | For | Meaning |
+| --- | --- | --- |
+| `name` | anyone, optional | how to address it ("Alex Duff", "Claude"); no other party's writer may hold the same name |
+| `model` | models: required; tools: optional | the model it runs as reported by its runtime (not verified), or a tool's version |
+| `operator` | models and tools: required | the registered human it acts for |
+| `surface` | models and tools, optional | where it runs: claude-code, claude-app, api… |
+| `session` | models and tools, optional | the runtime's id for this session or agent; one writer per party, session and surface (`E_IDENTITY`) |
+
+Models, operators and sessions are printable ASCII without spaces; names
+follow the participant-name rules (no look-alike scripts, combining marks,
+or hidden characters). A human has none of `model`, `operator`, `surface`
+or `session`, and cannot have `spawn`.
+
+**Instances.** A writer with `spawn` may register a new instance of itself
+(`E_SPAWN` otherwise): same kind, model, party, operator and name, and its
+surface if it has one; an id that starts with the parent's id and a hyphen
+(`claude-3` for `claude`); only compartments the parent is in; only
+capabilities the parent has, never `owner`, `govern` or `spawn`. So an
+instance can never take another identity or more power, and cannot probe
+for ids outside its parent's namespace. The MCP server uses this
+(`--per-session`) so that every session gets its own writer, however the
+host is configured; a session that resumes keeps its writer.
+
+**Names in recordings.** An episode may bind participant names to writers
+in its compartment (`"bindings": {"Claude": "claude-3"}`): this is the
+recorder's account of who each name is. A recorder may bind only its own
+id or registered name to itself: binding "Alex" to yourself would make
+Alex's words yours. A name without a binding is only a name: "Claude" in a
+transcript is not any particular Claude, and "Alex" is not the writer
+`alex`. Binding to a writer that does not exist and to one outside the
+compartment are refused alike, so neither reveals the other.
+
+**Who a claim's speaker is** is settled when the claim is first recorded.
+Quoting an episode: the writer the name is bound to there, or nobody. Not
+quoting: a writer id given as the speaker, or the author's own registered
+name. Nothing later changes it: a writer registered afterwards under a
+matching id, or another writer repeating the claim. This decides the
+hearsay rules (section 4): only the writer itself speaks in its own voice;
+not another session of the same model, not its party in general, and not
+a writer repeating a claim under a shared name.
+
+**Independence.** Each writer has a group: `model:<model>` for models and
+`tool:<version>` for versioned tools (both in lower case), its own id
+otherwise, and for an instance always its parent's group, so starting
+instances never makes agreement look independent. A claim's
+`independent_groups` (in state) and the `asserted_group` relation list the
+groups that asserted it; `independently_asserted(C)` holds when two groups
+did. Two sessions of one model agreeing is one group. Independence is
+*as reported*, not verified: the model string is what the runtime says and
+an owner could register one model under two names; a person and an agent
+acting for them count as two groups. Treat it as a floor on correlation,
+never as proof of independence.
+
+**Titles.** `gnomon.title()` names a writer so that it cannot be mistaken
+for another: name, model, surface, session, id, and who it acts for, e.g.
+`Claude (claude-opus-5-5, claude-code, session 7f3a) [claude-3] for Alex
+Duff [alex]`.
+
+Queries see identity through `identity(W, Key, Value)` (keys: name, model,
+operator, surface, session), `group(W, G)`, `instance_of(W, Parent)`,
+`speaks_as(C, W)` and `bound(Episode, Name, W)`, with views
+`asserted_group`, `independently_asserted`, `same_model` and `acts_for`.
+`group`, `instance_of` and `speaks_as` cite every event they rest on, and
+the independent checker re-derives them from the log. A claim's
+`speaks_as` is shown only when the reader can see that writer.
 
 ## 3. Claims
 
@@ -295,9 +383,10 @@ gives `E_REF` whatever the quote says.
 
 ### Hearsay
 
-A claim whose `speaker` is someone other than its writer or the writer's own
-party, and that does not quote them (origin anything but `direct`), is the
-writer's account of what someone else said. However it is labelled, it cannot
+A claim whose speaker is not its writer (section 2a: not another session of
+the same model, not its party, not a name that merely looks like it), and
+that does not quote them (origin anything but `direct`), is the writer's
+account of what someone else said. However it is labelled, it cannot
 carry confidence above 7000 (`E_ATTRIBUTION`). Quoting is the only way to put
 someone's words on record with certainty, and the gate checks the quote.
 
