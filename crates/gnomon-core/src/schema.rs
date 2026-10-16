@@ -41,6 +41,7 @@ pub const EVENT_KINDS: &[&str] = &[
     "resolve",
     "appeal",
     "schema_change",
+    "handoff",
 ];
 /// Contest rulings: old, new, both. Appeal rulings: reinstated, upheld.
 /// Either may be withdrawn by the party that raised it.
@@ -667,6 +668,94 @@ pub fn claim(body: &Value) -> GateResult<Claim<'_>> {
         source_episode,
         quote,
     })
+}
+
+/// Where a piece of work stands, written by whoever is doing it, so that
+/// anyone (another session, another model, a person) can pick it up.
+pub struct Handoff<'a> {
+    pub compartment: &'a str,
+    pub frame: &'a str,
+    /// Claims and episodes it rests on, by id.
+    pub refs: Vec<&'a str>,
+    /// The handoff this one continues, if any.
+    pub follows: Option<&'a str>,
+}
+
+pub const MAX_ITEMS: usize = 64;
+
+/// One line of text: no line breaks or tabs, so it cannot pass itself off
+/// as another line (another field, another writer) wherever it is shown.
+pub fn one_line(s: &str, what: &str) -> GateResult<()> {
+    if s.chars().any(|c| matches!(c, '\n' | '\r' | '\t')) {
+        return Err(body_err(format!("{what} is one line: no line breaks or tabs")));
+    }
+    Ok(())
+}
+
+pub fn handoff(body: &Value) -> GateResult<Handoff<'_>> {
+    let f = Fields::of(body, "handoff")?;
+    f.only(&["compartment", "frame", "summary", "goal", "done", "next", "open", "refs", "artifacts", "follows"])?;
+    let frame = f.text("frame", MAX_SHORT, false)?;
+    one_line(frame, "handoff: 'frame'")?;
+    f.text("summary", MAX_TEXT, false)?;
+    if let Some(g) = f.opt_text("goal", MAX_SHORT)? {
+        one_line(g, "handoff: 'goal'")?;
+    }
+    // Lists are measured before anything else is done with them.
+    let list = |key: &str| -> GateResult<Option<&[Value]>> {
+        match f.raw(key) {
+            None => Ok(None),
+            Some(v) => {
+                let a = v.as_array().ok_or_else(|| body_err(format!("handoff: '{key}' must be a list")))?;
+                if a.is_empty() || a.len() > MAX_ITEMS {
+                    return Err(body_err(format!("handoff: '{key}' holds 1 to {MAX_ITEMS} items")));
+                }
+                Ok(Some(a))
+            }
+        }
+    };
+    for key in ["done", "next", "open"] {
+        for item in list(key)?.unwrap_or(&[]) {
+            let t = item.as_str().ok_or_else(|| body_err(format!("handoff: items in '{key}' are text")))?;
+            if t.is_empty() || t.chars().count() > MAX_SHORT {
+                return Err(body_err(format!("handoff: each item in '{key}' is 1-{MAX_SHORT} characters")));
+            }
+            if has_hidden_chars(t) {
+                return Err(GateError::new("E_HIDDEN_CHARS", format!("handoff: an item in '{key}' has hidden characters")));
+            }
+            one_line(t, &format!("handoff: each item in '{key}'"))?;
+        }
+    }
+    let mut refs = Vec::new();
+    if list("refs")?.is_some() {
+        refs = f.str_list("refs", None, 1)?;
+        let mut sorted = refs.clone();
+        sorted.sort_unstable();
+        sorted.dedup();
+        if sorted.len() != refs.len() {
+            return Err(body_err("handoff: an id appears twice in 'refs'"));
+        }
+    }
+    if let Some(items) = list("artifacts")? {
+        for item in items {
+            let a = Fields::of(item, "handoff artifact")?;
+            a.only(&["uri", "note", "sha256"])?;
+            let uri = a.text("uri", MAX_SHORT, false)?;
+            if uri.chars().any(char::is_whitespace) {
+                return Err(body_err("handoff: an artifact's uri has no spaces"));
+            }
+            if let Some(n) = a.opt_text("note", MAX_SHORT)? {
+                one_line(n, "handoff: an artifact's note")?;
+            }
+            if let Some(h) = a.opt_text("sha256", 64)? {
+                if !is_hex64(h) {
+                    return Err(body_err("handoff: an artifact's sha256 is 64 lower-case hex digits"));
+                }
+            }
+        }
+    }
+    let follows = f.opt_text("follows", 80)?;
+    Ok(Handoff { compartment: f.ident("compartment")?, frame, refs, follows })
 }
 
 pub struct Verdict<'a> {

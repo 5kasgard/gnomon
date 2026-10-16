@@ -209,10 +209,8 @@ class Memory:
         if claim_id not in claims:
             raise GateError("E_REF", f"claim '{claim_id}' does not exist or is not accessible")
 
-        def order(cid: str) -> tuple:
-            c = claims[cid]
-            w, _, n = c["first_event"].rpartition("/")
-            return (c["record_time"], int(n) if n.isdigit() else 0, w, cid)
+        def order(cid: str) -> int:
+            return claims[cid]["order"]
 
         children: dict[str, set] = {}
         for cid, c in claims.items():
@@ -242,6 +240,134 @@ class Memory:
                 "refers_to": [r for r in c["body"].get("about", []) if r["claim"] in seen],
             })
         return {"root": claim_id, "posts": posts, "truncated": truncated}
+
+    # ------------------------------------------------------- continuity (M8)
+    def handoff(self, writer: str, *, frame: str, summary: str, compartment: str,
+                   goal: Optional[str] = None, done: Iterable[str] = (), next: Iterable[str] = (),
+                   open: Iterable[str] = (), refs: Iterable[str] = (), artifacts: Iterable[dict] = (),
+                   follows: Optional[str] = None, record_time: Optional[str] = None) -> str:
+        """Record where a piece of work (`frame`) stands, so that anyone can
+        pick it up: a summary, the goal, what is done, what comes next, what
+        is open, the claims and episodes it rests on (`refs`), and artifacts
+        ({"uri", "note", "sha256"}). Returns the handoff's event id."""
+        body: dict[str, Any] = {"compartment": compartment, "frame": frame, "summary": summary}
+        for key, val in (("done", list(done)), ("next", list(next)), ("open", list(open)),
+                         ("refs", list(refs)), ("artifacts", [dict(x) for x in artifacts])):
+            if val:
+                body[key] = val
+        if goal:
+            body["goal"] = goal
+        if follows:
+            body["follows"] = follows
+        return self.append(writer, "handoff", body, record_time)["event_id"]
+
+    def frames(self, reader: str, as_of: Optional[str] = None) -> list:
+        """Every piece of work (frame) the reader can see, most recently
+        active first: its last activity, how many claims and handoffs it
+        has, and its latest handoff."""
+        st = self.state(as_of=as_of, compartments=self._compartments(reader))["state"]
+        frames: dict[str, dict] = {}
+
+        def entry(f):
+            return frames.setdefault(f, {"frame": f, "last_activity": "", "last_order": -1, "claims": 0,
+                                         "handoffs": 0, "latest_handoff": None})
+        for c in st["claims"].values():
+            e = entry(c["body"]["frame"])
+            e["claims"] += 1
+            if c["order"] > e["last_order"]:
+                e["last_order"], e["last_activity"] = c["order"], c["record_time"]
+        for hid, h in sorted(st["handoffs"].items(), key=lambda kv: kv[1]["order"]):
+            e = entry(h["body"]["frame"])
+            e["handoffs"] += 1
+            e["latest_handoff"] = hid
+            if h["order"] > e["last_order"]:
+                e["last_order"], e["last_activity"] = h["order"], h["record_time"]
+        out = sorted(frames.values(), key=lambda e: e["last_order"], reverse=True)
+        for e in out:
+            del e["last_order"]
+        return out
+
+    def resume(self, reader: str, frame: Optional[str] = None, as_of: Optional[str] = None,
+               limit: int = 20) -> dict:
+        """Pick up a piece of work exactly where it was left, whoever left
+        it: the latest handoff of `frame` (default: the most recently active
+        frame), the earlier ones, how everything it rests on stands now (a
+        claim it relied on may have been refuted since), and what happened
+        after it: new claims, decisions, open questions and critiques
+        nobody has answered. Everything with its source. Long texts are cut
+        to a budget (marked "cut"), and lists to the `limit` most recent."""
+        limit = max(1, min(int(limit), 200))
+        st = self.state(as_of=as_of, compartments=self._compartments(reader))["state"]
+        empty = {"frame": frame, "handoff": None, "earlier_handoffs": [], "rests_on": [],
+                 "since": {"claims": [], "more": 0}, "decisions": [], "open_questions": [],
+                 "unanswered_critiques": []}
+        if frame is None:
+            fs = self.frames(reader, as_of)
+            if not fs:
+                return dict(empty, frames=[])
+            frame = fs[0]["frame"]
+        if not _plain_text(frame, 2000):
+            return dict(empty, frame=frame)  # no frame can have that name
+        hs = sorted(((hid, h) for hid, h in st["handoffs"].items() if h["body"]["frame"] == frame),
+                    key=lambda kv: kv[1]["order"])
+        latest = hs[-1] if hs else None
+        since = latest[1]["order"] if latest else -1
+        claims = st["claims"]
+
+        def standing(cid: str) -> dict:
+            c = claims[cid]
+            return {"claim": cid, "statement": _cut(c["body"]["statement"], 1000),
+                    "speaker": c["body"]["speaker"], "author": c["author"], "time": c["record_time"],
+                    "stance": c["body"]["stance"], "truth": c["effective_truth"], "disputed": c["disputed"],
+                    "superseded_by": c["superseded_by"], "supports": len(c["supports"]),
+                    "refutes": len(c["refutes"])}
+        rests_on = []
+        if latest:
+            for rid in latest[1]["body"].get("refs", []):
+                if rid in claims:
+                    rests_on.append(standing(rid))
+                elif rid in st["episodes"]:
+                    e = st["episodes"][rid]
+                    rests_on.append({"episode": rid, "writer": e["writer"], "time": e["record_time"],
+                                     "participants": e["body"].get("participants", [])})
+                elif rid in st["handoffs"]:
+                    rests_on.append({"handoff": rid, "time": st["handoffs"][rid]["record_time"]})
+        after = sorted((cid for cid, c in claims.items() if c["body"]["frame"] == frame and c["order"] > since),
+                       key=lambda cid: claims[cid]["order"])
+        fq = json.dumps(frame, ensure_ascii=False)
+
+        def ask(program: str) -> list:
+            rows = [a["values"] for a in self.query(reader, program, as_of)["answers"]]
+            return sorted(rows, key=lambda v: claims[v[0]]["order"] if v[0] in claims else -1)
+        open_qs = [standing(v[0]) for v in ask(f"?- open_question(Q), frame(Q, {fq}).")]
+        decisions = [standing(v[0]) for v in ask(f"?- decision(C), frame(C, {fq}).")]
+        critiques = [{"critique": standing(k), "of": c} for k, c in
+                     ask(f"?- unanswered_critique(K, C), frame(C, {fq}).")]
+        h = None
+        if latest:
+            b = latest[1]["body"]
+            h = {"handoff": latest[0], "writer": latest[1]["writer"], "time": latest[1]["record_time"],
+                 "summary": _cut(b["summary"], 4000)}
+            for key in ("goal", "follows", "refs"):
+                if key in b:
+                    h[key] = b[key]
+            for key in ("done", "next", "open"):
+                if key in b:
+                    h[key] = [_cut(x, 500) for x in b[key]]
+            if "artifacts" in b:
+                h["artifacts"] = [{k: (_cut(v, 500) if k != "sha256" else v) for k, v in x.items()}
+                                  for x in b["artifacts"]]
+        return {
+            "frame": frame,
+            "handoff": h,
+            "earlier_handoffs": [{"handoff": hid, "writer": x["writer"], "time": x["record_time"],
+                                  "summary": _cut(x["body"]["summary"], 300)} for hid, x in hs[:-1]][-10:],
+            "rests_on": rests_on,
+            "since": {"claims": [standing(cid) for cid in after[-limit:]], "more": max(0, len(after) - limit)},
+            "decisions": decisions[-limit:],
+            "open_questions": open_qs[-limit:],
+            "unanswered_critiques": critiques[-limit:],
+        }
 
     def _compartments(self, reader: str) -> list:
         writers = self.state()["state"]["writers"]
@@ -325,6 +451,22 @@ class Memory:
 
 #: The protocol version new memories start at (see the spec, section 2a).
 SCHEMA_VERSION = 2
+
+
+def _cut(text: str, n: int) -> str:
+    """At most n characters, saying so when cut."""
+    return text if len(text) <= n else text[:n] + f" [cut: {len(text) - n} more characters]"
+
+
+def _plain_text(text: str, n: int) -> bool:
+    """Could this be a name in the record: 1-n characters of real text?"""
+    if not 0 < len(text) <= n:
+        return False
+    try:
+        text.encode("utf-8")
+    except UnicodeEncodeError:
+        return False
+    return not any(ord(c) < 0x20 or 0x7F <= ord(c) <= 0x9F for c in text)
 
 
 def _about(refs) -> Optional[list]:
