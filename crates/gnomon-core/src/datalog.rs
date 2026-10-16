@@ -94,6 +94,9 @@ pub struct Limits {
     pub max_cells: usize,
     /// Size of the result, in bytes of values written (roughly).
     pub max_output: usize,
+    /// Answers given a proof (the first this many, in answer order); the
+    /// rest carry `"proof": null`. Proofs are most of a result's cost.
+    pub max_proofs: usize,
 }
 
 impl Default for Limits {
@@ -108,6 +111,7 @@ impl Default for Limits {
             max_answers: 10_000,
             max_cells: 10_000_000,
             max_output: 64 << 20,
+            max_proofs: 10_000,
         }
     }
 }
@@ -1395,20 +1399,29 @@ impl<'p> Engine<'p> {
             size: 0,
         };
         let mut answers = Vec::new();
-        for &a in &order {
+        let mut proved = 0;
+        for (n, &a) in order.iter().enumerate() {
+            let values = Value::Array(rel.rows[a].iter().map(Val::to_json).collect());
+            if n >= self.lim.max_proofs {
+                out.charge(rel.rows[a].iter().map(val_size).sum::<usize>() + 32, self.lim.max_output)?;
+                answers.push(Value::obj(vec![("values", values), ("proof", Value::Null)]));
+                continue;
+            }
             let node = self.node(prog.answer, a, &mut out, source)?;
             out.charge(rel.rows[a].iter().map(val_size).sum::<usize>() + 32 + 84, self.lim.max_output)?;
             let root = out.hashes[&node].clone();
             answers.push(Value::obj(vec![
-                ("values", Value::Array(rel.rows[a].iter().map(Val::to_json).collect())),
+                ("values", values),
                 ("proof", Value::str(node)),
                 ("proof_hash", Value::str(root)),
             ]));
+            proved += 1;
         }
         Ok(Value::obj(vec![
             ("variables", Value::Array(prog.answer_vars.iter().map(|v| Value::str(v.clone())).collect())),
             ("answers", Value::Array(answers)),
             ("truncated", Value::Bool(truncated)),
+            ("proved", Value::Int(proved)),
             ("nodes", Value::Object(out.nodes)),
             ("rules", Value::Object(out.rules)),
             ("facts", Value::Int(self.facts as i64)),

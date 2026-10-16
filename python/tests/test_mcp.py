@@ -141,9 +141,10 @@ class Modern(Fixture):
         self.assertFalse(r["isError"], r)
         hits = r["structuredContent"]["hits"]
         self.assertEqual(hits[0]["speaker"], "John")
-        self.assertEqual(hits[0]["context"][0]["text"], "We settled on SQLite for the prototype.")
-        self.assertEqual(len(hits[0]["dates"]), 1)
-        self.assertIn("John: Which database did we pick yesterday?", r["content"][0]["text"])
+        text = r["content"][0]["text"]
+        self.assertIn("John: Which database did we pick yesterday? <", text)
+        self.assertIn("yesterday=", text)
+        self.assertIn("#1 Claude: We settled on SQLite for the prototype.", text)
         r = self.s.call("recall", {"query": "x", "k": 0})
         self.assertTrue(r["isError"])
         r = self.s.call("recall", {"query": "x", "kinds": ["pages"]})

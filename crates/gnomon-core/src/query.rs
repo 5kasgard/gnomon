@@ -117,7 +117,7 @@ pub fn run(ledger: &Ledger, compartments: &[String], program: &str, lim: Limits)
     let mut b = Builder::new(ledger, &prog, compartments);
     b.load(&mut eng)?;
     eng.run()?;
-    let refs: Vec<Value> = b.sources.iter().map(|&seq| b.event_ref(seq)).collect();
+    // Event references are made only for the sources a proof shows.
     // Where the view ends, with that event's time: a result always states
     // the moment it describes.
     let through = b
@@ -127,7 +127,7 @@ pub fn run(ledger: &Ledger, compartments: &[String], program: &str, lim: Limits)
             b.event_ref(seq).with("time", time)
         })
         .unwrap_or(Value::Null);
-    Ok(eng.answers(&|i| refs[i].clone())?.with("through", through))
+    Ok(eng.answers(&|i| b.event_ref(b.sources[i]))?.with("through", through))
 }
 
 struct Builder<'a> {
@@ -211,8 +211,17 @@ impl<'a> Builder<'a> {
         let st = &ledger.state;
         let s = |x: &str| Val::str(x);
 
-        // Claims and their fields, from the event that first recorded each.
-        for (id, c) in &st.claims {
+        // Claims and their fields, from the event that first recorded each
+        // (skipped entirely when the query uses none of them).
+        const CLAIM_RELS: &[&str] = &[
+            "claim", "statement", "speaker", "frame", "compartment", "stance", "origin", "statement_kind",
+            "asserted_truth", "source", "validity_domain", "valid_from", "valid_to", "confidence", "quote_start",
+            "recorded", "author", "reference", "truth", "disputed", "defeated",
+        ];
+        let claims_needed = CLAIM_RELS.iter().any(|r| self.needed.contains(r));
+        let need_1 = claims_needed;
+
+        for (id, c) in st.claims.iter().filter(|_| need_1) {
             if !self.sees(&c.compartment) {
                 continue;
             }
@@ -233,6 +242,9 @@ impl<'a> Builder<'a> {
                 ("valid_from", "valid_from"),
                 ("valid_to", "valid_to"),
             ] {
+                if !self.needed.contains(rel) {
+                    continue;
+                }
                 if let Some(v) = c.body.get(field).and_then(|v| v.as_str()) {
                     self.add(eng, rel, vec![cid.clone(), s(v)], first)?;
                 }
@@ -273,21 +285,21 @@ impl<'a> Builder<'a> {
         }
 
         // Every assertion of a visible claim, each from its own event.
-        for (seq, e) in ledger.events.iter().enumerate() {
-            if e.get("kind").and_then(|v| v.as_str()) != Some("claim") {
-                continue;
-            }
-            let body = e.get("body").expect("body");
-            let id = claim_id(body);
-            let visible = st.claims.get(&id).map(|c| self.sees(&c.compartment)).unwrap_or(false);
-            if visible {
-                let w = e.get("writer").and_then(|v| v.as_str()).unwrap_or("");
-                let src = self.src_seq(seq);
-                self.add(eng, "asserted_by", vec![s(&id), s(w)], src)?;
+        if self.needed.contains("asserted_by") {
+            for (id, c) in &st.claims {
+                if !self.sees(&c.compartment) {
+                    continue;
+                }
+                for (w, seq) in &c.assertions {
+                    let src = self.src_seq(*seq);
+                    self.add(eng, "asserted_by", vec![s(id), s(w)], src)?;
+                }
             }
         }
 
-        for (vid, v) in &st.verdicts {
+        let need_2 = self.needed.contains("verdict");
+
+        for (vid, v) in st.verdicts.iter().filter(|_| need_2) {
             let visible = st.claims.get(&v.claim).map(|c| self.sees(&c.compartment)).unwrap_or(false);
             if !visible {
                 continue;
@@ -297,7 +309,9 @@ impl<'a> Builder<'a> {
             self.add(eng, "verdict", vec![s(vid), s(&v.claim), s(&v.writer), s(&v.result), s(method)], src)?;
         }
 
-        for (sid, sp) in &st.supersessions {
+        let need_3 = ["supersession", "evidence", "resolution"].iter().any(|r| self.needed.contains(r));
+
+        for (sid, sp) in st.supersessions.iter().filter(|_| need_3) {
             if !self.sees(&sp.compartment) {
                 continue;
             }
@@ -313,7 +327,9 @@ impl<'a> Builder<'a> {
             }
         }
 
-        for (aid, a) in &st.appeals {
+        let need_4 = ["appeal", "evidence", "resolution"].iter().any(|r| self.needed.contains(r));
+
+        for (aid, a) in st.appeals.iter().filter(|_| need_4) {
             if !self.sees(&a.compartment) {
                 continue;
             }
@@ -329,7 +345,9 @@ impl<'a> Builder<'a> {
             }
         }
 
-        for (cid, c) in &st.handoffs {
+        let need_5 = self.needed.contains("handoff");
+
+        for (cid, c) in st.handoffs.iter().filter(|_| need_5) {
             if !self.sees(&c.compartment) {
                 continue;
             }
@@ -337,7 +355,10 @@ impl<'a> Builder<'a> {
             self.add(eng, "handoff", vec![s(cid), s(&c.frame), s(&c.writer), s(&c.record_time)], src)?;
         }
 
-        for (eid, e) in &st.episodes {
+        let episodes_needed = ["episode", "participant", "bound"].iter().any(|r| self.needed.contains(r));
+        let need_6 = episodes_needed;
+
+        for (eid, e) in st.episodes.iter().filter(|_| need_6) {
             if !self.sees(&e.compartment) {
                 continue;
             }
@@ -354,14 +375,7 @@ impl<'a> Builder<'a> {
 
         // Writers who share a compartment with the reader, from their
         // registration; only the shared compartments are shown.
-        let mut registered: HashMap<&str, usize> = HashMap::new();
-        for (seq, e) in ledger.events.iter().enumerate() {
-            if e.get("kind").and_then(|v| v.as_str()) == Some("register") {
-                if let Some(w) = e.get("body").and_then(|b| b.get("writer")).and_then(|v| v.as_str()) {
-                    registered.entry(w).or_insert(seq);
-                }
-            }
-        }
+        let registered: HashMap<&str, usize> = st.writers.iter().map(|(w, i)| (w.as_str(), i.seq)).collect();
         for (wid, w) in &st.writers {
             let shared: Vec<&String> = w.compartments.iter().filter(|c| self.sees(c)).collect();
             if shared.is_empty() {
@@ -398,7 +412,9 @@ impl<'a> Builder<'a> {
         // recorded: from the claim and the episode that binds the name, or
         // the registration that names the writer. Only writers the reader
         // can see are named.
-        for (id, c) in &st.claims {
+        let need_7 = self.needed.contains("speaks_as");
+
+        for (id, c) in st.claims.iter().filter(|_| need_7) {
             let Some(who) = c.speaker_is.as_deref() else { continue };
             if !self.sees(&c.compartment) {
                 continue;

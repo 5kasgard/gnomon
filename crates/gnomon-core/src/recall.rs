@@ -18,6 +18,7 @@
 //! (`now`), so "what did I do last weekend?" favours turns from then.
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::sync::{Arc, Mutex, OnceLock};
 
 use crate::json::Value;
 use crate::ledger::Ledger;
@@ -25,8 +26,6 @@ use crate::schema::{GateError, GateResult};
 
 const MAX_K: usize = 200;
 const MAX_QUERY: usize = 10_000;
-const K1: f64 = 1.2;
-const B: f64 = 0.75;
 
 fn rerr(msg: impl Into<String>) -> GateError {
     GateError::new("E_RECALL", msg)
@@ -62,11 +61,39 @@ pub struct Tuning {
     /// strongest terms of its first results. Off by default: on LoCoMo it
     /// cost far more at the top of the ranking than it gained further down.
     pub prf: bool,
+    /// Weights, in thousandths (JSON here has no fractions), switchable for
+    /// measurement: BM25's k1 and b; the share of a question before a turn
+    /// and of other neighbours; the speaker and dates boosts; how much a
+    /// turn gains from its whole conversation matching (session); and the
+    /// boost for a turn holding a date when the question asks when.
+    pub k1: i64,
+    pub b: i64,
+    pub prop_q: i64,
+    pub prop_n: i64,
+    pub speaker: i64,
+    pub window: i64,
+    pub session: i64,
+    pub when: i64,
 }
 
 impl Default for Tuning {
     fn default() -> Self {
-        Tuning { joins: true, speaker_prior: true, propagate: true, prf: false }
+        Tuning {
+            joins: true,
+            speaker_prior: true,
+            propagate: true,
+            prf: false,
+            // Chosen on LoCoMo conversations 0-4 only (bench/locomo.py
+            // --grid); conversations 5-9 were held out to check them.
+            k1: 1200,
+            b: 400,
+            prop_q: 1000,
+            prop_n: 250,
+            speaker: 2500,
+            window: 1500,
+            session: 1200,
+            when: 500,
+        }
     }
 }
 
@@ -122,15 +149,32 @@ impl Request {
         if let Some(t) = v.get("tuning") {
             let obj = t.as_object().ok_or_else(|| rerr("'tuning' must be an object"))?;
             for (k, x) in obj {
-                let b = match x {
-                    Value::Bool(b) => *b,
-                    _ => return Err(rerr(format!("tuning '{k}' must be true or false"))),
+                let flag = |x: &Value| match x {
+                    Value::Bool(b) => Ok(*b),
+                    _ => Err(rerr(format!("tuning '{k}' must be true or false"))),
+                };
+                let num = |x: &Value| match x.as_int() {
+                    Some(n) if (0..=100_000).contains(&n) => Ok(n),
+                    _ => Err(rerr(format!("tuning '{k}' must be an integer 0..100000 (thousandths)"))),
                 };
                 match k.as_str() {
-                    "joins" => tuning.joins = b,
-                    "speaker_prior" => tuning.speaker_prior = b,
-                    "propagate" => tuning.propagate = b,
-                    "prf" => tuning.prf = b,
+                    "joins" => tuning.joins = flag(x)?,
+                    "speaker_prior" => tuning.speaker_prior = flag(x)?,
+                    "propagate" => tuning.propagate = flag(x)?,
+                    "prf" => tuning.prf = flag(x)?,
+                    "k1" => tuning.k1 = num(x)?,
+                    "b" => {
+                        tuning.b = num(x)?;
+                        if tuning.b > 1000 {
+                            return Err(rerr("tuning 'b' is at most 1000 (BM25's b is between 0 and 1)"));
+                        }
+                    }
+                    "prop_q" => tuning.prop_q = num(x)?,
+                    "prop_n" => tuning.prop_n = num(x)?,
+                    "speaker" => tuning.speaker = num(x)?,
+                    "window" => tuning.window = num(x)?,
+                    "session" => tuning.session = num(x)?,
+                    "when" => tuning.when = num(x)?,
                     _ => return Err(rerr(format!("unknown tuning '{k}'"))),
                 }
             }
@@ -232,10 +276,6 @@ pub fn stem(word: &str) -> String {
 }
 
 const MAX_STEM: usize = 48;
-/// Score multipliers: a turn by a speaker the question names, and a unit
-/// within the dates the question gives.
-const SPEAKER_BOOST: f64 = 1.3;
-const WINDOW_BOOST: f64 = 1.5;
 
 fn is_cons(w: &[u8], i: usize) -> bool {
     match w[i] {
@@ -631,22 +671,111 @@ struct Unit {
     turn: usize,
     speaker: String,
     time: String,
-    text: String,
     /// Code-point offsets in the episode (claims: none).
     span: Option<(usize, usize)>,
-    terms: Vec<String>,
-    speaker_terms: Vec<String>,
-    /// Ends with a question mark (its answer is likely the next turn).
-    question: bool,
-    dates: Vec<(String, Span)>,
-    /// Holds characters that do not show when printed (see schema).
-    hidden: bool,
+    /// What does not change once recorded: its words and terms, dates,
+    /// speaker words. Worked out once and cached by content.
+    a: Arc<Analysis>,
+    /// Its place in the analysis cache.
+    slot: u32,
     /// The registered writer the speaker is, when the record says so.
     speaker_is: Option<String>,
     /// Passes the request's filters (speaker, after, before). Filters pick
     /// which hits are returned; everything the reader can see is still
     /// ranked, so a reply is found through the question before it.
     wanted: bool,
+}
+
+/// The fixed analysis of one turn or claim.
+struct Analysis {
+    text: String,
+    /// Number of terms (the document length for BM25).
+    len: usize,
+    /// Each distinct term (by its id in the cache) with its count.
+    tf: Vec<(u32, u32)>,
+    speaker_terms: Vec<String>,
+    /// Ends with a question mark (its answer is likely the next turn).
+    question: bool,
+    dates: Vec<(String, Span)>,
+    /// Holds characters that do not show when printed (see schema).
+    hidden: bool,
+}
+
+fn analyse(text: String, speaker: &str, day: Option<i64>, joins: bool, ids: &mut Interner) -> Analysis {
+    let terms = if joins { terms_joined(&text) } else { terms(&text) };
+    let mut counts: BTreeMap<u32, u32> = BTreeMap::new();
+    for t in &terms {
+        *counts.entry(ids.id(t)).or_default() += 1;
+    }
+    Analysis {
+        len: terms.len(),
+        tf: counts.into_iter().collect(),
+        speaker_terms: words(speaker),
+        question: text.trim_end().ends_with('?'),
+        dates: day.map(|z| resolve(&text, z)).unwrap_or_default(),
+        hidden: crate::schema::has_hidden_chars(&text),
+        text,
+    }
+}
+
+/// Terms by number, both ways.
+#[derive(Default)]
+struct Interner {
+    ids: HashMap<String, u32>,
+    names: Vec<String>,
+}
+
+impl Interner {
+    fn id(&mut self, t: &str) -> u32 {
+        if let Some(&i) = self.ids.get(t) {
+            return i;
+        }
+        let i = self.names.len() as u32;
+        self.names.push(t.to_string());
+        self.ids.insert(t.to_string(), i);
+        i
+    }
+}
+
+/// Analyses by content: an episode's turns by the hash of the event that
+/// recorded it, a claim by its id and recording time. Content never
+/// changes, so entries never go stale; the cache is cleared when large.
+type EpisodeTurns = Arc<Vec<(String, usize, usize, u32)>>;
+
+/// Every analysed turn and claim lives once in `arena`; `postings` says,
+/// for each term, which of them hold it and how often. A query then
+/// touches only the entries holding its terms.
+#[derive(Default)]
+struct AnalysisCache {
+    episodes: HashMap<(String, bool), EpisodeTurns>,
+    claims: HashMap<(String, String, bool), u32>,
+    arena: Vec<Arc<Analysis>>,
+    terms: Interner,
+    postings: Vec<Vec<(u32, u32)>>,
+    size: usize,
+}
+
+impl AnalysisCache {
+    fn add(&mut self, a: Analysis) -> u32 {
+        let idx = self.arena.len() as u32;
+        for &(t, f) in &a.tf {
+            let t = t as usize;
+            if self.postings.len() <= t {
+                self.postings.resize_with(t + 1, Vec::new);
+            }
+            self.postings[t].push((idx, f));
+        }
+        self.arena.push(Arc::new(a));
+        self.size += 1;
+        idx
+    }
+}
+
+const ANALYSIS_CACHE_MAX: usize = 2_000_000; // turns and claims
+
+fn analysis_cache() -> &'static Mutex<AnalysisCache> {
+    static C: OnceLock<Mutex<AnalysisCache>> = OnceLock::new();
+    C.get_or_init(|| Mutex::new(AnalysisCache::default()))
 }
 
 /// An episode's text and its pieces: the recorded turns, or paragraphs when
@@ -666,80 +795,86 @@ fn slice(content: &[char], a: usize, b: usize) -> String {
     content[a.min(content.len())..b.min(content.len())].iter().collect()
 }
 
-fn units(ledger: &Ledger, visible: &[String], req: &Request, seq: &HashMap<&str, usize>) -> Vec<Unit> {
+fn units(ledger: &Ledger, visible: &[String], req: &Request, cache: &mut AnalysisCache) -> Vec<Unit> {
     let st = &ledger.state;
-    let pos = |id: &str| seq.get(id).copied().unwrap_or(usize::MAX);
     let speaker_ok = |sp: &str| req.speaker.as_deref().map(|s| s.eq_ignore_ascii_case(sp)).unwrap_or(true);
     let sees = |c: &str| visible.iter().any(|x| x == c);
     let in_time = |t: &str| {
         req.after.as_deref().map(|a| t >= a).unwrap_or(true) && req.before.as_deref().map(|b| t <= b).unwrap_or(true)
     };
+    let joins = req.tuning.joins;
     let mut out = Vec::new();
     if req.turns {
         // Episodes in log order, so ties break by when things were recorded.
         let mut eps: Vec<(&String, &crate::ledger::EpisodeInfo)> =
             st.episodes.iter().filter(|(_, e)| sees(&e.compartment)).collect();
-        eps.sort_by_key(|(id, _)| pos(id));
+        eps.sort_by_key(|(_, e)| e.seq);
         for (id, e) in eps {
-            let (content, pieces) = pieces(e);
-            let day = day_of(&e.record_time);
-            for (n, (speaker, a, b)) in pieces.into_iter().enumerate() {
-                let wanted = in_time(&e.record_time) && speaker_ok(&speaker);
-                let text = slice(&content, a, b);
-                let hidden = crate::schema::has_hidden_chars(&text);
-                let t = if req.tuning.joins { terms_joined(&text) } else { terms(&text) };
-                let dates = day.map(|z| resolve(&text, z)).unwrap_or_default();
-                let (speaker_words, question) = (words(&speaker), text.trim_end().ends_with('?'));
-                let speaker_name = speaker.clone();
+            let hash = ledger.events.get(e.seq).and_then(|ev| ev.get("hash")).and_then(|h| h.as_str()).unwrap_or(id);
+            let key = (hash.to_string(), joins);
+            let turns = match cache.episodes.get(&key) {
+                Some(t) => t.clone(),
+                None => {
+                    let (content, pieces) = pieces(e);
+                    let day = day_of(&e.record_time);
+                    let t: EpisodeTurns = Arc::new(
+                        pieces
+                            .into_iter()
+                            .map(|(sp, a, b)| {
+                                let an = analyse(slice(&content, a, b), &sp, day, joins, &mut cache.terms);
+                                (sp, a, b, cache.add(an))
+                            })
+                            .collect(),
+                    );
+                    cache.episodes.insert(key, t.clone());
+                    t
+                }
+            };
+            for (n, (speaker, a, b, slot)) in turns.iter().enumerate() {
                 out.push(Unit {
                     kind: "turn",
                     item: id.clone(),
                     event: id.clone(),
                     turn: n,
-                    speaker,
+                    speaker: speaker.clone(),
                     time: e.record_time.clone(),
-                    text,
-                    span: Some((a, b)),
-                    terms: t,
-                    speaker_terms: speaker_words,
-                    question,
-                    dates,
-                    hidden,
-                    speaker_is: e.bound(&speaker_name).map(|w| w.to_string()),
-                    wanted,
+                    span: Some((*a, *b)),
+                    a: cache.arena[*slot as usize].clone(),
+                    slot: *slot,
+                    speaker_is: e.bound(speaker).map(|w| w.to_string()),
+                    wanted: in_time(&e.record_time) && speaker_ok(speaker),
                 });
             }
         }
     }
     if req.claims {
-        let mut claims: Vec<_> = st.claims.iter().collect();
-        claims.sort_by_key(|(_, c)| pos(&c.first_event));
+        let mut claims: Vec<_> = st.claims.iter().filter(|(_, c)| sees(&c.compartment)).collect();
+        claims.sort_by_key(|(_, c)| c.seq);
         for (id, c) in claims {
-            if !sees(&c.compartment) {
-                continue;
-            }
             let speaker = c.body.get("speaker").and_then(|s| s.as_str()).unwrap_or("").to_string();
-            let wanted = in_time(&c.record_time) && speaker_ok(&speaker);
-            let text = c.body.get("statement").and_then(|s| s.as_str()).unwrap_or("").to_string();
-            let t = if req.tuning.joins { terms_joined(&text) } else { terms(&text) };
-            let dates = day_of(&c.record_time).map(|z| resolve(&text, z)).unwrap_or_default();
-            let (speaker_words, question) = (words(&speaker), text.trim_end().ends_with('?'));
+            let key = (id.clone(), c.record_time.clone(), joins);
+            let slot = match cache.claims.get(&key) {
+                Some(&s) => s,
+                None => {
+                    let text = c.body.get("statement").and_then(|s| s.as_str()).unwrap_or("").to_string();
+                    let an = analyse(text, &speaker, day_of(&c.record_time), joins, &mut cache.terms);
+                    let s = cache.add(an);
+                    cache.claims.insert(key, s);
+                    s
+                }
+            };
             out.push(Unit {
                 kind: "claim",
                 item: id.clone(),
                 event: c.first_event.clone(),
                 turn: 0,
+                wanted: in_time(&c.record_time) && speaker_ok(&speaker),
                 speaker,
                 time: c.record_time.clone(),
-                text,
                 span: None,
-                terms: t,
-                speaker_terms: speaker_words,
-                question,
-                dates,
-                hidden: false, // claims cannot hold hidden characters
+                a: cache.arena[slot as usize].clone(),
+                slot,
                 speaker_is: st.speaker_of(c),
-                wanted,
             });
         }
     }
@@ -781,59 +916,74 @@ fn paragraphs(content: &[char]) -> Vec<(usize, usize)> {
 
 // ---------------------------------------------------------------- ranking
 
+/// BM25 over the units the reader can see, using the cache's postings:
+/// a query term costs the number of entries holding it, not the size of
+/// the memory.
 struct Index<'a> {
     units: &'a [Unit],
-    tfs: Vec<HashMap<&'a str, usize>>,
-    df: HashMap<&'a str, usize>,
+    cache: &'a AnalysisCache,
     avgdl: f64,
+    k1: f64,
+    b: f64,
+    /// Cache slot -> unit, for the units of this query.
+    unit_of: HashMap<u32, usize>,
+    postings: std::cell::RefCell<HashMap<String, std::rc::Rc<Vec<(usize, u32)>>>>,
 }
 
 impl<'a> Index<'a> {
-    fn new(units: &'a [Unit]) -> Self {
-        let mut df: HashMap<&str, usize> = HashMap::new();
-        let mut tfs = Vec::with_capacity(units.len());
-        let mut total = 0usize;
-        for u in units {
-            let mut tf: HashMap<&str, usize> = HashMap::new();
-            for t in &u.terms {
-                *tf.entry(t.as_str()).or_default() += 1;
-            }
-            for t in tf.keys() {
-                *df.entry(t).or_default() += 1;
-            }
-            total += u.terms.len();
-            tfs.push(tf);
-        }
+    fn new(units: &'a [Unit], cache: &'a AnalysisCache, k1: f64, b: f64) -> Self {
+        let total: usize = units.iter().map(|u| u.a.len).sum();
         let avgdl = if units.is_empty() { 1.0 } else { (total as f64 / units.len() as f64).max(1.0) };
-        Index { units, tfs, df, avgdl }
+        let unit_of = units.iter().enumerate().map(|(i, u)| (u.slot, i)).collect();
+        Index { units, cache, avgdl, k1, b, unit_of, postings: Default::default() }
+    }
+
+    fn postings(&self, t: &str) -> std::rc::Rc<Vec<(usize, u32)>> {
+        if let Some(p) = self.postings.borrow().get(t) {
+            return p.clone();
+        }
+        let p: Vec<(usize, u32)> = {
+            let cache = self.cache;
+            match cache.terms.ids.get(t) {
+                Some(&id) => {
+                    let mut v: Vec<(usize, u32)> = cache
+                        .postings
+                        .get(id as usize)
+                        .map(|ps| ps.iter().filter_map(|&(slot, f)| self.unit_of.get(&slot).map(|&u| (u, f))).collect())
+                        .unwrap_or_default();
+                    v.sort_unstable();
+                    v.dedup_by_key(|x| x.0);
+                    v
+                }
+                None => Vec::new(),
+            }
+        };
+        let p = std::rc::Rc::new(p);
+        self.postings.borrow_mut().insert(t.to_string(), p.clone());
+        p
     }
 
     fn idf(&self, t: &str) -> f64 {
         let n = self.units.len() as f64;
-        let d = *self.df.get(t).unwrap_or(&0) as f64;
+        let d = self.postings(t).len() as f64;
         (1.0 + (n - d + 0.5) / (d + 0.5)).ln()
     }
 
     /// BM25 of every unit for weighted query terms, with each term's share.
     fn score(&self, q: &[(String, f64)]) -> Vec<(f64, Vec<(String, f64)>)> {
-        self.units
-            .iter()
-            .enumerate()
-            .map(|(i, u)| {
-                let dl = u.terms.len() as f64;
-                let mut total = 0.0;
-                let mut parts = Vec::new();
-                for (t, w) in q {
-                    if let Some(&f) = self.tfs[i].get(t.as_str()) {
-                        let f = f as f64;
-                        let s = w * self.idf(t) * f * (K1 + 1.0) / (f + K1 * (1.0 - B + B * dl / self.avgdl));
-                        total += s;
-                        parts.push((t.clone(), s));
-                    }
-                }
-                (total, parts)
-            })
-            .collect()
+        let mut out: Vec<(f64, Vec<(String, f64)>)> = (0..self.units.len()).map(|_| (0.0, Vec::new())).collect();
+        for (t, w) in q {
+            let idf = self.idf(t);
+            for &(i, f) in self.postings(t).iter() {
+                let dl = self.units[i].a.len as f64;
+                let f = f as f64;
+                let (k1, b) = (self.k1, self.b);
+                let s = w * idf * f * (k1 + 1.0) / (f + k1 * (1.0 - b + b * dl / self.avgdl));
+                out[i].0 += s;
+                out[i].1.push((t.clone(), s));
+            }
+        }
+        out
     }
 }
 
@@ -845,8 +995,15 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
         .enumerate()
         .filter_map(|(i, e)| e.get("event_id").and_then(|v| v.as_str()).map(|id| (id, i)))
         .collect();
-    let units = units(ledger, visible, req, &seq_of);
-    let index = Index::new(&units);
+    // The analysis cache is held for the whole question: its slots and
+    // postings stay consistent with the units built from it.
+    let mut guard = analysis_cache().lock().unwrap_or_else(|p| p.into_inner());
+    if guard.size > ANALYSIS_CACHE_MAX {
+        *guard = AnalysisCache::default();
+    }
+    let units = units(ledger, visible, req, &mut guard);
+    let cache: &AnalysisCache = &guard;
+    let index = Index::new(&units, cache, req.tuning.k1 as f64 / 1000.0, req.tuning.b as f64 / 1000.0);
     let tune = req.tuning;
 
     // A speaker named in the question ("What did Caroline paint?") is who
@@ -858,7 +1015,13 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
     let lower: Vec<&str> = qwords.iter().map(|(w, _)| w.as_str()).collect();
     let mut named: HashSet<Vec<String>> = HashSet::new();
     if tune.speaker_prior {
-        let speakers: BTreeSet<&Vec<String>> = units.iter().map(|u| &u.speaker_terms).filter(|s| !s.is_empty()).collect();
+        let mut seen_names: HashSet<&str> = HashSet::new();
+        let speakers: BTreeSet<&Vec<String>> = units
+            .iter()
+            .filter(|u| seen_names.insert(u.speaker.as_str()))
+            .map(|u| &u.a.speaker_terms)
+            .filter(|s| !s.is_empty())
+            .collect();
         for sp in speakers {
             let whole = lower.windows(sp.len()).any(|w| w.iter().zip(sp.iter()).all(|(a, b)| *a == b));
             let first = sp[0].chars().count() >= 2
@@ -885,8 +1048,14 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
     let window: Vec<(String, Span)> =
         req.now.as_deref().and_then(day_of).map(|z| resolve(&req.query, z)).unwrap_or_default();
 
-    let rank = |q: &[(String, f64)]| -> Vec<(f64, Vec<(String, f64)>)> {
-        let mut s = index.score(q);
+    let (prop_q, prop_n) = (tune.prop_q as f64 / 1000.0, tune.prop_n as f64 / 1000.0);
+    let (speaker_boost, window_boost) = (tune.speaker as f64 / 1000.0, tune.window as f64 / 1000.0);
+    let (session_w, when_boost) = (tune.session as f64 / 1000.0, 1.0 + tune.when as f64 / 1000.0);
+    let asks_when = qwords.first().map(|(w, _)| w == "when").unwrap_or(false)
+        || lower.windows(2).any(|w| w == ["what", "date"] || w == ["what", "time"] || w == ["how", "long"]);
+    type Ranked = Vec<(f64, Vec<(String, f64)>, Vec<(&'static str, f64)>)>;
+    let rank = |q: &[(String, f64)]| -> Ranked {
+        let mut s: Ranked = index.score(q).into_iter().map(|(x, p)| (x, p, Vec::new())).collect();
         if tune.propagate {
             // Answers follow questions: a turn takes half the score of a
             // question just before it, and a quarter of any other neighbour.
@@ -904,10 +1073,10 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
                 };
                 let mut extra = 0.0;
                 if i > 0 && next_to(i - 1, true) {
-                    extra += base[i - 1] * if units[i - 1].question { 0.5 } else { 0.25 };
+                    extra += base[i - 1] * if units[i - 1].a.question { prop_q } else { prop_n };
                 }
                 if i + 1 < units.len() && next_to(i + 1, false) {
-                    extra += base[i + 1] * 0.25;
+                    extra += base[i + 1] * prop_n;
                 }
                 if extra > 0.0 {
                     s[i].0 += extra;
@@ -919,17 +1088,46 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
             if s[i].0 <= 0.0 {
                 continue;
             }
-            if named.contains(&u.speaker_terms) {
-                s[i].0 *= SPEAKER_BOOST;
+            if named.contains(&u.a.speaker_terms) {
+                s[i].0 *= speaker_boost;
+                s[i].2.push(("speaker named in the question", speaker_boost));
             }
             if !window.is_empty() {
                 let day = day_of(&u.time);
                 let hit = window.iter().any(|(_, w)| {
                     day.map(|d| d >= w.first && d <= w.last).unwrap_or(false)
-                        || u.dates.iter().any(|(_, sp)| sp.first <= w.last && sp.last >= w.first)
+                        || u.a.dates.iter().any(|(_, sp)| sp.first <= w.last && sp.last >= w.first)
                 });
                 if hit {
-                    s[i].0 *= WINDOW_BOOST;
+                    s[i].0 *= window_boost;
+                    s[i].2.push(("within the question's dates", window_boost));
+                }
+            }
+            if asks_when && !u.a.dates.is_empty() {
+                s[i].0 *= when_boost;
+                s[i].2.push(("holds a date, and the question asks when", when_boost));
+            }
+        }
+        if session_w > 0.0 {
+            // A turn gains from its whole conversation matching: evidence
+            // for one question often spans a session.
+            let mut agg: HashMap<&str, (f64, usize)> = HashMap::new();
+            for (i, u) in units.iter().enumerate() {
+                if u.kind == "turn" {
+                    let e = agg.entry(u.item.as_str()).or_default();
+                    e.0 += s[i].0;
+                    e.1 += 1;
+                }
+            }
+            let top = agg.values().map(|(x, n)| x / (*n as f64).sqrt()).fold(0.0, f64::max);
+            if top > 0.0 {
+                for (i, u) in units.iter().enumerate() {
+                    if u.kind == "turn" && s[i].0 > 0.0 {
+                        let (x, n) = agg[u.item.as_str()];
+                        let m = 1.0 + session_w * (x / (n as f64).sqrt()) / top;
+                        s[i].0 *= m;
+                        s[i].2.push(("its conversation matches as a whole", m));
+                    }
                 }
             }
         }
@@ -942,41 +1140,44 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
         // tf x idf; the 10 strongest new terms join the question at 0.3.
         let mut order: Vec<usize> = (0..units.len()).filter(|&i| scores[i].0 > 0.0).collect();
         order.sort_by(|&a, &b| scores[b].0.partial_cmp(&scores[a].0).unwrap_or(std::cmp::Ordering::Equal).then(a.cmp(&b)));
-        let mut votes: BTreeMap<&str, f64> = BTreeMap::new();
+        let mut votes: BTreeMap<String, f64> = BTreeMap::new();
         for &i in order.iter().take(10) {
-            let len = units[i].terms.len().max(1) as f64;
-            for (t, &f) in &index.tfs[i] {
-                if !q_terms.iter().any(|x| x == t) {
-                    *votes.entry(t).or_default() += f as f64 / len * index.idf(t);
+            let len = units[i].a.len.max(1) as f64;
+            let names: Vec<(String, u32)> =
+                units[i].a.tf.iter().map(|&(t, f)| (cache.terms.names[t as usize].clone(), f)).collect();
+            for (t, f) in names {
+                if !q_terms.iter().any(|x| *x == t) {
+                    let w = f as f64 / len * index.idf(&t);
+                    *votes.entry(t).or_default() += w;
                 }
             }
         }
-        let mut cand: Vec<(&str, f64)> = votes.into_iter().collect();
-        cand.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal).then(a.0.cmp(b.0)));
+        let mut cand: Vec<(String, f64)> = votes.into_iter().collect();
+        cand.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal).then(a.0.cmp(&b.0)));
         for (t, _) in cand.into_iter().take(10) {
-            q.push((t.to_string(), 0.3));
+            q.push((t, 0.3));
         }
         scores = rank(&q);
     }
 
+    // Rank first, then do the per-hit work for the top k only.
+    let mut order: Vec<(f64, usize)> =
+        (0..units.len()).filter(|&i| scores[i].0 > 0.0 && units[i].wanted).map(|i| (scores[i].0, i)).collect();
+    order.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal).then(a.1.cmp(&b.1)));
+    order.truncate(req.k);
     let mut scored: Vec<(f64, usize, Vec<(String, f64)>, bool)> = Vec::new();
-    for (i, u) in units.iter().enumerate() {
-        let (score, matched) = (scores[i].0, scores[i].1.clone());
-        if score <= 0.0 || !u.wanted {
-            continue;
-        }
+    for (score, i) in order {
+        let u = &units[i];
+        let matched = std::mem::take(&mut scores[i].1);
         let in_window = !window.is_empty() && {
             let day = day_of(&u.time);
             window.iter().any(|(_, w)| {
                 day.map(|d| d >= w.first && d <= w.last).unwrap_or(false)
-                    || u.dates.iter().any(|(_, sp)| sp.first <= w.last && sp.last >= w.first)
+                    || u.a.dates.iter().any(|(_, sp)| sp.first <= w.last && sp.last >= w.first)
             })
         };
         scored.push((score, i, matched, in_window));
     }
-    // Highest score first; ties by the order things were recorded.
-    scored.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal).then(a.1.cmp(&b.1)));
-    scored.truncate(req.k);
     let q = q_terms;
 
     let event_ref = |id: &str| -> Value {
@@ -1009,7 +1210,7 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
             ("speaker", Value::str(u.speaker.clone())),
             ("speaker_is", u.speaker_is.clone().map(Value::str).unwrap_or(Value::Null)),
             ("time", Value::str(u.time.clone())),
-            ("text", Value::str(u.text.clone())),
+            ("text", Value::str(u.a.text.clone())),
             // Scores as integers (millionths): JSON here has no fractions.
             ("score", Value::Int((score * 1e6).round() as i64)),
             (
@@ -1021,24 +1222,21 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
                         .collect(),
                 ),
             ),
-            ("dates", dates_json(&u.dates)),
+            ("dates", dates_json(&u.a.dates)),
             ("in_window", Value::Bool(in_window)),
             (
                 "boosts",
                 Value::Array(
-                    [
-                        (named.contains(&u.speaker_terms), "speaker named in the question", SPEAKER_BOOST),
-                        (in_window, "within the question's dates", WINDOW_BOOST),
-                    ]
-                    .iter()
-                    .filter(|b| b.0)
-                    .map(|b| {
-                        Value::obj(vec![("why", Value::str(b.1)), ("times_thousandths", Value::Int((b.2 * 1000.0) as i64))])
-                    })
-                    .collect(),
+                    scores[i]
+                        .2
+                        .iter()
+                        .map(|(why, m)| {
+                            Value::obj(vec![("why", Value::str(*why)), ("times_thousandths", Value::Int((m * 1000.0).round() as i64))])
+                        })
+                        .collect(),
                 ),
             ),
-            ("hidden_chars", Value::Bool(u.hidden)),
+            ("hidden_chars", Value::Bool(u.a.hidden)),
         ];
         if let Some((a, b)) = u.span {
             fields.push(("episode", Value::str(u.item.clone())));

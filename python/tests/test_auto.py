@@ -347,3 +347,104 @@ class ReviewAuto(Auto):
                         record_time=t(6))
         r = self.m.resume("john", "nothing-here")
         self.assertEqual([x["text"] for x in r["recent_turns"]], ["A1", "A2"])
+
+
+class ShortIdsAndProofs(unittest.TestCase):
+    """What a model reads is compact; what it sends back is resolved."""
+
+    def setUp(self):
+        self.dir = tempfile.TemporaryDirectory()
+        self.log = str(Path(self.dir.name) / "m.jsonl")
+        m = self.m = Memory(self.log)
+        m.register("john", "john", party="john", kind="human", capabilities=["owner"], compartments=["lab", "p"],
+                   record_time=t(0))
+        m.register("john", "claude", party="anthropic", kind="model", model="claude-opus-5-5", operator="john",
+                   name="Claude", capabilities=["write", "verify"], compartments=["lab"], record_time=t(1))
+        m.register("john", "gpt", party="openai", kind="model", model="gpt-6", operator="john",
+                   capabilities=["write", "verify"], compartments=["lab"], record_time=t(1))
+        self.c = m.remember("gpt", claim("The build is green.", speaker="gpt", frame="ci", compartment="lab",
+                                         truth="true"), record_time=t(2))
+        self.secret = m.remember("john", claim("Private.", speaker="john", frame="x", compartment="p"),
+                                 record_time=t(2))
+
+    def tearDown(self):
+        self.dir.cleanup()
+
+    def test_short_ids_are_shown_and_accepted(self):
+        from gnomon.mcp import Server
+        s = Server(self.log, "claude")
+        text, _ = s.tool("discussion", {"claim": self.c[:12]})
+        self.assertIn(self.c[:12], text)
+        self.assertNotIn(self.c, text)
+        s.tool("give_verdict", {"claim": self.c[:12], "result": "supports", "method": "test"})
+        self.assertEqual(len(self.m.state()["state"]["claims"][self.c]["supports"]), 1)
+        from gnomon.mcp import ToolError
+        for bad in (self.secret[:12], "c:0000000000", "c:12"):
+            with self.assertRaises(ToolError):
+                s.tool("discussion", {"claim": bad})
+
+    def test_proofs_can_be_limited(self):
+        from gnomon import VIEWS, proofs
+        for i in range(30):
+            self.m.remember("gpt", claim(f"Fact {i}.", speaker="gpt", frame="ci", compartment="lab", truth="true"),
+                            record_time=t(3))
+        q = "?- claim(C), statement(C, S)."
+        r = self.m.query("john", q, proofs=5)
+        self.assertEqual(r["proved"], 5)
+        self.assertEqual(sum(1 for a in r["answers"] if a["proof"] is not None), 5)
+        self.assertEqual(len(r["answers"]), 32)
+        # Unproven answers are never passed silently.
+        self.assertTrue(proofs.check(r, q, VIEWS, self.log, require_hashes=True))
+        self.assertEqual(proofs.check(r, q, VIEWS, self.log, require_hashes=True, proofs_requested=5), [])
+        r0 = self.m.query("john", q, proofs=0)
+        self.assertEqual((r0["proved"], r0["nodes"]), (0, {}))
+        # Review: a forged answer with no proof, alone or appended, fails.
+        import copy
+        forged = {"answers": [{"values": ["c:" + "0" * 64, "We pay Evil Corp"], "proof": None}],
+                  "nodes": {}, "rules": {}}
+        self.assertTrue(proofs.check(forged, q, VIEWS, self.log, require_hashes=True))
+        full = self.m.query("john", q)
+        extra = copy.deepcopy(full)
+        extra["answers"].append({"values": ["c:" + "1" * 64, "Fake"], "proof": None})
+        self.assertTrue(proofs.check(extra, q, VIEWS, self.log, proofs_requested=10000))
+        middle = copy.deepcopy(r)
+        middle["answers"][1], middle["answers"][-1] = middle["answers"][-1], middle["answers"][1]
+        self.assertTrue(proofs.check(middle, q, VIEWS, self.log, proofs_requested=5))
+        self.assertTrue(proofs.check(r, q, VIEWS, self.log, proofs_requested=6))
+
+
+class ReviewPerf(ShortIdsAndProofs):
+    """Findings of the performance review, as tests."""
+
+    def test_query_programs_take_short_ids(self):
+        from gnomon.mcp import Server
+        s = Server(self.log, "claude")
+        text, out = s.tool("query", {"program": f'?- statement("{self.c[:18]}", S).'})
+        self.assertEqual(out["answers"], [["The build is green."]])
+        self.assertTrue(out["proofs_checked"])
+
+    def test_unproven_answers_are_never_reported_as_checked(self):
+        from gnomon.mcp import Server
+        s = Server(self.log, "claude")
+        text, out = s.tool("query", {"program": "?- claim(C).", "proofs": 0})
+        self.assertFalse(out["proofs_checked"])
+        self.assertIn("unproven", text)
+
+    def test_recall_is_the_same_from_many_threads(self):
+        import threading
+        want = json.dumps(self.m.recall("john", "build green"))
+        got, errs = [], []
+
+        def work():
+            try:
+                for _ in range(20):
+                    got.append(json.dumps(self.m.recall("john", "build green")))
+            except Exception as e:  # pragma: no cover
+                errs.append(e)
+        ts = [threading.Thread(target=work) for _ in range(4)]
+        for th in ts:
+            th.start()
+        for th in ts:
+            th.join()
+        self.assertEqual(errs, [])
+        self.assertEqual(set(got), {want})

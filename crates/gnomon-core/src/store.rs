@@ -61,6 +61,14 @@ impl From<std::io::Error> for StoreError {
 }
 
 fn parse_events(text: &str) -> Result<Vec<Value>, StoreError> {
+    Ok(parse_lines(text)?.into_iter().map(|(v, _)| v).collect())
+}
+
+/// Each line parsed, checked to be canonical, and its envelope hash (the
+/// hash of the event without its "hash" member) worked out from the line
+/// itself, in parallel: a canonical line minus its top-level `,"hash":"…"`
+/// is exactly the canonical form of the event without it.
+fn parse_lines(text: &str) -> Result<Vec<(Value, String)>, StoreError> {
     if text.is_empty() {
         return Ok(Vec::new());
     }
@@ -70,21 +78,60 @@ fn parse_events(text: &str) -> Result<Vec<Value>, StoreError> {
     if !lines[complete].is_empty() {
         return Err(StoreError::TornTail { line: complete });
     }
-    let mut events = Vec::with_capacity(complete);
-    for (i, line) in lines[..complete].iter().enumerate() {
-        let v = json::parse(line).map_err(|e| StoreError::Malformed {
-            line: i,
-            reason: e.to_string(),
-        })?;
+    let lines = &lines[..complete];
+    let one = |i: usize, line: &str| -> Result<(Value, String), StoreError> {
+        let v = json::parse(line).map_err(|e| StoreError::Malformed { line: i, reason: e.to_string() })?;
         if canonical(&v) != *line {
-            return Err(StoreError::Malformed {
-                line: i,
-                reason: "line is not in canonical form".to_string(),
-            });
+            return Err(StoreError::Malformed { line: i, reason: "line is not in canonical form".to_string() });
         }
-        events.push(v);
+        let h = match v.get("hash").and_then(|h| h.as_str()) {
+            Some(h) => {
+                let member = format!(",\"hash\":\"{h}\"");
+                // The top-level member is the last: only flat members follow it.
+                match line.rfind(&member) {
+                    Some(at) => {
+                        let mut rest = String::with_capacity(line.len());
+                        rest.push_str(&line[..at]);
+                        rest.push_str(&line[at + member.len()..]);
+                        crate::sha256::hex_digest(rest.as_bytes())
+                    }
+                    None => String::new(), // no hash member: the gate will say so
+                }
+            }
+            None => String::new(),
+        };
+        Ok((v, h))
+    };
+    let threads = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(1).min(8);
+    if threads < 2 || lines.len() < 2048 {
+        return lines.iter().enumerate().map(|(i, l)| one(i, l)).collect();
     }
-    Ok(events)
+    let chunk = lines.len().div_ceil(threads);
+    let parts: Vec<Result<Vec<(Value, String)>, StoreError>> = std::thread::scope(|scope| {
+        let handles: Vec<_> = lines
+            .chunks(chunk)
+            .enumerate()
+            .map(|(k, ls)| {
+                let one = &one;
+                scope.spawn(move || ls.iter().enumerate().map(|(i, l)| one(k * chunk + i, l)).collect())
+            })
+            .collect();
+        handles.into_iter().map(|h| h.join().expect("parse thread")).collect()
+    });
+    let mut out = Vec::with_capacity(lines.len());
+    for p in parts {
+        out.extend(p?);
+    }
+    Ok(out)
+}
+
+/// Replay parsed lines through the gate, with their envelope hashes.
+fn verify_lines(mut ledger: Ledger, lines: Vec<(Value, String)>, base: usize) -> Result<Ledger, StoreError> {
+    for (i, (ev, h)) in lines.into_iter().enumerate() {
+        let known = if h.is_empty() { None } else { Some(h) };
+        ledger.apply_hashed(ev, known).map_err(|error| StoreError::Invalid { seq: base + i, error })?;
+    }
+    Ok(ledger)
 }
 
 /// Open an existing, non-empty log for reading under a shared lock.
@@ -124,6 +171,25 @@ fn verify_events(events: &[Value], budget: Option<usize>) -> Result<Ledger, Stor
             Err(StoreError::Exhausted { checked, total })
         }
     }
+}
+
+/// Replay an existing log from scratch through every rule (no cache), at
+/// most `budget` events: the full audit. Lines are parsed and hashed in
+/// parallel; the gate runs in order.
+pub fn audit(path: &Path, budget: Option<usize>) -> Result<VerifyStatus, StoreError> {
+    let (_f, bytes) = open_for_read(path)?;
+    let lines = parse_lines(&utf8(bytes)?)?;
+    let total = lines.len();
+    let mut ledger = Ledger::new();
+    for (i, (ev, h)) in lines.into_iter().enumerate() {
+        if budget.is_some_and(|b| i >= b) {
+            return Ok(VerifyStatus::Exhausted { checked: i, total });
+        }
+        if let Err(error) = ledger.apply_hashed(ev, if h.is_empty() { None } else { Some(h) }) {
+            return Ok(VerifyStatus::Broken { seq: i, error });
+        }
+    }
+    Ok(VerifyStatus::Ok { count: total, head: ledger.head() })
 }
 
 /// Open and fully verify an existing log. `budget` limits how many events
@@ -193,14 +259,37 @@ fn verified_for(key: &Path, bytes: Vec<u8>) -> Result<Cached, StoreError> {
             if entry.bytes == bytes {
                 return Ok(entry);
             }
+            // Grown by appends (from another process, say): the verified
+            // part is byte-identical, so only the new lines need checking,
+            // each through the same gate a full replay would use.
+            if bytes.len() > entry.bytes.len()
+                && bytes.starts_with(&entry.bytes)
+                && (entry.bytes.is_empty() || entry.bytes.ends_with(b"\n"))
+            {
+                drop(c);
+                return extend_verified(entry, bytes);
+            }
         }
     }
     let text = utf8(bytes)?;
-    let ledger = verify_events(&parse_events(&text)?, None)?;
+    let ledger = verify_lines(Ledger::new(), parse_lines(&text)?, 0)?;
     Ok(Cached {
         bytes: text.into_bytes(),
         ledger,
     })
+}
+
+fn extend_verified(mut entry: Cached, bytes: Vec<u8>) -> Result<Cached, StoreError> {
+    let base = entry.ledger.events.len();
+    let tail = utf8(bytes[entry.bytes.len()..].to_vec())?;
+    let lines = parse_lines(&tail).map_err(|e| match e {
+        StoreError::Malformed { line, reason } => StoreError::Malformed { line: base + line, reason },
+        StoreError::TornTail { line } => StoreError::TornTail { line: base + line },
+        other => other,
+    })?;
+    entry.ledger = verify_lines(entry.ledger, lines, base)?;
+    entry.bytes = bytes;
+    Ok(entry)
 }
 
 fn put_cache(key: PathBuf, entry: Cached) {

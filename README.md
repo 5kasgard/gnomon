@@ -206,33 +206,80 @@ dependencies. The gate checks:
 Accepted events are appended to the log and nothing else. State is never
 stored, only rebuilt by replaying the log, so two replays always agree.
 
-## Recall, measured
+## Measured
 
-Recall finds where something was said, with no language model. It uses:
+Every number below is reproducible from `bench/`, with no model and no
+network involved.
 
-- **BM25 with stemming,** a standard keyword-ranking method.
-- **Speaker awareness:** "What did Caroline paint?" favours Caroline's own
-  turns.
-- **Answers found through their questions.**
-- **Dates by the calendar:** relative dates ("last Friday") are resolved
-  against the day they were said.
+### Recall: finding the evidence
 
-The benchmark is [LoCoMo](https://github.com/snap-research/locomo): long
-conversations, with each question labelled with the turns that answer it.
-All tuning was done on conversations 0–4, and the table reports the
-held-out conversations 5–9:
+[LoCoMo](https://github.com/snap-research/locomo) is a benchmark of long
+conversations in which each question is labelled with the turns that
+answer it. Recall ranks what was said using:
 
-| Evidence found in the top… | 5 | 10 | 25 | 50 |
-|---|---|---|---|---|
-| Keyword search (BM25) alone | 49.2% | 57.2% | 65.5% | 71.3% |
-| **Gnomon recall** | **63.9%** | **71.8%** | 79.5% | 85.4% |
-| DRAGON, a trained neural retriever (LoCoMo paper) | 58.8% | 67.5% | 79.9% | 84.8% |
+- **BM25 with stemming,** a standard keyword-ranking method;
+- **speaker awareness;**
+- **answers found through their questions;**
+- **whole conversations that match;**
+- **dates resolved by the calendar.**
 
-Recall takes under 20 ms per question on one CPU core.
-`python bench/locomo.py --split test` reproduces it. DRAGON's numbers are
-from the paper over the whole dataset, so the comparison is indicative;
-see the [spec](spec/claim-protocol-v0.1.md#11-recall-m5) for method and
-caveats.
+Every weight was chosen on conversations 0–4. The table shows the held-out
+conversations 5–9, all questions:
+
+| Evidence found in the top… | 1 | 5 | 10 | 25 | 50 |
+|---|---|---|---|---|---|
+| Keyword search (BM25) alone | 26.4% | 49.2% | 57.2% | 65.5% | 71.3% |
+| **Gnomon recall** | **35.8%** | **65.4%** | **74.2%** | **82.3%** | **86.5%** |
+| DRAGON, a trained neural retriever (LoCoMo paper) | – | 58.8% | 67.5% | 79.9% | 84.8% |
+
+Gnomon is ahead of the neural retriever at every depth reported, in under
+2 ms per question on one CPU core. Reproduce it with
+`python bench/locomo.py --split test`. DRAGON's numbers are from the paper
+over the whole dataset, so the comparison is indicative; see the
+[spec](spec/claim-protocol-v0.1.md#11-recall-m5) for method and caveats.
+
+### Speed at scale
+
+Measured on a memory of 20,000 events, in a long-lived process like the MCP
+server (`python bench/scale.py`):
+
+| Operation | Before this round | Now |
+|---|---|---|
+| A new process's first read (each hook, each new session) | 2,304 ms | **400 ms** |
+| Recall | 997 ms | **107 ms** |
+| Resume | 2,692 ms | **257 ms** |
+| A query whose proofs are checked independently, as the MCP server does (all proved before; the first 100 now) | 4,571 ms | **254 ms** |
+| First read after another process appended | 1,730 ms | **281 ms** |
+
+How it got there:
+
+- Analyses are cached by content.
+- A log that has only grown has just its new lines verified.
+- Lines are parsed and hashed in parallel.
+- Queries load only what they can reach.
+- Resume reads only the part of the state it needs.
+- The independent proof checker re-reads only what was appended.
+- Proofs are made for the answers that will be shown. The others are
+  marked unproven and never passed off as checked.
+
+### What a model pays to read it
+
+Models are shown compact text:
+
+- short claim ids, which every tool accepts back;
+- `2026-10-16 10:15` times;
+- stance and truth as codes, with a one-line legend;
+- no repeated fields.
+
+The structured results stay small too. On a LoCoMo conversation
+(`python bench/tokens.py`):
+
+| Output | Tokens per item, before | Now |
+|---|---|---|
+| Resume | 41.1 | **32.5** |
+| Recall: everything but the words said | 27.1 | **14.4** |
+| Query answers | 37.8 | **26.1** |
+| Open questions | 11.7 | **7.6** |
 
 ## What's in it
 
@@ -246,7 +293,7 @@ caveats.
 | **Identity** | Each session or agent is its own writer, on record with its model, surface, session and operator. Names in recordings are bound, never matched. Agreement between sessions of one model counts once. |
 | **Ingestion** | Transcripts and documents are parsed by plain code and classified by named rules. Anything uncertain is set aside, never guessed. Quotes are checked word for word. |
 | **Queries** | Datalog with recursion and stratified negation, under hard limits. Every answer has a proof down to log events, re-checked by an independent checker. Proofs are content-addressed: each rule is named by a hash of its text and each step by a hash of what it rests on. |
-| **Recall** | Ranked search with provenance on every hit, and dates resolved by the calendar. |
+| **Recall** | Ranked search with provenance on every hit, and dates resolved by the calendar. Every weight is tunable and every boost is explained on the hit. |
 | **Checkers** | Arithmetic with exact fractions and dates against the real calendar, acting as verifiers under the same rules as everyone else. |
 | **MCP server** | Standard library only, for current and older MCP clients. It is fuzzed, and tested in CI with the official MCP SDK. |
 
@@ -259,7 +306,7 @@ The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
   (`tests/incidents.rs`).
 - **Each milestone was attacked by a reviewer who didn't write it.** That
   covered the record, queries, the MCP server, recall, identity, the forum,
-  continuity and auto mode, over 17 review rounds. Every confirmed finding is now a
+  continuity, auto mode and performance, over 18 review rounds. Every confirmed finding is now a
   regression test.
 - **The query engine has a second implementation to agree with.** It is
   checked against a deliberately naive evaluator on hundreds of random
@@ -268,7 +315,7 @@ The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
 - **The MCP server is tested hard.** It is fuzzed with thousands of
   malformed messages and driven in CI by the official MCP Python SDK.
 - **Recall was tested on data it was never tuned on.**
-- **Every platform:** 176 Rust tests and 185 Python tests run on Linux,
+- **Every platform:** 177 Rust tests and 192 Python tests run on Linux,
   macOS and Windows on every change.
 
 ```bash
