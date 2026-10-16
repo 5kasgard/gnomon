@@ -418,7 +418,7 @@ def record_transcript(memory, writer: str, content: str, *, participants: Iterab
 
 def record_messages(memory, writer: str, messages: Iterable[tuple[str, str]], *, compartment: str,
                     medium: str = "chat", record_time: Optional[str] = None,
-                    bindings: Optional[dict] = None) -> str:
+                    bindings: Optional[dict] = None, exact: bool = False) -> str:
     """Record structured messages [(speaker, text), ...] as an episode.
 
     Prefer this whenever the source already says who sent each message (chat
@@ -428,14 +428,16 @@ def record_messages(memory, writer: str, messages: Iterable[tuple[str, str]], *,
     from John speaking.
 
     `bindings` says which registered writer each name refers to ({"Claude":
-    "claude-c1"}); without one, a name is only a name.
+    "claude-c1"}); without one, a name is only a name. With `exact`, each
+    message is kept character for character (no trimming); only empty ones
+    are left out.
     """
     messages = list(messages)
     _check_names(dict.fromkeys(sp for sp, _ in messages))
     parts, turns, pos, participants = [], [], 0, []
     for speaker, text in messages:
         label = f"{speaker}: "
-        body_text = text.strip()
+        body_text = text if exact else text.strip()
         if not body_text:
             continue
         if parts:

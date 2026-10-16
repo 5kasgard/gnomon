@@ -112,7 +112,7 @@ class Continuity(Fixture):
         b = Proc("--log", self.log, "--writer", "claude", "--per-session")
         try:
             r = b.call("resume", {})
-            self.assertEqual(r["structuredContent"]["handoff"]["handoff"], hid)
+            self.assertEqual(r["structuredContent"]["handoff"], hid)
             self.assertIn("Next: write tests", r["content"][0]["text"])
             r = b.call("frames", {})
             self.assertEqual(r["structuredContent"]["frames"][0]["frame"], "db")
