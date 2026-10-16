@@ -32,6 +32,7 @@ def main(argv=None) -> int:
     i.add_argument("--log", required=True)
     i.add_argument("--owner", required=True, help="the owner's writer id (also their party)")
     i.add_argument("--compartments", required=True, help="comma-separated, e.g. lab,private")
+    i.add_argument("--name", help="how you are named in records, e.g. 'Alex Duff'")
 
     r = sub.add_parser("register", help="register a writer (by an owner)")
     r.add_argument("--log", required=True)
@@ -70,7 +71,7 @@ def main(argv=None) -> int:
                 print(f"{a.log} already exists; not touching it", file=sys.stderr)
                 return 1
             ev = m.register(a.owner, a.owner, party=a.owner, kind="human", capabilities=["owner"],
-                            compartments=_list(a.compartments))
+                            compartments=_list(a.compartments), name=a.name)
             print(f"created {a.log}: owner {a.owner} ({ev['event_id']})")
         elif a.cmd == "register":
             operator = a.operator or (a.by if a.kind != "human" else None)
