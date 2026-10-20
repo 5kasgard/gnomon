@@ -5,19 +5,30 @@
 //! A snapshot is a cache, never a source of truth:
 //!
 //! * It names the exact bytes it was made from: their length and SHA-256.
-//!   It is used only if the log still begins with exactly those bytes; any
-//!   other change to the log (an edit, a truncation) makes it useless, and
-//!   the log is verified from scratch as before. Events added after it are
-//!   checked through the gate as usual.
+//!   It is used only if the log still begins with exactly those bytes, its
+//!   event count is the number of lines there, and its last event's hash is
+//!   the one on the last of them. Any other change to the log (an edit, a
+//!   truncation) makes it useless, and the log is verified from scratch as
+//!   before. Events added after it are checked through the gate as usual.
 //! * It names the code that made it: a hash of the source of the gate, the
-//!   schema, canonical JSON and this file. A build with any change to how
-//!   state is derived ignores snapshots made by another.
-//! * Its own contents carry a SHA-256, so a damaged file is ignored.
+//!   schema, canonical JSON, hashing, the store and this file. A build with
+//!   any change to how state is derived ignores snapshots made by another.
+//! * It is sealed with an HMAC-SHA-256 under a secret key of the user's own
+//!   (`snapshot.key` in `$GNOMON_STATE_DIR`, else `$XDG_STATE_HOME/gnomon`,
+//!   else `~/.local/state/gnomon`; made on first use, readable by its owner
+//!   only). Anyone who can write beside the log but not read that key
+//!   cannot make a snapshot that will be used: a forged or damaged one is
+//!   ignored, and the log is verified in full.
+//! * Its directory and file must belong to the user running the code and be
+//!   writable by no one else, or they are neither read nor written. The file
+//!   is written under a fresh name (never through an existing file or link)
+//!   and renamed into place.
+//! * Decoding is bounded: nesting no deeper than canonical JSON allows, and
+//!   no allocation larger than the file justifies.
 //! * The full audit (`store::audit`, `gn_verify`) never reads it.
 //!
-//! The file is written to a temporary name and renamed into place, readable
-//! by its owner only. Anyone who can rewrite it could equally rewrite the
-//! log; the audit is how either is caught.
+//! Snapshots need a Unix system (for the key and the ownership checks);
+//! elsewhere none are made, and every new process replays the log.
 //!
 //! The format is a plain binary encoding of the ledger: little-endian
 //! LEB128 lengths, then the events and the derived state, field by field.
@@ -33,7 +44,10 @@ use crate::ledger::{
 };
 use crate::sha256::digest;
 
-const MAGIC: &[u8; 8] = b"GNSNAP1\n";
+
+const MAGIC: &[u8; 8] = b"GNSNAP2\n";
+/// Magic, code hash, bytes covered, their hash, HMAC.
+const HEADER: usize = 8 + 32 + 8 + 32 + 32;
 
 /// Logs with fewer events than this are cheap to verify: no snapshot.
 pub const MIN_EVENTS: usize = 1000;
@@ -72,6 +86,8 @@ fn code_hash() -> &'static [u8; 32] {
             include_str!("ledger.rs"),
             include_str!("schema.rs"),
             include_str!("json.rs"),
+            include_str!("sha256.rs"),
+            include_str!("store.rs"),
             include_str!("snapshot.rs"),
         ] {
             s.push_str(&part.len().to_string());
@@ -87,6 +103,7 @@ fn code_hash() -> &'static [u8; 32] {
 struct Reader<'a> {
     b: &'a [u8],
     at: usize,
+    depth: usize,
 }
 
 impl<'a> Reader<'a> {
@@ -210,7 +227,8 @@ impl<T: Codec> Codec for Vec<T> {
     }
     fn dec(r: &mut Reader) -> Option<Self> {
         let n = r.len()?;
-        let mut v = Vec::with_capacity(n);
+        // A length is only a claim: never allocate more than a little ahead.
+        let mut v = Vec::with_capacity(n.min(1024));
         for _ in 0..n {
             v.push(T::dec(r)?);
         }
@@ -249,7 +267,7 @@ impl<T: Codec> Codec for BTreeMap<String, T> {
     }
     fn dec(r: &mut Reader) -> Option<Self> {
         let n = r.len()?;
-        let mut v: Vec<(String, T)> = Vec::with_capacity(n);
+        let mut v: Vec<(String, T)> = Vec::with_capacity(n.min(1024));
         for _ in 0..n {
             let k = String::dec(r)?;
             // Written in order: anything else is not a snapshot of ours.
@@ -295,7 +313,25 @@ impl Codec for Value {
         }
     }
     fn dec(r: &mut Reader) -> Option<Self> {
-        Some(match r.byte()? {
+        let tag = r.byte()?;
+        if tag >= 5 {
+            // As deep as canonical JSON may nest, and no deeper.
+            r.depth += 1;
+            if r.depth > crate::json::MAX_DEPTH {
+                return None;
+            }
+        }
+        let v = Self::dec_tagged(r, tag);
+        if tag >= 5 {
+            r.depth -= 1;
+        }
+        v
+    }
+}
+
+impl Value {
+    fn dec_tagged(r: &mut Reader, tag: u8) -> Option<Self> {
+        Some(match tag {
             0 => Value::Null,
             1 => Value::Bool(false),
             2 => Value::Bool(true),
@@ -346,81 +382,240 @@ codec_struct!(Ledger { events, state });
 
 // ------------------------------------------------------------ the file
 
-/// The snapshot of `ledger`, verified from exactly `log` (its bytes).
-pub fn encode(ledger: &Ledger, log: &[u8]) -> Vec<u8> {
-    let mut payload = Vec::with_capacity(log.len());
-    ledger.enc(&mut payload);
-    let mut out = Vec::with_capacity(payload.len() + 120);
+/// Whether `meta` belongs to the user running this code and no one else
+/// may write to it (or, for the key, read it).
+#[cfg(unix)]
+fn ours(meta: &std::fs::Metadata, forbidden: u32) -> bool {
+    use std::os::unix::fs::MetadataExt;
+    extern "C" {
+        fn geteuid() -> u32;
+    }
+    // SAFETY: geteuid has no preconditions and cannot fail.
+    let me = unsafe { geteuid() };
+    meta.uid() == me && meta.mode() & forbidden == 0
+}
+
+/// A directory of ours, made (owner only) if it does not exist.
+#[cfg(unix)]
+fn our_dir(dir: &Path) -> Option<()> {
+    use std::os::unix::fs::DirBuilderExt;
+    if !dir.exists() {
+        let _ = std::fs::DirBuilder::new().recursive(true).mode(0o700).create(dir);
+    }
+    let meta = std::fs::symlink_metadata(dir).ok()?;
+    (meta.is_dir() && ours(&meta, 0o022)).then_some(())
+}
+
+/// The user's snapshot key: 32 random bytes, made on first use.
+#[cfg(unix)]
+fn key() -> Option<&'static [u8; 32]> {
+    static KEY: OnceLock<Option<[u8; 32]>> = OnceLock::new();
+    KEY.get_or_init(|| {
+        let dir = match std::env::var_os("GNOMON_STATE_DIR") {
+            Some(d) if !d.is_empty() => PathBuf::from(d),
+            _ => match std::env::var_os("XDG_STATE_HOME") {
+                Some(d) if !d.is_empty() => PathBuf::from(d).join("gnomon"),
+                _ => PathBuf::from(std::env::var_os("HOME")?).join(".local").join("state").join("gnomon"),
+            },
+        };
+        our_dir(&dir)?;
+        let path = dir.join("snapshot.key");
+        read_key(&path).or_else(|| {
+            use std::io::{Read, Write};
+            use std::os::unix::fs::OpenOptionsExt;
+            let mut k = [0u8; 32];
+            std::fs::File::open("/dev/urandom").ok()?.read_exact(&mut k).ok()?;
+            let tmp = dir.join(format!("snapshot.key.{}.tmp", std::process::id()));
+            let mut f = std::fs::OpenOptions::new().write(true).create_new(true).mode(0o600).open(&tmp).ok()?;
+            let written = f.write_all(&k).and_then(|_| f.sync_all());
+            drop(f);
+            // Never replace a key another process made first: its snapshots
+            // would stop being used.
+            let linked = written.and_then(|_| std::fs::hard_link(&tmp, &path));
+            let _ = std::fs::remove_file(&tmp);
+            match linked {
+                Ok(()) => Some(k),
+                Err(_) => read_key(&path),
+            }
+        })
+    })
+    .as_ref()
+}
+
+#[cfg(unix)]
+fn read_key(path: &Path) -> Option<[u8; 32]> {
+    let meta = std::fs::symlink_metadata(path).ok()?;
+    if !meta.is_file() || !ours(&meta, 0o077) {
+        return None;
+    }
+    std::fs::read(path).ok()?.try_into().ok()
+}
+
+#[cfg(not(unix))]
+fn key() -> Option<&'static [u8; 32]> {
+    None
+}
+
+/// The snapshot of `ledger`, verified from exactly `log` (its bytes),
+/// sealed under `key`.
+fn seal(ledger: &Ledger, log: &[u8], key: &[u8; 32]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(log.len() + HEADER);
     out.extend_from_slice(MAGIC);
     out.extend_from_slice(code_hash());
     out.extend_from_slice(&(log.len() as u64).to_le_bytes());
     out.extend_from_slice(&digest(log));
-    out.extend_from_slice(&digest(&payload));
-    out.extend_from_slice(&payload);
+    out.extend_from_slice(&[0u8; 32]); // the HMAC, below
+    ledger.enc(&mut out);
+    let mac = crate::sha256::hmac(key, &[&out[..HEADER - 32], &out[HEADER..]]);
+    out[HEADER - 32..HEADER].copy_from_slice(&mac);
     out
 }
 
-/// How many bytes of the log a snapshot covers, if it was made by this
-/// build and is undamaged (without checking the log).
-fn header(snap: &[u8]) -> Option<(usize, &[u8], &[u8])> {
-    if snap.len() < 112 || &snap[..8] != MAGIC || snap[8..40] != code_hash()[..] {
-        return None;
-    }
-    let covered = usize::try_from(u64::from_le_bytes(snap[40..48].try_into().ok()?)).ok()?;
-    let (log_hash, payload) = (&snap[48..80], &snap[112..]);
-    if digest(payload)[..] != snap[80..112] {
-        return None;
-    }
-    Some((covered, log_hash, payload))
+/// How many bytes of a log `snap` says it covers (unchecked).
+fn covers(snap: &[u8]) -> Option<usize> {
+    (snap.len() >= HEADER && &snap[..8] == MAGIC)
+        .then(|| usize::try_from(u64::from_le_bytes(snap[40..48].try_into().ok()?)).ok())
+        .flatten()
 }
 
-/// The ledger saved in `snap`, and how many bytes of `log` it covers: only
-/// if `log` begins with exactly the bytes it was made from.
-pub fn decode(snap: &[u8], log: &[u8]) -> Option<(Ledger, usize)> {
-    let (covered, log_hash, payload) = header(snap)?;
-    if covered == 0 || covered > log.len() || log[covered - 1] != b'\n' || digest(&log[..covered])[..] != *log_hash {
+/// The ledger sealed in `snap` under `key`, and how many bytes of `log` it
+/// covers: only if it was made by this build, its seal holds, and `log`
+/// begins with exactly the bytes it was made from, as many lines as it has
+/// events, the last of them its last event.
+fn unseal(snap: &[u8], log: &[u8], key: &[u8; 32]) -> Option<(Ledger, usize)> {
+    let covered = covers(snap)?;
+    if snap[8..40] != code_hash()[..] {
         return None;
     }
-    let mut r = Reader { b: payload, at: 0 };
+    let mac = crate::sha256::hmac(key, &[&snap[..HEADER - 32], &snap[HEADER..]]);
+    // Compared in full whatever the first difference: no timing to learn from.
+    if mac.iter().zip(&snap[HEADER - 32..HEADER]).fold(0u8, |acc, (a, b)| acc | (a ^ b)) != 0 {
+        return None;
+    }
+    if covered == 0 || covered > log.len() || log[covered - 1] != b'\n' || digest(&log[..covered])[..] != snap[48..80] {
+        return None;
+    }
+    let mut r = Reader { b: &snap[HEADER..], at: 0, depth: 0 };
     let ledger = Ledger::dec(&mut r)?;
-    (r.at == payload.len()).then_some((ledger, covered))
+    if r.at != snap.len() - HEADER {
+        return None;
+    }
+    let lines = log[..covered].iter().filter(|b| **b == b'\n').count();
+    let last_line = log[..covered - 1].rsplit(|b| *b == b'\n').next()?;
+    let last = crate::json::parse(std::str::from_utf8(last_line).ok()?).ok()?;
+    let head = |v: &Value| v.get("hash").and_then(|h| h.as_str()).map(str::to_string);
+    if ledger.events.len() != lines || ledger.events.last().and_then(head) != head(&last) || head(&last).is_none() {
+        return None;
+    }
+    Some((ledger, covered))
 }
 
-/// Read the snapshot beside `log_path`, if there is a usable one for `log`.
-pub fn load(log_path: &Path, log: &[u8]) -> Option<(Ledger, usize)> {
-    let snap = std::fs::read(path_for(log_path)).ok()?;
-    decode(&snap, log)
+/// The snapshot of `ledger` (verified from exactly `log`) as it would be
+/// saved, if this system can keep snapshots.
+pub fn encode(ledger: &Ledger, log: &[u8]) -> Option<Vec<u8>> {
+    Some(seal(ledger, log, key()?))
+}
+
+/// A snapshot holding `payload` as its encoded ledger, sealed with this
+/// user's key, for `log`: for tests of what decoding refuses. (Anyone able
+/// to call this already holds the key.)
+#[doc(hidden)]
+pub fn seal_raw(payload: &[u8], log: &[u8]) -> Option<Vec<u8>> {
+    let key = key()?;
+    let mut out = Vec::with_capacity(payload.len() + HEADER);
+    out.extend_from_slice(MAGIC);
+    out.extend_from_slice(code_hash());
+    out.extend_from_slice(&(log.len() as u64).to_le_bytes());
+    out.extend_from_slice(&digest(log));
+    out.extend_from_slice(&[0u8; 32]);
+    out.extend_from_slice(payload);
+    let mac = crate::sha256::hmac(key, &[&out[..HEADER - 32], &out[HEADER..]]);
+    out[HEADER - 32..HEADER].copy_from_slice(&mac);
+    Some(out)
+}
+
+/// The encoded ledger inside a snapshot (for tests).
+#[doc(hidden)]
+pub fn payload(snap: &[u8]) -> &[u8] {
+    &snap[HEADER.min(snap.len())..]
+}
+
+/// The ledger in snapshot `snap` and how many bytes of `log` it covers, if
+/// it is usable for `log` (see the module documentation).
+pub fn decode(snap: &[u8], log: &[u8]) -> Option<(Ledger, usize)> {
+    unseal(snap, log, key()?)
+}
+
+/// What the snapshot beside `log_path` holds for `log`.
+pub enum Loaded {
+    /// A usable snapshot: the ledger and how many bytes of the log it covers.
+    Usable(Ledger, usize),
+    /// None, or one made from more of the log than there is now.
+    Absent,
+    /// One that cannot be used for this log (another log's, another
+    /// build's, damaged, forged, or not ours).
+    Unusable,
+}
+
+/// Read the snapshot beside `log_path` for `log`.
+pub fn load(log_path: &Path, log: &[u8]) -> Loaded {
+    let path = path_for(log_path);
+    let Ok(meta) = std::fs::symlink_metadata(&path) else { return Loaded::Absent };
+    #[cfg(unix)]
+    if !meta.is_file() || !ours(&meta, 0o022) || our_dir(path.parent().expect("has a parent")).is_none() {
+        return Loaded::Unusable;
+    }
+    #[cfg(not(unix))]
+    let _ = meta;
+    let Ok(snap) = std::fs::read(&path) else { return Loaded::Absent };
+    match covers(&snap) {
+        Some(n) if n > log.len() => Loaded::Absent,
+        _ => match decode(&snap, log) {
+            Some((l, n)) => Loaded::Usable(l, n),
+            None => Loaded::Unusable,
+        },
+    }
+}
+
+/// Remove an unusable snapshot (so a fresh one can take its place).
+pub fn discard(log_path: &Path) {
+    let _ = std::fs::remove_file(path_for(log_path));
 }
 
 /// Save a snapshot of `ledger` (verified from exactly `log`) beside
-/// `log_path`. Failure to save is not an error: it is only a cache.
+/// `log_path`, unless one there already covers more. Failure to save is
+/// not an error: it is only a cache.
 pub fn save(log_path: &Path, ledger: &Ledger, log: &[u8]) {
     let _ = try_save(log_path, ledger, log);
 }
 
 fn try_save(log_path: &Path, ledger: &Ledger, log: &[u8]) -> std::io::Result<()> {
     use std::io::Write;
+    let fail = || std::io::Error::other("snapshots are not kept here");
+    let key = key().ok_or_else(fail)?;
     let target = path_for(log_path);
     let dir = target.parent().expect("snapshot path has a parent");
-    std::fs::create_dir_all(dir)?;
+    #[cfg(unix)]
+    our_dir(dir).ok_or_else(fail)?;
     static N: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
     let n = N.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
     let tmp = dir.join(format!("snapshot.{}.{n}.tmp", std::process::id()));
     let mut opts = std::fs::OpenOptions::new();
-    opts.write(true).create(true).truncate(true);
+    // A fresh file: never through an existing file or link.
+    opts.write(true).create_new(true);
     #[cfg(unix)]
     {
         use std::os::unix::fs::OpenOptionsExt;
         opts.mode(0o600);
     }
     let mut f = opts.open(&tmp)?;
-    let res = f.write_all(&encode(ledger, log)).and_then(|_| f.sync_data());
+    let res = f.write_all(&seal(ledger, log, key)).and_then(|_| f.sync_data());
     drop(f);
-    match res.and_then(|_| std::fs::rename(&tmp, &target)) {
-        Ok(()) => Ok(()),
-        Err(e) => {
-            let _ = std::fs::remove_file(&tmp);
-            Err(e)
-        }
+    // Keep a snapshot that covers more (from a process that saw more).
+    let newer = std::fs::read(&target).ok().and_then(|s| covers(&s)).is_some_and(|c| c > log.len());
+    let res = res.and_then(|_| if newer { Err(fail()) } else { std::fs::rename(&tmp, &target) });
+    if res.is_err() {
+        let _ = std::fs::remove_file(&tmp);
     }
+    res
 }

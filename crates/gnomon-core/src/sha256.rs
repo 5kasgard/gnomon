@@ -124,6 +124,82 @@ fn digest_with(data: &[u8], hardware: bool) -> [u8; 32] {
     out
 }
 
+/// SHA-256 over data given in pieces.
+pub struct Hasher {
+    state: [u32; 8],
+    buf: [u8; 64],
+    used: usize,
+    len: u64,
+    hardware: bool,
+}
+
+impl Default for Hasher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl Hasher {
+    pub fn new() -> Self {
+        Hasher { state: H0, buf: [0; 64], used: 0, len: 0, hardware: has_hardware() }
+    }
+
+    pub fn update(&mut self, mut data: &[u8]) {
+        self.len = self.len.wrapping_add(data.len() as u64);
+        if self.used > 0 {
+            let take = (64 - self.used).min(data.len());
+            self.buf[self.used..self.used + take].copy_from_slice(&data[..take]);
+            self.used += take;
+            data = &data[take..];
+            if self.used < 64 {
+                return;
+            }
+            let block = self.buf;
+            compress_blocks(&mut self.state, &block, self.hardware);
+            self.used = 0;
+        }
+        let whole = data.len() - data.len() % 64;
+        compress_blocks(&mut self.state, &data[..whole], self.hardware);
+        let rest = &data[whole..];
+        self.buf[..rest.len()].copy_from_slice(rest);
+        self.used = rest.len();
+    }
+
+    pub fn finish(mut self) -> [u8; 32] {
+        let bit_len = self.len.wrapping_mul(8);
+        let mut tail = [0u8; 128];
+        tail[..self.used].copy_from_slice(&self.buf[..self.used]);
+        tail[self.used] = 0x80;
+        let tail_len = if self.used < 56 { 64 } else { 128 };
+        tail[tail_len - 8..tail_len].copy_from_slice(&bit_len.to_be_bytes());
+        compress_blocks(&mut self.state, &tail[..tail_len], self.hardware);
+        let mut out = [0u8; 32];
+        for (i, word) in self.state.iter().enumerate() {
+            out[i * 4..i * 4 + 4].copy_from_slice(&word.to_be_bytes());
+        }
+        out
+    }
+}
+
+/// HMAC-SHA-256 (RFC 2104) of the concatenation of `parts`, under `key`.
+pub fn hmac(key: &[u8], parts: &[&[u8]]) -> [u8; 32] {
+    let mut k = [0u8; 64];
+    if key.len() > 64 {
+        k[..32].copy_from_slice(&digest(key));
+    } else {
+        k[..key.len()].copy_from_slice(key);
+    }
+    let mut inner = Hasher::new();
+    inner.update(&k.map(|b| b ^ 0x36));
+    for p in parts {
+        inner.update(p);
+    }
+    let mut outer = Hasher::new();
+    outer.update(&k.map(|b| b ^ 0x5c));
+    outer.update(&inner.finish());
+    outer.finish()
+}
+
 /// Lowercase hex SHA-256 of `data`.
 pub fn hex_digest(data: &[u8]) -> String {
     const HEX: &[u8; 16] = b"0123456789abcdef";
@@ -206,6 +282,38 @@ mod ni {
 #[cfg(test)]
 mod tests {
     use super::{digest_with, has_hardware, hex_digest};
+
+    #[test]
+    fn pieces_hash_as_the_whole() {
+        let data: Vec<u8> = (0..1000u32).map(|i| (i * 7 + 3) as u8).collect();
+        for cut in [0, 1, 55, 63, 64, 65, 127, 128, 500, 999, 1000] {
+            for cut2 in [cut, (cut + 70).min(1000)] {
+                let mut h = super::Hasher::new();
+                h.update(&data[..cut]);
+                h.update(&data[cut..cut2]);
+                h.update(&data[cut2..]);
+                assert_eq!(h.finish(), super::digest(&data), "{cut} {cut2}");
+            }
+        }
+    }
+
+    #[test]
+    fn hmac_rfc4231() {
+        // RFC 4231 test cases 1, 2 and 6 (key longer than a block).
+        let hex = |d: [u8; 32]| d.iter().map(|b| format!("{b:02x}")).collect::<String>();
+        assert_eq!(
+            hex(super::hmac(&[0x0b; 20], &[b"Hi ", b"There"])),
+            "b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7"
+        );
+        assert_eq!(
+            hex(super::hmac(b"Jefe", &[b"what do ya want for nothing?"])),
+            "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843"
+        );
+        assert_eq!(
+            hex(super::hmac(&[0xaa; 131], &[b"Test Using Larger Than Block-Size Key - Hash Key First"])),
+            "60e431591ee0b67f0d8a26aacbf5b77f8e0bc6213728c5140546040f0ee37f54"
+        );
+    }
 
     #[test]
     fn hardware_matches_portable() {

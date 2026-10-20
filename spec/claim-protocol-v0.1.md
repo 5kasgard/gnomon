@@ -996,18 +996,30 @@ which session and model left it, and for whom.
   of the verified state when there is a usable one: `<log>.d/snapshot`,
   readable by its owner only. A snapshot is a cache, not a source of truth:
   - it names the exact bytes it was made from (their length and SHA-256),
-    and is used only while the log still begins with exactly those bytes;
-    events after them go through the gate as usual;
+    and is used only while the log still begins with exactly those bytes,
+    with as many lines as it has events and its last event's hash on the
+    last of them; events after them go through the gate as usual;
   - it names the code that made it (a hash of the gate, schema, canonical
-    JSON and snapshot source), so another build never uses it;
-  - its contents carry their own SHA-256, so a damaged file is ignored;
+    JSON, hashing, store and snapshot source), so another build never uses
+    it;
+  - it is sealed with HMAC-SHA-256 under a key of the user's own
+    (`snapshot.key` in `$GNOMON_STATE_DIR`, `$XDG_STATE_HOME/gnomon` or
+    `~/.local/state/gnomon`, owner only). Whoever can write beside the log
+    but cannot read that key cannot make a snapshot that is used: a forged
+    or damaged one is ignored, removed, and the log verified in full;
+  - its directory and file must be the user's own and writable by no one
+    else. It is written under a fresh name, never through an existing file
+    or link, then renamed into place, and never over one that covers more;
+  - decoding is bounded in depth (as canonical JSON is) and in allocation;
   - it decodes to exactly the ledger a replay gives. An appended event is
     held in memory exactly as a replay of its line would hold it, so state
     never depends on how a draft was built;
   - the full audit (`gn_verify`) never reads it.
 
-  Logs under 1,000 events get none. A new one is saved when the log has
-  grown by 1,000 events and a quarter since the last.
+  Logs under 1,000 events get none, and neither do systems other than Unix
+  (for the key and ownership checks). A new one is saved, with no lock held
+  on the log, once the log has grown 1% past the last (at least 256 events,
+  at most 4,096), so a new process replays little.
 - **Partial state:** `gn_writers` (Python `Memory.writers`) returns only the
   writers, and `gn_select` (`Memory.select`) the writers plus named claims,
   episodes and handoffs, so callers that need a little of the state never

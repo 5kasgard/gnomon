@@ -238,14 +238,15 @@ struct Cached {
     snap_events: usize,
 }
 
-/// Save a new snapshot once the log has grown enough past the last one: by
-/// at least `snapshot::MIN_EVENTS` and a quarter, so saving costs O(1) per
-/// event over time.
+/// Save a new snapshot once the log has grown past the last one by 1% (at
+/// least 256 events, at most 4,096), so a new process replays little, and
+/// saving, which costs the whole log, happens rarely. Called only with no
+/// lock held on the log.
 fn maybe_snapshot(key: &Path, c: &mut Cached) {
     let n = c.ledger.events.len();
     let grown = n.saturating_sub(c.snap_events);
     let min = crate::snapshot::min_events();
-    if n >= min && grown >= min.max(c.snap_events / 4) {
+    if n >= min && grown >= (n / 100).clamp(256, 4096).min(min) {
         crate::snapshot::save(key, &c.ledger, &c.bytes);
         c.snap_events = n;
     }
@@ -287,14 +288,17 @@ fn verified_for(key: &Path, bytes: Vec<u8>) -> Result<Cached, StoreError> {
                 && (entry.bytes.is_empty() || entry.bytes.ends_with(b"\n"))
             {
                 drop(c);
-                let mut e = extend_verified(entry, bytes)?;
-                maybe_snapshot(key, &mut e);
-                return Ok(e);
+                return extend_verified(entry, bytes);
             }
         }
     }
-    let mut c = match crate::snapshot::load(key, &bytes) {
-        Some((ledger, covered)) => {
+    use crate::snapshot::Loaded;
+    let loaded = crate::snapshot::load(key, &bytes);
+    if matches!(loaded, Loaded::Unusable) {
+        crate::snapshot::discard(key); // so a good one can take its place
+    }
+    let c = match loaded {
+        Loaded::Usable(ledger, covered) => {
             let snap_events = ledger.events.len();
             let start = Cached { bytes: bytes[..covered].to_vec(), ledger, snap_events };
             let c = if covered == bytes.len() { start } else { extend_verified(start, bytes)? };
@@ -314,13 +318,12 @@ fn verified_for(key: &Path, bytes: Vec<u8>) -> Result<Cached, StoreError> {
             }
             c
         }
-        None => {
+        Loaded::Absent | Loaded::Unusable => {
             let text = utf8(bytes)?;
             let ledger = verify_lines(Ledger::new(), parse_lines(&text)?, 0)?;
             Cached { bytes: text.into_bytes(), ledger, snap_events: 0 }
         }
     };
-    maybe_snapshot(key, &mut c);
     Ok(c)
 }
 
@@ -375,7 +378,8 @@ pub fn with_ledger<T>(path: &Path, f: impl FnOnce(&Ledger) -> T) -> Result<T, St
         bytes
     }; // lock released here
     let key = cache_key(path);
-    let c = verified_for(&key, bytes)?;
+    let mut c = verified_for(&key, bytes)?;
+    maybe_snapshot(&key, &mut c); // no lock is held here
     let out = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| f(&c.ledger)));
     // Only cache the snapshot if no newer bytes were cached meanwhile.
     {
@@ -421,7 +425,6 @@ pub fn append(path: &Path, draft: Draft) -> Result<Value, StoreError> {
     f.write_all(line.as_bytes())?;
     f.sync_data()?;
     c.bytes.extend_from_slice(line.as_bytes());
-    maybe_snapshot(&key, &mut c);
     put_cache(key, c);
     Ok(env)
 }

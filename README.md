@@ -259,9 +259,10 @@ finish. How it got there:
   instructions where they exist (5.4× the portable code here), with the
   portable code as fallback and as the reference it is tested against.
 - **New processes start from a snapshot** of the verified state saved
-  beside the log, used only while the log still begins with exactly the
-  bytes it was made from, and only by the build that made it. Events after
-  it go through the gate as usual. The full audit never reads it.
+  beside the log. It is sealed with a key only you can read, used only while
+  the log still begins with exactly the bytes it was made from, and only by
+  the build that made it. Events after it go through the gate as usual. The
+  full audit never reads it.
 - **Nothing renders what nobody reads.** Hooks and tools that needed only
   the writers, or one episode, asked for the whole state. Now they ask for
   just that part.
@@ -327,7 +328,7 @@ The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
   (`tests/incidents.rs`).
 - **Each milestone was attacked by a reviewer who didn't write it.** That
   covered the record, queries, the MCP server, recall, identity, the forum,
-  continuity, auto mode and performance, over 18 review rounds. Every confirmed finding is now a
+  continuity, auto mode and performance, over 19 review rounds. Every confirmed finding is now a
   regression test.
 - **The query engine has a second implementation to agree with.** It is
   checked against a deliberately naive evaluator on hundreds of random
@@ -336,7 +337,7 @@ The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
 - **The MCP server is tested hard.** It is fuzzed with thousands of
   malformed messages and driven in CI by the official MCP Python SDK.
 - **Recall was tested on data it was never tuned on.**
-- **Every platform:** 177 Rust tests and 192 Python tests run on Linux,
+- **Every platform:** 190 Rust tests and 197 Python tests run on Linux,
   macOS and Windows on every change.
 
 ```bash

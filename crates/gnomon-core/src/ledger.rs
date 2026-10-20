@@ -315,9 +315,6 @@ impl Ledger {
         if let Some(k) = first_duplicate_key(&env) {
             return Err(err("E_ENVELOPE", format!("duplicate key '{k}'")));
         }
-        if let Some(k) = first_duplicate_key(&env) {
-            return Err(err("E_ENVELOPE", format!("duplicate key '{k}'")));
-        }
         let hash = envelope_hash(&env);
         let line = canonical(&env.with("hash", Value::str(hash.clone())));
         // Exactly the value a replay of the written line gives (members in

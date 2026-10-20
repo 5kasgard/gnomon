@@ -159,8 +159,8 @@ fn a_snapshot_decodes_to_exactly_what_a_replay_gives() {
     let full = replay(&path);
     // From a ledger built by appends (members in insertion order) and from
     // one replayed from the file: the same snapshot, the same ledger.
-    let a = snapshot::encode(&l, &bytes);
-    let b = snapshot::encode(&full, &bytes);
+    let a = snapshot::encode(&l, &bytes).unwrap();
+    let b = snapshot::encode(&full, &bytes).unwrap();
     assert!(a == b, "a ledger built by appends and its replay must snapshot identically");
     let (decoded, covered) = snapshot::decode(&a, &bytes).expect("usable");
     assert_eq!(covered, bytes.len());
@@ -192,7 +192,7 @@ fn events_after_the_snapshot_go_through_the_gate() {
     let l = world();
     write_log(&path, &l);
     let bytes = fs::read(&path).unwrap();
-    let snap = snapshot::encode(&replay(&path), &bytes);
+    let snap = snapshot::encode(&replay(&path), &bytes).unwrap();
     // The log grows by a valid event and by an invalid one.
     store::append(&path, draft("claude-c1", 40, "claim", claim_body("After.", "asserted", "true"))).unwrap();
     let grown = fs::read(&path).unwrap();
@@ -221,7 +221,7 @@ fn a_snapshot_is_never_used_for_a_log_that_changed() {
     let l = world();
     write_log(&path, &l);
     let bytes = fs::read(&path).unwrap();
-    let snap = snapshot::encode(&replay(&path), &bytes);
+    let snap = snapshot::encode(&replay(&path), &bytes).unwrap();
     // Any byte changed, the log truncated, a line removed: not used.
     let mut edited = bytes.clone();
     let at = bytes.len() / 2;
@@ -244,7 +244,7 @@ fn a_damaged_or_foreign_snapshot_is_ignored() {
     let path = tmp("damaged");
     write_log(&path, &world());
     let bytes = fs::read(&path).unwrap();
-    let snap = snapshot::encode(&replay(&path), &bytes);
+    let snap = snapshot::encode(&replay(&path), &bytes).unwrap();
     // A flipped byte anywhere: header, code hash, log hash, payload.
     for at in [0, 9, 45, 60, 100, snap.len() / 2, snap.len() - 1] {
         let mut s = snap.clone();
@@ -274,7 +274,7 @@ fn a_forged_snapshot_cannot_survive_a_change_to_its_log_hash() {
     w.append(Draft { writer: "gpt-g1".into(), record_time: t(50), kind: "claim".into(), body: claim_body("Z", "asserted", "true") })
         .unwrap();
     write_log(&p2, &w);
-    let s1 = snapshot::encode(&replay(&p1), &fs::read(&p1).unwrap());
+    let s1 = snapshot::encode(&replay(&p1), &fs::read(&p1).unwrap()).unwrap();
     let b2 = fs::read(&p2).unwrap();
     // p2 begins with p1's bytes, so p1's snapshot is a valid start for p2...
     assert!(snapshot::decode(&s1, &b2).is_some());
@@ -282,4 +282,96 @@ fn a_forged_snapshot_cannot_survive_a_change_to_its_log_hash() {
     let mut other = b2.clone();
     other[10] ^= 1;
     assert!(snapshot::decode(&s1, &other).is_none());
+}
+
+#[test]
+fn a_snapshot_sealed_with_another_key_or_reencoded_is_ignored() {
+    // The payload is sealed with the user's key: a plain hash recomputed
+    // over a changed payload does not make it usable.
+    let path = tmp("forged");
+    write_log(&path, &world());
+    let bytes = fs::read(&path).unwrap();
+    let snap = snapshot::encode(&replay(&path), &bytes).unwrap();
+    let mut forged = snap.clone();
+    let n = forged.len();
+    forged[n - 10] ^= 1;
+    for at in 80..112 {
+        forged[at] ^= 0x55; // any change to the seal itself
+    }
+    assert!(snapshot::decode(&forged, &bytes).is_none());
+}
+
+#[test]
+fn a_sealed_snapshot_must_still_agree_with_the_log() {
+    // Even under a valid seal: as many events as lines, the same last hash.
+    let path = tmp("agree");
+    write_log(&path, &world());
+    let bytes = fs::read(&path).unwrap();
+    let mut l = replay(&path);
+    let full = snapshot::encode(&l, &bytes).unwrap();
+    assert!(snapshot::decode(&full, &bytes).is_some());
+    l.events.pop();
+    let fewer = snapshot::encode(&l, &bytes).unwrap();
+    assert!(snapshot::decode(&fewer, &bytes).is_none(), "one event short");
+    let mut l = replay(&path);
+    let last = l.events.pop().unwrap();
+    l.events.push(last.with("hash", Value::str("0".repeat(64))));
+    let wrong = snapshot::encode(&l, &bytes).unwrap();
+    assert!(snapshot::decode(&wrong, &bytes).is_none(), "another last hash");
+}
+
+#[test]
+fn decoding_is_bounded() {
+    let path = tmp("bounded");
+    write_log(&path, &world());
+    let bytes = fs::read(&path).unwrap();
+    // Two million nested arrays: refused, not a stack overflow.
+    let mut deep = vec![1u8]; // one event...
+    deep.extend(std::iter::repeat_n([5u8, 1u8], 2_000_000).flatten()); // ...an array of one array of...
+    deep.push(0);
+    assert!(snapshot::decode(&snapshot::seal_raw(&deep, &bytes).unwrap(), &bytes).is_none());
+    // A length claiming four hundred million writers in a few bytes:
+    // refused without trying to allocate for them.
+    let mut huge = vec![0u8]; // no events
+    let mut n: u64 = 400_000_000;
+    loop {
+        let b = (n & 0x7f) as u8;
+        n >>= 7;
+        if n == 0 {
+            huge.push(b);
+            break;
+        }
+        huge.push(b | 0x80);
+    }
+    huge.extend(std::iter::repeat_n(1u8, 64 << 20)); // 64 MB of filler
+    assert!(snapshot::decode(&snapshot::seal_raw(&huge, &bytes).unwrap(), &bytes).is_none());
+    // The real payload still decodes when resealed: the test helper is honest.
+    let snap = snapshot::encode(&replay(&path), &bytes).unwrap();
+    let again = snapshot::seal_raw(snapshot::payload(&snap), &bytes).unwrap();
+    assert!(snapshot::decode(&again, &bytes).is_some());
+}
+
+#[cfg(unix)]
+#[test]
+fn snapshots_are_written_only_into_our_own_directory_and_never_through_a_link() {
+    use std::os::unix::fs::{symlink, PermissionsExt};
+    let path = tmp("links");
+    write_log(&path, &world());
+    let dir = snapshot::path_for(&path).parent().unwrap().to_path_buf();
+    fs::create_dir_all(&dir).unwrap();
+    let victim = path.parent().unwrap().join("victim.txt");
+    fs::write(&victim, "untouched").unwrap();
+    for n in 0..64 {
+        let _ = symlink(&victim, dir.join(format!("snapshot.{}.{n}.tmp", std::process::id())));
+    }
+    store::with_ledger(&path, |_| ()).unwrap();
+    assert_eq!(fs::read_to_string(&victim).unwrap(), "untouched");
+    // A directory others may write to is neither read nor written.
+    let p2 = tmp("shared-dir");
+    write_log(&p2, &world());
+    let d2 = snapshot::path_for(&p2).parent().unwrap().to_path_buf();
+    fs::create_dir_all(&d2).unwrap();
+    fs::set_permissions(&d2, fs::Permissions::from_mode(0o777)).unwrap();
+    store::with_ledger(&p2, |_| ()).unwrap();
+    assert!(!snapshot::path_for(&p2).exists());
 }
