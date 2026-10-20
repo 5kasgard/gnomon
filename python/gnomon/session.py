@@ -29,7 +29,7 @@ def instance_for(memory: Memory, parent: str, session: Optional[str] = None,
                  surface: Optional[str] = None) -> str:
     """The writer for `session`, an instance of `parent`: the existing one
     if this session has one, otherwise a new one (`parent-<n>`)."""
-    writers = memory.state()["state"]["writers"]
+    writers = memory.writers()
     if parent not in writers:
         raise GateError("E_UNKNOWN_WRITER", f"writer '{parent}' is not registered")
     p = writers[parent]

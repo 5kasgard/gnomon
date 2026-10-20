@@ -1,5 +1,10 @@
 //! SHA-256 (FIPS 180-4), standard library only.
 //!
+//! On x86-64 processors with the SHA extensions (Intel since Ice Lake and
+//! Goldmont, AMD since Zen) the compression function runs on those
+//! instructions, chosen once at run time; everywhere else, and as the
+//! reference the hardware path is tested against, it is portable code.
+//!
 //! Correctness is checked against the FIPS test vectors in this module and,
 //! independently, against Python's `hashlib` in the cross-language tests.
 
@@ -18,7 +23,7 @@ const H0: [u32; 8] = [
     0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c, 0x1f83d9ab, 0x5be0cd19,
 ];
 
-fn compress(state: &mut [u32; 8], block: &[u8]) {
+fn compress_portable(state: &mut [u32; 8], block: &[u8]) {
     debug_assert_eq!(block.len(), 64);
     let mut w = [0u32; 64];
     for (i, chunk) in block.chunks_exact(4).enumerate() {
@@ -58,23 +63,60 @@ fn compress(state: &mut [u32; 8], block: &[u8]) {
     }
 }
 
+/// Compress whole 64-byte blocks (`blocks.len()` is a multiple of 64).
+fn compress_blocks(state: &mut [u32; 8], blocks: &[u8], hardware: bool) {
+    #[cfg(target_arch = "x86_64")]
+    if hardware {
+        // SAFETY: `hardware` is only true when the CPU reports the SHA,
+        // SSSE3 and SSE4.1 features (see `has_hardware`).
+        unsafe { ni::compress_blocks(state, blocks) };
+        return;
+    }
+    let _ = hardware;
+    for block in blocks.chunks_exact(64) {
+        compress_portable(state, block);
+    }
+}
+
+/// Whether this CPU has the SHA-256 instructions (checked once).
+pub fn has_hardware() -> bool {
+    #[cfg(target_arch = "x86_64")]
+    {
+        use std::sync::atomic::{AtomicU8, Ordering};
+        static HW: AtomicU8 = AtomicU8::new(0); // 0 unknown, 1 no, 2 yes
+        match HW.load(Ordering::Relaxed) {
+            1 => false,
+            2 => true,
+            _ => {
+                let yes = std::is_x86_feature_detected!("sha")
+                    && std::is_x86_feature_detected!("ssse3")
+                    && std::is_x86_feature_detected!("sse4.1");
+                HW.store(if yes { 2 } else { 1 }, Ordering::Relaxed);
+                yes
+            }
+        }
+    }
+    #[cfg(not(target_arch = "x86_64"))]
+    false
+}
+
 /// SHA-256 digest of `data`.
 pub fn digest(data: &[u8]) -> [u8; 32] {
+    digest_with(data, has_hardware())
+}
+
+fn digest_with(data: &[u8], hardware: bool) -> [u8; 32] {
     let mut state = H0;
-    let mut chunks = data.chunks_exact(64);
-    for block in &mut chunks {
-        compress(&mut state, block);
-    }
-    let rem = chunks.remainder();
+    let whole = data.len() - data.len() % 64;
+    compress_blocks(&mut state, &data[..whole], hardware);
+    let rem = &data[whole..];
     let bit_len = (data.len() as u64).wrapping_mul(8);
     let mut tail = [0u8; 128];
     tail[..rem.len()].copy_from_slice(rem);
     tail[rem.len()] = 0x80;
     let tail_len = if rem.len() < 56 { 64 } else { 128 };
     tail[tail_len - 8..tail_len].copy_from_slice(&bit_len.to_be_bytes());
-    for block in tail[..tail_len].chunks_exact(64) {
-        compress(&mut state, block);
-    }
+    compress_blocks(&mut state, &tail[..tail_len], hardware);
     let mut out = [0u8; 32];
     for (i, word) in state.iter().enumerate() {
         out[i * 4..i * 4 + 4].copy_from_slice(&word.to_be_bytes());
@@ -94,9 +136,95 @@ pub fn hex_digest(data: &[u8]) -> String {
     s
 }
 
+#[cfg(target_arch = "x86_64")]
+mod ni {
+    //! The compression function on the x86 SHA extensions: two rounds per
+    //! `sha256rnds2`, the message schedule on `sha256msg1`/`sha256msg2`.
+    use super::K;
+    use std::arch::x86_64::*;
+
+    #[inline(always)]
+    unsafe fn schedule(v0: __m128i, v1: __m128i, v2: __m128i, v3: __m128i) -> __m128i {
+        let t1 = _mm_sha256msg1_epu32(v0, v1);
+        let t2 = _mm_alignr_epi8(v3, v2, 4);
+        _mm_sha256msg2_epu32(_mm_add_epi32(t1, t2), v3)
+    }
+
+    #[inline(always)]
+    unsafe fn rounds4(abef: &mut __m128i, cdgh: &mut __m128i, w: __m128i, i: usize) {
+        let k = _mm_loadu_si128(K.as_ptr().add(4 * i) as *const __m128i);
+        let t1 = _mm_add_epi32(w, k);
+        *cdgh = _mm_sha256rnds2_epu32(*cdgh, *abef, t1);
+        let t2 = _mm_shuffle_epi32(t1, 0x0E);
+        *abef = _mm_sha256rnds2_epu32(*abef, *cdgh, t2);
+    }
+
+    /// # Safety
+    /// The CPU must support the `sha`, `ssse3` and `sse4.1` features.
+    #[target_feature(enable = "sha,sse2,ssse3,sse4.1")]
+    pub unsafe fn compress_blocks(state: &mut [u32; 8], blocks: &[u8]) {
+        let mask = _mm_set_epi64x(0x0C0D_0E0F_0809_0A0Bu64 as i64, 0x0405_0607_0001_0203u64 as i64);
+        let p = state.as_ptr() as *const __m128i;
+        let dcba = _mm_loadu_si128(p);
+        let efgh = _mm_loadu_si128(p.add(1));
+        let cdab = _mm_shuffle_epi32(dcba, 0xB1);
+        let efgh = _mm_shuffle_epi32(efgh, 0x1B);
+        let mut abef = _mm_alignr_epi8(cdab, efgh, 8);
+        let mut cdgh = _mm_blend_epi16(efgh, cdab, 0xF0);
+        for block in blocks.chunks_exact(64) {
+            let (abef0, cdgh0) = (abef, cdgh);
+            let d = block.as_ptr() as *const __m128i;
+            let mut w = [
+                _mm_shuffle_epi8(_mm_loadu_si128(d), mask),
+                _mm_shuffle_epi8(_mm_loadu_si128(d.add(1)), mask),
+                _mm_shuffle_epi8(_mm_loadu_si128(d.add(2)), mask),
+                _mm_shuffle_epi8(_mm_loadu_si128(d.add(3)), mask),
+            ];
+            for (i, wi) in w.iter().enumerate() {
+                rounds4(&mut abef, &mut cdgh, *wi, i);
+            }
+            for i in 4..16 {
+                // w[i % 4] holds W[i-4 .. i-1] (four words): the next four
+                // come from the previous sixteen.
+                let next = schedule(w[i % 4], w[(i + 1) % 4], w[(i + 2) % 4], w[(i + 3) % 4]);
+                w[i % 4] = next;
+                rounds4(&mut abef, &mut cdgh, next, i);
+            }
+            abef = _mm_add_epi32(abef, abef0);
+            cdgh = _mm_add_epi32(cdgh, cdgh0);
+        }
+        let feba = _mm_shuffle_epi32(abef, 0x1B);
+        let dchg = _mm_shuffle_epi32(cdgh, 0xB1);
+        let dcba = _mm_blend_epi16(feba, dchg, 0xF0);
+        let hgef = _mm_alignr_epi8(dchg, feba, 8);
+        let q = state.as_mut_ptr() as *mut __m128i;
+        _mm_storeu_si128(q, dcba);
+        _mm_storeu_si128(q.add(1), hgef);
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use super::hex_digest;
+    use super::{digest_with, has_hardware, hex_digest};
+
+    #[test]
+    fn hardware_matches_portable() {
+        // Every length across several blocks and the padding boundaries,
+        // with varied bytes: the two paths must agree exactly.
+        if !has_hardware() {
+            return;
+        }
+        let mut x: u32 = 12345;
+        let data: Vec<u8> = (0..1100)
+            .map(|_| {
+                x = x.wrapping_mul(1_103_515_245).wrapping_add(12_345);
+                (x >> 16) as u8
+            })
+            .collect();
+        for n in 0..data.len() {
+            assert_eq!(digest_with(&data[..n], true), digest_with(&data[..n], false), "length {n}");
+        }
+    }
 
     // FIPS 180-4 / NIST CAVS examples.
     #[test]

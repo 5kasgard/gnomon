@@ -243,16 +243,30 @@ over the whole dataset, so the comparison is indicative; see the
 Measured on a memory of 20,000 events, in a long-lived process like the MCP
 server (`python bench/scale.py`):
 
-| Operation | Before this round | Now |
-|---|---|---|
-| A new process's first read (each hook, each new session) | 2,304 ms | **400 ms** |
-| Recall | 997 ms | **107 ms** |
-| Resume | 2,692 ms | **257 ms** |
-| A query whose proofs are checked independently, as the MCP server does (all proved before; the first 100 now) | 4,571 ms | **254 ms** |
-| First read after another process appended | 1,730 ms | **281 ms** |
+| Operation | First measured | Last round | Now |
+|---|---|---|---|
+| **A Claude Code hook, after every reply** (auto mode: a new process records the turn) | – | 3,073 ms | **305 ms** |
+| **Starting a session** (the hook binds the session and builds its resume) | – | 5,057 ms | **557 ms** |
+| A new process's first read | 2,304 ms | 400 ms | **228 ms** |
+| Recall | 997 ms | 107 ms | **113 ms** |
+| Resume | 2,692 ms | 257 ms | 285 ms |
+| A query whose proofs are checked independently, as the MCP server does | 4,571 ms | 254 ms | 286 ms |
 
-How it got there:
+The hook numbers time the real `python -m gnomon.hook` command, start to
+finish. How it got there:
 
+- **The hardware is used.** SHA-256 runs on the processor's SHA
+  instructions where they exist (5.4× the portable code here), with the
+  portable code as fallback and as the reference it is tested against.
+- **New processes start from a snapshot** of the verified state saved
+  beside the log, used only while the log still begins with exactly the
+  bytes it was made from, and only by the build that made it. Events after
+  it go through the gate as usual. The full audit never reads it.
+- **Nothing renders what nobody reads.** Hooks and tools that needed only
+  the writers, or one episode, asked for the whole state. Now they ask for
+  just that part.
+- Canonical JSON copies plain text whole and sorts only what is out of
+  order.
 - Analyses are cached by content.
 - A log that has only grown has just its new lines verified.
 - Lines are parsed and hashed in parallel.

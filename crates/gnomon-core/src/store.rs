@@ -15,6 +15,11 @@
 //! lock is on the file, every path that reaches it (symlinks, `./`
 //! spellings) shares one lock, and there is no lock file to delete.
 //!
+//! Starting fast: a new process does not replay the whole log if a
+//! snapshot of its verified state, made from exactly the bytes the log still
+//! begins with, is saved beside it (see [`crate::snapshot`]); only events
+//! after it go through the gate. Snapshots are refreshed as the log grows.
+//!
 //! An empty file is treated exactly like a missing one.
 
 use std::collections::HashMap;
@@ -229,6 +234,21 @@ pub fn verify_checkpoint(path: &Path, count: usize, head: &str) -> Result<(), St
 struct Cached {
     bytes: Vec<u8>,
     ledger: Ledger,
+    /// Events covered by the newest snapshot this process knows of.
+    snap_events: usize,
+}
+
+/// Save a new snapshot once the log has grown enough past the last one: by
+/// at least `snapshot::MIN_EVENTS` and a quarter, so saving costs O(1) per
+/// event over time.
+fn maybe_snapshot(key: &Path, c: &mut Cached) {
+    let n = c.ledger.events.len();
+    let grown = n.saturating_sub(c.snap_events);
+    let min = crate::snapshot::min_events();
+    if n >= min && grown >= min.max(c.snap_events / 4) {
+        crate::snapshot::save(key, &c.ledger, &c.bytes);
+        c.snap_events = n;
+    }
 }
 
 /// Bounded so that touching many logs cannot grow memory without limit.
@@ -267,16 +287,41 @@ fn verified_for(key: &Path, bytes: Vec<u8>) -> Result<Cached, StoreError> {
                 && (entry.bytes.is_empty() || entry.bytes.ends_with(b"\n"))
             {
                 drop(c);
-                return extend_verified(entry, bytes);
+                let mut e = extend_verified(entry, bytes)?;
+                maybe_snapshot(key, &mut e);
+                return Ok(e);
             }
         }
     }
-    let text = utf8(bytes)?;
-    let ledger = verify_lines(Ledger::new(), parse_lines(&text)?, 0)?;
-    Ok(Cached {
-        bytes: text.into_bytes(),
-        ledger,
-    })
+    let mut c = match crate::snapshot::load(key, &bytes) {
+        Some((ledger, covered)) => {
+            let snap_events = ledger.events.len();
+            let start = Cached { bytes: bytes[..covered].to_vec(), ledger, snap_events };
+            let c = if covered == bytes.len() { start } else { extend_verified(start, bytes)? };
+            if crate::snapshot::checking() {
+                let text = utf8(c.bytes.clone())?;
+                let full = verify_lines(Ledger::new(), parse_lines(&text)?, 0)?;
+                if full != c.ledger {
+                    let (a, b) = (&full, &c.ledger);
+                    let what = if a.events != b.events { "events" } else if a.state.writers != b.state.writers { "writers" }
+                        else if a.state.episodes != b.state.episodes { "episodes" } else if a.state.claims != b.state.claims { "claims" }
+                        else if a.state.supersessions != b.state.supersessions { "supersessions" } else if a.state.verdicts != b.state.verdicts { "verdicts" }
+                        else if a.state.appeals != b.state.appeals { "appeals" } else if a.state.handoffs != b.state.handoffs { "handoffs" }
+                        else if a.state.appeals_by_claim != b.state.appeals_by_claim { "appeals_by_claim" } else { "schema_version" };
+                    eprintln!("gnomon: a snapshot of {} differs from a full replay in {what} ({} vs {} events)", key.display(), a.events.len(), b.events.len());
+                    std::process::abort();
+                }
+            }
+            c
+        }
+        None => {
+            let text = utf8(bytes)?;
+            let ledger = verify_lines(Ledger::new(), parse_lines(&text)?, 0)?;
+            Cached { bytes: text.into_bytes(), ledger, snap_events: 0 }
+        }
+    };
+    maybe_snapshot(key, &mut c);
+    Ok(c)
 }
 
 fn extend_verified(mut entry: Cached, bytes: Vec<u8>) -> Result<Cached, StoreError> {
@@ -376,6 +421,7 @@ pub fn append(path: &Path, draft: Draft) -> Result<Value, StoreError> {
     f.write_all(line.as_bytes())?;
     f.sync_data()?;
     c.bytes.extend_from_slice(line.as_bytes());
+    maybe_snapshot(&key, &mut c);
     put_cache(key, c);
     Ok(env)
 }

@@ -38,7 +38,7 @@ pub fn envelope_hash(env: &Value) -> String {
     hex_digest(canonical(&env.without("hash")).as_bytes())
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct WriterInfo {
     /// Position of its registration in the log.
     pub seq: usize,
@@ -80,7 +80,7 @@ impl WriterInfo {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct EpisodeInfo {
     /// Position in the log.
     pub seq: usize,
@@ -102,7 +102,7 @@ impl EpisodeInfo {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct ClaimInfo {
     pub body: Value,
     pub compartment: String,
@@ -132,7 +132,7 @@ pub struct ClaimInfo {
     pub supersedes: Vec<String>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Resolution {
     pub event: String,
     pub outcome: String,
@@ -144,7 +144,7 @@ pub struct Resolution {
     pub by_refutation: bool,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SupersessionInfo {
     pub old: String,
     pub new: String,
@@ -180,7 +180,7 @@ impl SupersessionInfo {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct VerdictInfo {
     pub claim: String,
     pub result: String,
@@ -200,7 +200,7 @@ fn c_later<T>(seq: usize, cur: Option<(usize, T)>) -> bool {
     cur.map(|(s, _)| seq > s).unwrap_or(true)
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct HandoffInfo {
     pub seq: usize,
     pub compartment: String,
@@ -210,7 +210,7 @@ pub struct HandoffInfo {
     pub body: Value,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct AppealInfo {
     pub claim: String,
     pub compartment: String,
@@ -238,7 +238,7 @@ impl AppealInfo {
     }
 }
 
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, PartialEq)]
 pub struct State {
     pub writers: BTreeMap<String, WriterInfo>,
     pub episodes: BTreeMap<String, EpisodeInfo>,
@@ -260,7 +260,7 @@ pub struct Draft {
     pub body: Value,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug, PartialEq)]
 pub struct Ledger {
     pub events: Vec<Value>,
     pub state: State,
@@ -312,9 +312,19 @@ impl Ledger {
             ("kind", Value::str(draft.kind)),
             ("body", draft.body),
         ]);
+        if let Some(k) = first_duplicate_key(&env) {
+            return Err(err("E_ENVELOPE", format!("duplicate key '{k}'")));
+        }
+        if let Some(k) = first_duplicate_key(&env) {
+            return Err(err("E_ENVELOPE", format!("duplicate key '{k}'")));
+        }
         let hash = envelope_hash(&env);
-        let env = env.with("hash", Value::str(hash));
-        self.apply(env.clone())?;
+        let line = canonical(&env.with("hash", Value::str(hash.clone())));
+        // Exactly the value a replay of the written line gives (members in
+        // canonical order): the state never depends on how a draft was
+        // built, only on the log.
+        let env = crate::json::parse(&line).map_err(|e| err("E_BODY", format!("event is not valid JSON: {e}")))?;
+        self.apply_hashed(env.clone(), Some(hash))?;
         Ok(env)
     }
 

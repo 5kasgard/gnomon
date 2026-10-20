@@ -987,6 +987,31 @@ which session and model left it, and for whom.
   parallel. Each event's hash is worked out once, from its exact line minus
   its top-level hash member. They are then replayed through the gate in
   order.
+- **Hashing** uses the processor's SHA-256 instructions where it has them
+  (x86-64 SHA extensions: Intel since Ice Lake, AMD since Zen), chosen at
+  run time and tested against the portable code at every length. Canonical
+  JSON copies runs of plain bytes whole and sorts members only when they are
+  out of order.
+- **A new process** (every hook, every new session) starts from a snapshot
+  of the verified state when there is a usable one: `<log>.d/snapshot`,
+  readable by its owner only. A snapshot is a cache, not a source of truth:
+  - it names the exact bytes it was made from (their length and SHA-256),
+    and is used only while the log still begins with exactly those bytes;
+    events after them go through the gate as usual;
+  - it names the code that made it (a hash of the gate, schema, canonical
+    JSON and snapshot source), so another build never uses it;
+  - its contents carry their own SHA-256, so a damaged file is ignored;
+  - it decodes to exactly the ledger a replay gives. An appended event is
+    held in memory exactly as a replay of its line would hold it, so state
+    never depends on how a draft was built;
+  - the full audit (`gn_verify`) never reads it.
+
+  Logs under 1,000 events get none. A new one is saved when the log has
+  grown by 1,000 events and a quarter since the last.
+- **Partial state:** `gn_writers` (Python `Memory.writers`) returns only the
+  writers, and `gn_select` (`Memory.select`) the writers plus named claims,
+  episodes and handoffs, so callers that need a little of the state never
+  render all of it.
 - **In a long-lived process** (the MCP server), a verified log is cached:
   - A log that has only grown, from any process, has just its new lines
     checked, through the same gate.

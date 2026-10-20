@@ -441,7 +441,7 @@ class Server:
         if "me" in a and a.get("operator_name") == a["me"]:
             raise ToolError("'me' and 'operator_name' must be different speakers")
         if "operator_name" in a:
-            op = self.memory.state()["state"]["writers"].get(self.writer, {}).get("operator")
+            op = self.memory.writers().get(self.writer, {}).get("operator")
             if not op:
                 raise ToolError("you have no operator on record to bind operator_name to")
             bindings[a["operator_name"]] = op
@@ -542,7 +542,7 @@ class Server:
             raise ToolError("no checker writer is configured (start the server with --checker <writer>)")
         # Only what this server's writer can see: the checker may see more,
         # and its results come back to the model.
-        mine = self.memory.state()["state"]["writers"][self.writer]["compartments"]
+        mine = self.memory.writers()[self.writer]["compartments"]
         rep = checkers.run(self.memory, self.checker, compartments=mine)
         out = {"verdicts": [{"claim": c, "result": r, "note": n} for c, r, n in rep.verdicts],
                "failures": [{"claim": c, "error": e} for c, e in rep.failures]}
@@ -622,7 +622,7 @@ class Server:
         if self.writer != self.parent:
             raise ToolError(f"this session already writes as {self.writer}; attach first, before other tools")
         wid = redeem_token(self.log, a["token"], self.session)
-        writers = self.memory.state()["state"]["writers"]
+        writers = self.memory.writers()
         w = writers.get(wid or "")
         if not w or w.get("instance_of") != self.parent:
             raise ToolError("that token is not valid (tokens are single use, and name an instance of this "
@@ -631,10 +631,10 @@ class Server:
         return f"Attached: you write as {title(writers, wid)}.", {"writer": wid}
 
     def t_whoami(self, a: dict) -> tuple[str, Any]:
-        full = self.memory.state()["state"]["writers"]
+        full = self.memory.writers()
         # Only what this writer may see: others are named as far as they
         # share a compartment with it.
-        writers = self.memory.state(compartments=full[self.writer]["compartments"])["state"]["writers"]
+        writers = self.memory.writers(compartments=full[self.writer]["compartments"])
         me = dict(writers.get(self.writer, {}))
         me.pop("last_seq", None)
         out = {"writer": self.writer, "title": title(writers, self.writer), **me}
@@ -1042,7 +1042,7 @@ def main(argv: Optional[list[str]] = None) -> int:
     server = Server(a.log, a.writer, a.checker, per_session=a.per_session,
                     session=a.session or os.environ.get("GNOMON_SESSION"))
     try:
-        writers = server.memory.state()["state"]["writers"]
+        writers = server.memory.writers()
     except GateError as e:
         print(f"gnomon: cannot open {a.log}: {e}", file=sys.stderr)
         return 2

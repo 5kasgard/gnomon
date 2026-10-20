@@ -487,10 +487,10 @@ def ingest(memory, writer: str, episode_id: str, *, frame: str, compartment: str
     """
     from . import GateError, claim
 
-    state = memory.state()["state"]
-    me = state["writers"].get(writer)
+    writers = memory.writers()
+    me = writers.get(writer)
     my_party = me["party"] if me else None
-    visible = memory.state(compartments=me["compartments"] if me else [])["state"]
+    visible = memory.select(compartments=me["compartments"] if me else [], episodes=[episode_id])
     ep = visible["episodes"].get(episode_id)
     if ep is None:
         raise GateError("E_REF", f"episode '{episode_id}' does not exist or is not accessible")
@@ -499,7 +499,7 @@ def ingest(memory, writer: str, episode_id: str, *, frame: str, compartment: str
     # If the writer's own party recorded this episode, its quotes of anyone
     # else are that party's account of what was said: capped at 7000, as
     # the core requires.
-    recorder = state["writers"].get(ep["writer"], {})
+    recorder = writers.get(ep["writer"], {})
     self_recorded = my_party is not None and recorder.get("party") == my_party
     _check_names(participants)  # look-alike names: refuse rather than attribute
     report = Report(episode_id)

@@ -391,7 +391,7 @@ class Memory:
         return list(reversed(out))
 
     def _compartments(self, reader: str) -> list:
-        writers = self.state()["state"]["writers"]
+        writers = self.writers()
         if reader not in writers:
             raise GateError("E_UNKNOWN_WRITER", f"reader '{reader}' is not registered")
         return writers[reader]["compartments"]
@@ -428,6 +428,21 @@ class Memory:
     def state(self, as_of: Optional[str] = None, compartments: Optional[Iterable[str]] = None) -> dict:
         comps = None if compartments is None else _dumps(list(compartments))
         return _unwrap(_native.call("gn_state", self.path, as_of, comps))
+
+    def writers(self, compartments: Optional[Iterable[str]] = None) -> dict:
+        """The registered writers, as `state()` shows them (all, or those in
+        `compartments`), without rendering the rest of the state."""
+        comps = None if compartments is None else _dumps(list(compartments))
+        return _unwrap(_native.call("gn_writers", self.path, comps))["writers"]
+
+    def select(self, compartments: Optional[Iterable[str]] = None, claims: Iterable[str] = (),
+               episodes: Iterable[str] = (), handoffs: Iterable[str] = ()) -> dict:
+        """Part of the state, as `state()` shows it: the writers and only the
+        named claims, episodes and handoffs (those that exist and are in
+        `compartments`; all compartments if None)."""
+        comps = None if compartments is None else _dumps(list(compartments))
+        sel = _dumps({"claims": list(claims), "episodes": list(episodes), "handoffs": list(handoffs)})
+        return _unwrap(_native.call("gn_select", self.path, comps, sel))["state"]
 
     def query(self, reader: str, program: str, as_of: Optional[str] = None,
               proofs: Optional[int] = None) -> dict:

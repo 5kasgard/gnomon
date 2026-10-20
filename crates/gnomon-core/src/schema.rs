@@ -115,7 +115,15 @@ pub fn is_disallowed_control(c: char) -> bool {
 }
 
 pub fn has_hidden_chars(s: &str) -> bool {
-    s.chars().any(|c| is_hidden_char(c) || is_disallowed_control(c))
+    s.chars().any(|c| {
+        if c.is_ascii() {
+            // The only ASCII ones are controls (none is a format or
+            // private-use character).
+            (c < ' ' && c != '\n' && c != '\t') || c == '\u{7f}'
+        } else {
+            is_hidden_char(c) || is_disallowed_control(c)
+        }
+    })
 }
 
 /// Identifier for writers, parties and compartments: lowercase ASCII,
