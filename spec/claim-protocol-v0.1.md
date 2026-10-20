@@ -1051,6 +1051,16 @@ token:
 - **A writer** is named only when it is not the speaker.
 - **Structured results** for recall and resume carry ids and scores, not the
   text again.
+- **What the model was already shown** is referred to, not repeated. Each
+  MCP connection notes the recall hits (and neighbouring turns) it showed in
+  full. A hit shown within the last 20 results is written as `^` with its
+  place. Words of 40 characters or fewer are always shown.
+  - When the host compacts the session's context, the `PreCompact` hook
+    leaves a mark beside the log (`<log>.d/hooks/<session hash>.compacted`).
+    The server sees it and forgets what it showed, since the model may no
+    longer have it.
+  - `repeat: true` shows everything in full. `--no-dedup` turns this off
+    for a server.
 
 `bench/tokens.py` measures the cost per item shown.
 

@@ -62,6 +62,20 @@ def _save_mark(log: str, session: str, offset: int, file_id: str) -> None:
     os.replace(tmp, p)
 
 
+def compaction_mark(log: str, session: str) -> Path:
+    """A file whose time says when this session's context was last
+    compacted: the MCP server then stops referring to what it showed
+    before, which the model may no longer have."""
+    return _state_path(log, session).with_suffix(".compacted")
+
+
+def _mark_compaction(log: str, session: str) -> None:
+    p = compaction_mark(log, session)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.touch()
+    os.utime(p)
+
+
 @contextlib.contextmanager
 def _locked(log: str, session: str):
     """One recorder per session at a time: overlapping hooks wait."""
@@ -285,6 +299,8 @@ def main(argv: Optional[list] = None) -> int:
         writer = instance_for(memory, a.writer, session, surface="claude-code")
         compartment = a.compartment or memory.writers()[writer]["compartments"][0]
         transcript = event.get("transcript_path")
+        if name == "PreCompact":
+            _mark_compaction(a.log, session)
         if name in ("Stop", "SubagentStop", "PreCompact", "SessionEnd") and transcript:
             record(memory, a.log, writer, session, transcript, compartment, a.with_tools)
         elif name == "SessionStart":

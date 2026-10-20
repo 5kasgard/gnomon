@@ -288,12 +288,19 @@ Models are shown compact text:
 The structured results stay small too. On a LoCoMo conversation
 (`python bench/tokens.py`):
 
-| Output | Tokens per item, before | Now |
+| Output | Tokens per item, first measured | Now |
 |---|---|---|
 | Resume | 41.1 | **32.5** |
 | Recall: everything but the words said | 27.1 | **14.4** |
 | Query answers | 37.8 | **26.1** |
-| Open questions | 11.7 | **7.6** |
+| Open questions | 11.7 | **7.4** |
+| **Recall over a working session** (60 questions in turn, 10 hits each) | 54.2 | **39.3** (−27%) |
+
+Within a session, a hit the model was already shown in full is referred to
+(`^`, with its place) instead of being paid for again. That holds only for
+the last 20 results, and resets when the host compacts the session's
+context, since the model may no longer have it then. `repeat=true` shows it
+again in full.
 
 ## What's in it
 

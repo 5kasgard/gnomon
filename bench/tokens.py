@@ -34,9 +34,13 @@ QUESTIONS = ["When did Caroline go to the LGBTQ support group?", "What did Melan
              "What did Caroline research?", "How long has Caroline had her friends?"]
 
 
+SESSION_QUESTIONS: list = []
+
+
 def build(data_path: str, d: str) -> tuple[str, Memory]:
     from locomo import build as locomo_build, load
     sample = load(Path(data_path))[0]
+    SESSION_QUESTIONS[:] = [q["question"] for q in sample["qa"] if "question" in q][:60]
     m, reader, ids = locomo_build(sample, Path(d))
     log = m.path
     m.register("owner", "claude", party="anthropic", kind="model", model="claude-opus-5-5", operator="owner",
@@ -73,6 +77,14 @@ def measure(srv: Server) -> dict:
     out["recall overhead (all but the words said)"] = {
         "chars": len(joined) - words, "tokens": estimate_tokens(joined) - (words + 3) // 4, "items": n,
         "tokens_per_item": round((estimate_tokens(joined) - (words + 3) // 4) / max(1, n), 1)}
+    # A working session: the conversation's first 60 benchmark questions
+    # asked one after another through one connection, which refers to hits
+    # it has already shown rather than repeating them.
+    for dedup in (False, True):
+        s2 = Server(srv.log, srv.writer, dedup=dedup)
+        session = [s2.tool("recall", {"query": q, "k": 10})[0] for q in SESSION_QUESTIONS]
+        name = "recall, a 60-question session" + (" (repeats referred to)" if dedup else " (all in full)")
+        add(name, "\n".join(session), 10 * len(SESSION_QUESTIONS))
     t, rr = srv.tool("query", {"program": "?- statement(C, S), speaker(C, P).", "explain": 0})
     add("query (statements and speakers)", t, min(50, len(rr["answers"])))
     t, rr = srv.tool("open_questions", {})
@@ -87,7 +99,7 @@ def main() -> int:
     a = p.parse_args()
     with tempfile.TemporaryDirectory() as d:
         log, m = build(a.data, d)
-        srv = Server(log, "owner")
+        srv = Server(log, "owner", dedup=False)  # one-off results: each shown in full
         res = measure(srv)
     if a.json:
         print(json.dumps(res, indent=1))
