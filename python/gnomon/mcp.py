@@ -343,6 +343,31 @@ TOOLS: list[dict] = [
         "inputSchema": {"type": "object", "additionalProperties": False},
         "annotations": {"readOnlyHint": True, "openWorldHint": False},
     },
+    {
+        "name": "plan_team",
+        "title": "Plan a team of models for a piece of work",
+        "description": (
+            "Shape a team for work you could split across agents: which model does each part (Haiku, Sonnet, "
+            "Opus), what checks it, who escalates, how many managers, and the expected cost and risk against one "
+            "Opus agent doing it alone. Priced from published prices and the track record on file: record each "
+            "finished part as a claim in frame `firm/<kind>`, and have someone else judge it with give_verdict."
+        ),
+        "inputSchema": _schema({
+            "kind": {"type": "string", "description": "The kind of work (e.g. code, extract, summarise, design)."},
+            "input_tokens": {"type": "integer", "minimum": 0, "description": "Prompt size of one part."},
+            "output_tokens": {"type": "integer", "minimum": 0, "description": "Output size of one part."},
+            "stakes_usd": {"type": "number", "minimum": 0,
+                           "description": "What a wrong part that goes unnoticed costs, in USD."},
+            "check": {"type": "string", "enum": ["exact", "review", "none"],
+                      "description": "exact: the computer can check it (tests, arithmetic); review: another "
+                                     "model must; none."},
+            "parts": {"type": "integer", "minimum": 1, "maximum": 100000, "description": "Independent parts (default 1)."},
+            "urgent": {"type": "boolean", "description": "False allows the half-price Batch API (default true)."},
+            "step_usd": {"type": "number", "minimum": 0,
+                         "description": "What waiting for one more attempt costs, in USD (default 0)."},
+        }, ["kind", "input_tokens", "output_tokens", "stakes_usd"]),
+        "annotations": {"readOnlyHint": True, "openWorldHint": False},
+    },
 ]
 TOOL_NAMES = {t["name"] for t in TOOLS}
 
@@ -694,6 +719,20 @@ class Server:
                             "server's writer)")
         self.writer = wid
         return f"Attached: you write as {title(writers, wid)}.", {"writer": wid}
+
+    def t_plan_team(self, a: dict) -> tuple[str, Any]:
+        from . import firm
+        task = firm.Task(a["kind"], int(a["input_tokens"]), int(a["output_tokens"]), float(a["stakes_usd"]),
+                         a.get("check", "none"), int(a.get("parts", 1)), bool(a.get("urgent", True)),
+                         float(a.get("step_usd", 0.0)))
+        rec = firm.record_from(self.memory, self.writer)
+        p = firm.plan(task, rec)
+        out = firm.as_dict(p)
+        out["record"] = firm.explain(rec, [task.kind])
+        on = sum(r["on_record"] for r in out["record"])
+        text = p.summary() + (f"\n  track record for '{task.kind}': {on} judged part(s)" if on else
+                              f"\n  no track record for '{task.kind}' yet: priors only")
+        return text, out
 
     def t_whoami(self, a: dict) -> tuple[str, Any]:
         full = self.memory.writers()

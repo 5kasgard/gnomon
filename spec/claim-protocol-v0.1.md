@@ -1076,7 +1076,51 @@ token:
 
 `bench/tokens.py` measures the cost per item shown.
 
-## 15. Not yet in v0.1
+## 15. The firm: teams of models
+
+A request that can be split is work for a firm. `gnomon.firm` (MCP
+`plan_team`) shapes one: who does each part, who checks it, who it
+escalates to, how many managers on how many floors, and what that is
+expected to cost and risk next to one top-tier agent doing it all.
+
+| A firm has | Here it is |
+|---|---|
+| Pay grades | Tiers priced from the published per-token prices (Haiku, Sonnet, Opus), read on the date in `PRICES_READ`. |
+| Desks | Context windows. Staff desks stay under Haiku's 100,000-token price rise; a manager's desk sets how many reports fit on it. |
+| Floors | Levels of management: a new floor when one floor of managers would have more than a desk's worth of reports. |
+| The executive | The top tier plans the split and integrates the parts: a mistake there costs every part. |
+| Quality control | An exact check (tests, arithmetic, dates: free and certain), a reviewing tier (priced, with a stated catch and false-alarm rate), or none. |
+| Escalation | A cascade: the cheapest tier first, the next only when a check fails. |
+| The night shift | Work that is not urgent goes to the Batch API at half price. |
+| Track records and promotion | Each finished part is a claim in a `firm/<kind>` frame by the worker that did it; each check is a verdict on it by another party. Per tier and kind of work, successes and failures update a Beta prior. Who is hired for what follows the record. |
+| Integrity | Gnomon's rules already apply: no one verifies their own work, sessions of one model count as one group, and every part is attributed. |
+| Shift changes | Handoffs (section 13). |
+
+**The decision.** For one unit of work, every option is priced: each tier
+alone, and each rising cascade under each kind of check the work allows.
+Its cost is expected spend on tokens, plus the expected loss (the chance a
+wrong result is kept unnoticed, or nothing right is left at the top, times
+`stakes_usd`), plus the price of waiting for each further attempt
+(`step_usd`). The cheapest total wins. Parts run in parallel; the planner
+and integrator, and a floor of managers per span, are added on top.
+
+**The baseline** is one top-tier agent doing every part in turn, re-reading
+what it has done so far as prompt-cache hits, with its own chance of error.
+
+**Stated assumptions**, each to be replaced by the record:
+
+- priors per tier (`PRIORS`, as pseudo-counts);
+- reviewers' catch and false-alarm rates (`REVIEW`);
+- attempts independent of each other (a part one tier got wrong is taken
+  to be no harder for the next, which flatters cascades);
+- summaries handed up a floor of 600 tokens.
+
+**Not yet:** running the agents (the host does that: Claude Code's
+subagents or the API), learning how failures correlate across tiers,
+latency beyond a price per step, and measurements of plans against single
+agents on real work.
+
+## 16. Not yet in v0.1
 
 Signatures (writer identity is by registration only), multi-writer merge of
 independently written logs, storage in immutable segments with sync to

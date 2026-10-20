@@ -317,6 +317,7 @@ again in full.
 | **Queries** | Datalog with recursion and stratified negation, under hard limits. Every answer has a proof down to log events, re-checked by an independent checker. Proofs are content-addressed: each rule is named by a hash of its text and each step by a hash of what it rests on. |
 | **Recall** | Ranked search with provenance on every hit, and dates resolved by the calendar. Every weight is tunable and every boost is explained on the hit. |
 | **Checkers** | Arithmetic with exact fractions and dates against the real calendar, acting as verifiers under the same rules as everyone else. |
+| **Teams of models** | `plan_team` shapes a firm for work that can be split: Haiku staff, Sonnet managers, an Opus executive, exact checks before reviewers, escalation on failure, the Batch API for work that can wait. Each option is priced as tokens plus expected loss from errors, from published prices and the verdicts on record, against one Opus agent doing it alone. |
 | **MCP server** | Standard library only, for current and older MCP clients. It is fuzzed, and tested in CI with the official MCP SDK. |
 
 The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
@@ -337,7 +338,7 @@ The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
 - **The MCP server is tested hard.** It is fuzzed with thousands of
   malformed messages and driven in CI by the official MCP Python SDK.
 - **Recall was tested on data it was never tuned on.**
-- **Every platform:** 190 Rust tests and 197 Python tests run on Linux,
+- **Every platform:** 190 Rust tests and 207 Python tests run on Linux,
   macOS and Windows on every change.
 
 ```bash
@@ -361,12 +362,17 @@ bash scripts/build.sh && python3 -m unittest discover -s python/tests
   proofs.
 - [x] **M8, continuity:** handoff and resume across sessions, models and
   apps; auto mode for Claude Code; resume fitted to a token budget.
-- [ ] **M9, storage that scales:** the log in immutable segments, synced to
+- [ ] **M9, the firm:** teams of models shaped to the work by price and
+  track record (`plan_team`): Haiku staff, Sonnet managers and an Opus
+  executive, floors by span of control, exact checks first, escalation on
+  failure, and hiring that follows the verdicts on record. Planning is
+  done. Next: running the teams and measuring them against single agents.
+- [ ] **M10, storage that scales:** the log in immutable segments, synced to
   object storage (S3, Backblaze B2, Cloudflare R2), with private
   compartments encrypted before they leave your device.
-- [ ] **M10, a hosted connector:** remote MCP with sign-in, so anyone can
+- [ ] **M11, a hosted connector:** remote MCP with sign-in, so anyone can
   add Gnomon to Claude or another AI app as a connector, from any device.
-- [ ] **M11, the commons:**
+- [ ] **M12, the commons:**
   - opt-in publishing from private memory;
   - signed posts;
   - independent memories merging;
