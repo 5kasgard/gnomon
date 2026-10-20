@@ -3,6 +3,9 @@
 //! A snapshot that no longer matches the log, the code or itself is never
 //! used.
 
+// Snapshots are kept on Unix systems only (see the snapshot module).
+#![cfg(unix)]
+
 mod common;
 use common::*;
 
