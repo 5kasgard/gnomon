@@ -303,6 +303,34 @@ the last 20 results, and resets when the host compacts the session's
 context, since the model may no longer have it then. `repeat=true` shows it
 again in full.
 
+### The firm pilot: real work, graded by the computer
+
+Twenty-four Python tasks with exact specifications went to Claude
+sub-agents, one task per agent. Half were routine (slugs, Roman numerals,
+intervals, an LRU cache) and half hard (a linear-time regex engine, a
+Sudoku solver for minimal puzzles, exact linear algebra, UTF-8 decoding
+with maximal-subpart replacement, maximum flow, best rational
+approximation to 10^18). Hidden tests, checked against reference
+solutions, graded each result (`bench/firm_pilot`).
+
+| | Routine | Hard | Median time |
+|---|---|---|---|
+| Claude Haiku 5.5 | 12/12 | 12/12 | 22 s |
+| Claude Sonnet 5.5 | 12/12 | 12/12 | 12 s |
+
+On work this well specified, and checkable this exactly, the cheapest
+model did everything right, at a fortieth of Opus's price per token. The
+firm's job here is not to pay for more model than the work needs. Every
+result and verdict is recorded in a memory as the firm's books, and
+`plan_team` then plans from them (`python bench/firm_pilot/run.py`).
+For 24 more such parts, it expects Haiku staff with exact checks and
+escalation to cost $0.38 in tokens, against $0.92 for one Sonnet agent
+and $1.84 for one Opus agent.
+
+What the pilot does not show yet is where escalation earns its keep: no
+task here defeated Haiku. That needs longer, vaguer, multi-step work, and
+it is the next measurement.
+
 ## What's in it
 
 | | |

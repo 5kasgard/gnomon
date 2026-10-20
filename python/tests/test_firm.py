@@ -102,7 +102,7 @@ class Decisions(unittest.TestCase):
         cheap = decide(Task("k", 2_000, 300, stakes_usd=0.001, check="none"))
         dear = decide(Task("k", 2_000, 300, stakes_usd=100.0, check="none"))
         self.assertEqual(cheap.workers, ("haiku",))
-        self.assertEqual(dear.workers, ("opus",))
+        self.assertEqual(dear.workers, (ORDER[-1],))  # the most reliable tier
 
     def test_the_record_changes_who_is_hired(self):
         t = Task("code", 20_000, 3_000, stakes_usd=5.0, check="exact", parts=4, step_usd=0.02)

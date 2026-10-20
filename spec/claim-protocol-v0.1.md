@@ -1123,6 +1123,13 @@ to the cache. Plan and baseline report tokens, loss and rounds separately.
   to be no harder for the next, which flatters cascades);
 - summaries handed up a floor of 600 tokens.
 
+**The pilot** (`bench/firm_pilot`): 24 exactly specified Python tasks, 12
+routine and 12 hard, each given to a Haiku 5.5 and a Sonnet 5.5
+sub-agent and graded by hidden tests. All 48 passed. Recorded as work
+orders, results and test verdicts, they are the record `plan_team` plans
+from. No task needed escalation, so the cascade itself is not yet
+measured.
+
 The comparison with the baseline is only as good as these assumptions:
 with independent attempts, a cascade with an exact check is close to
 certain to win on loss. Real measurements decide.

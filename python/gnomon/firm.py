@@ -37,7 +37,7 @@ Everything here is exact arithmetic over stated inputs:
   more than one part; each manager takes as many reports as fit on their
   desk, and more floors are added when one floor of managers would have
   too many.
-* **The baseline** is one top-tier agent doing every part in turn, with the
+* **The baseline** is one agent (Opus unless another is named) doing every part in turn, with the
   same checks available to it, re-reading what it has done so far from the
   prompt cache, its context compacted to its desk when it grows past it.
 
@@ -107,19 +107,22 @@ TIERS: dict[str, Tier] = {
                    window=1_000_000, desk=150_000),
     "opus": Tier("opus", "claude-opus-", "claude-opus-5-5", Price(4.0, 20.0, 0.20, 5.0),
                  window=1_000_000, desk=150_000),
+    "fable": Tier("fable", "claude-fable-", "claude-fable-5-1", Price(10.0, 50.0, 0.25, 12.5),
+                  window=1_000_000, desk=150_000),
 }
-ORDER = ["haiku", "sonnet", "opus"]  # cheapest first
+ORDER = ["haiku", "sonnet", "opus", "fable"]  # cheapest first
 MAX_OUTPUT = 32_000  # output tokens per request the planner is given at most
 
 # Prior beliefs, as pseudo-counts (successes, failures) per tier, before any
 # record: assumptions, stated so they can be argued with. The record soon
 # outweighs them.
-PRIORS: dict[str, tuple[float, float]] = {"haiku": (6, 4), "sonnet": (8, 2), "opus": (9, 1)}
+PRIORS: dict[str, tuple[float, float]] = {"haiku": (6, 4), "sonnet": (8, 2), "opus": (9, 1), "fable": (9.5, 0.5)}
 # How often a reviewing tier catches a wrong result (and wrongly flags a
 # right one): assumptions. (Gnomon refuses a party's verdict on its own
 # party's claims: register reviewing models as parties of their own to put
 # their reviews on record.)
-REVIEW: dict[str, tuple[float, float]] = {"haiku": (0.55, 0.10), "sonnet": (0.75, 0.06), "opus": (0.85, 0.04)}
+REVIEW: dict[str, tuple[float, float]] = {"haiku": (0.55, 0.10), "sonnet": (0.75, 0.06), "opus": (0.85, 0.04),
+                                          "fable": (0.90, 0.03)}
 CHECKS = ("exact", "review", "none")
 
 
@@ -345,7 +348,8 @@ class Plan:
     spend: float  # expected USD on tokens
     loss: float  # expected USD lost
     rounds: int  # sequential rounds on the critical path (worst case)
-    baseline: Choice  # how one top-tier agent does each part
+    single: str  # the tier of the single agent compared with
+    baseline: Choice  # how that one agent does each part
     baseline_spend: float
     baseline_loss: float
     baseline_rounds: float  # expected
@@ -373,19 +377,19 @@ class Plan:
         lines.append(f"  expected: ${self.spend:.4f} tokens + ${self.loss:.4f} lost{wait} = ${self.total:.4f}; "
                      f"{self.rounds} round(s) at most")
         bwait = f" + ${t.step_usd * self.baseline_rounds:.4f} waiting" if t.step_usd else ""
-        lines.append(f"  one {ORDER[-1]} agent alone ({self.baseline.describe()}, each part in turn): "
+        lines.append(f"  one {self.single} agent alone ({self.baseline.describe()}, each part in turn): "
                      f"${self.baseline_spend:.4f} tokens + ${self.baseline_loss:.4f} lost{bwait} = "
                      f"${self.baseline_total:.4f}; {self.baseline_rounds:.1f} round(s) expected")
         lines += [f"  note: {n}" for n in self.notes]
         return "\n".join(lines)
 
 
-def _baseline(task: Task, rec: Record) -> tuple:
-    """One top-tier agent doing every part in turn, with the best checks it
-    can use, re-reading its work so far from the prompt cache (compacted to
-    its desk once it outgrows it) and writing each part's prompt to the
-    cache. Returns (how each part is done, tokens, loss, rounds)."""
-    top = ORDER[-1]
+def _baseline(task: Task, rec: Record, top: str) -> tuple:
+    """One agent of tier `top` doing every part in turn, with the best
+    checks it can use, re-reading its work so far from the prompt cache
+    (compacted to its desk once it outgrows it) and writing each part's
+    prompt to the cache. Returns (how each part is done, tokens, loss,
+    rounds)."""
     tier = TIERS[top]
     unit = choices(task, rec, [top])[0]
     batch = not task.urgent
@@ -400,7 +404,8 @@ def _baseline(task: Task, rec: Record) -> tuple:
     return unit, spend, task.parts * unit.loss, task.parts * unit.rounds
 
 
-def plan(task: Task, rec: Optional[Record] = None, manager: str = "sonnet", executive: str = "opus") -> Plan:
+def plan(task: Task, rec: Optional[Record] = None, manager: str = "sonnet", executive: str = "opus",
+         single: str = "opus") -> Plan:
     """The firm for `task`: who does each part, who checks it, how many
     managers on how many floors, what it is expected to cost and risk, and
     the same for one top-tier agent doing it all alone."""
@@ -452,8 +457,8 @@ def plan(task: Task, rec: Optional[Record] = None, manager: str = "sonnet", exec
                      f"{first.name} at its lower price")
     if batch:
         notes.append("not urgent: the Batch API halves every price (slower)")
-    b_unit, b_spend, b_loss, b_rounds = _baseline(task, rec)
-    return Plan(task, unit, floors, span, spend, loss, rounds, b_unit, b_spend, b_loss, b_rounds, notes)
+    b_unit, b_spend, b_loss, b_rounds = _baseline(task, rec, single)
+    return Plan(task, unit, floors, span, spend, loss, rounds, single, b_unit, b_spend, b_loss, b_rounds, notes)
 
 
 def as_dict(p: Plan) -> dict:
@@ -462,7 +467,7 @@ def as_dict(p: Plan) -> dict:
         "each_part": {"workers": list(p.unit.workers), "check": p.unit.reviewer, "p_right": round(p.unit.p_right, 4)},
         "expected": {"tokens_usd": round(p.spend, 6), "lost_usd": round(p.loss, 6), "rounds": p.rounds,
                      "total_usd": round(p.total, 6)},
-        "single_agent": {"tier": ORDER[-1], "each_part": p.baseline.describe(),
+        "single_agent": {"tier": p.single, "each_part": p.baseline.describe(),
                          "tokens_usd": round(p.baseline_spend, 6), "lost_usd": round(p.baseline_loss, 6),
                          "rounds": round(p.baseline_rounds, 3), "total_usd": round(p.baseline_total, 6)},
         "span": p.span,
