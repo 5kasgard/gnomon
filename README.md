@@ -243,16 +243,31 @@ over the whole dataset, so the comparison is indicative; see the
 Measured on a memory of 20,000 events, in a long-lived process like the MCP
 server (`python bench/scale.py`):
 
-| Operation | Before this round | Now |
-|---|---|---|
-| A new process's first read (each hook, each new session) | 2,304 ms | **400 ms** |
-| Recall | 997 ms | **107 ms** |
-| Resume | 2,692 ms | **257 ms** |
-| A query whose proofs are checked independently, as the MCP server does (all proved before; the first 100 now) | 4,571 ms | **254 ms** |
-| First read after another process appended | 1,730 ms | **281 ms** |
+| Operation | First measured | Last round | Now |
+|---|---|---|---|
+| **A Claude Code hook, after every reply** (auto mode: a new process records the turn) | – | 3,073 ms | **305 ms** |
+| **Starting a session** (the hook binds the session and builds its resume) | – | 5,057 ms | **557 ms** |
+| A new process's first read | 2,304 ms | 400 ms | **228 ms** |
+| Recall | 997 ms | 107 ms | **113 ms** |
+| Resume | 2,692 ms | 257 ms | 285 ms |
+| A query whose proofs are checked independently, as the MCP server does | 4,571 ms | 254 ms | 286 ms |
 
-How it got there:
+The hook numbers time the real `python -m gnomon.hook` command, start to
+finish. How it got there:
 
+- **The hardware is used.** SHA-256 runs on the processor's SHA
+  instructions where they exist (5.4× the portable code here), with the
+  portable code as fallback and as the reference it is tested against.
+- **New processes start from a snapshot** of the verified state saved
+  beside the log. It is sealed with a key only you can read, used only while
+  the log still begins with exactly the bytes it was made from, and only by
+  the build that made it. Events after it go through the gate as usual. The
+  full audit never reads it.
+- **Nothing renders what nobody reads.** Hooks and tools that needed only
+  the writers, or one episode, asked for the whole state. Now they ask for
+  just that part.
+- Canonical JSON copies plain text whole and sorts only what is out of
+  order.
 - Analyses are cached by content.
 - A log that has only grown has just its new lines verified.
 - Lines are parsed and hashed in parallel.
@@ -274,12 +289,19 @@ Models are shown compact text:
 The structured results stay small too. On a LoCoMo conversation
 (`python bench/tokens.py`):
 
-| Output | Tokens per item, before | Now |
+| Output | Tokens per item, first measured | Now |
 |---|---|---|
 | Resume | 41.1 | **32.5** |
 | Recall: everything but the words said | 27.1 | **14.4** |
 | Query answers | 37.8 | **26.1** |
-| Open questions | 11.7 | **7.6** |
+| Open questions | 11.7 | **7.4** |
+| **Recall over a working session** (60 questions in turn, 10 hits each) | 54.2 | **39.3** (−27%) |
+
+Within a session, a hit the model was already shown in full is referred to
+(`^`, with its place) instead of being paid for again. That holds only for
+the last 20 results, and resets when the host compacts the session's
+context, since the model may no longer have it then. `repeat=true` shows it
+again in full.
 
 ## What's in it
 
@@ -306,7 +328,7 @@ The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
   (`tests/incidents.rs`).
 - **Each milestone was attacked by a reviewer who didn't write it.** That
   covered the record, queries, the MCP server, recall, identity, the forum,
-  continuity, auto mode and performance, over 18 review rounds. Every confirmed finding is now a
+  continuity, auto mode and performance, over 19 review rounds. Every confirmed finding is now a
   regression test.
 - **The query engine has a second implementation to agree with.** It is
   checked against a deliberately naive evaluator on hundreds of random
@@ -315,7 +337,7 @@ The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
 - **The MCP server is tested hard.** It is fuzzed with thousands of
   malformed messages and driven in CI by the official MCP Python SDK.
 - **Recall was tested on data it was never tuned on.**
-- **Every platform:** 177 Rust tests and 192 Python tests run on Linux,
+- **Every platform:** 190 Rust tests and 197 Python tests run on Linux,
   macOS and Windows on every change.
 
 ```bash

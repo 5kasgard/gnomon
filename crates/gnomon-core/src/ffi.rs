@@ -226,23 +226,9 @@ pub unsafe extern "C" fn gn_state(
                 Err(e) => return e,
             }
         };
-        let comps: Option<Vec<String>> = if compartments.is_null() {
-            None
-        } else {
-            let c = match arg(compartments).map(json::parse) {
-                Ok(Ok(v)) => v,
-                Ok(Err(e)) => return fail("E_JSON", e.to_string()),
-                Err(e) => return e,
-            };
-            match c.as_array() {
-                Some(items) if items.iter().all(|i| i.as_str().is_some()) => Some(
-                    items
-                        .iter()
-                        .map(|i| i.as_str().unwrap().to_string())
-                        .collect(),
-                ),
-                _ => return fail("E_ARG", "compartments must be an array of strings"),
-            }
+        let comps = match compartments_arg(compartments) {
+            Ok(c) => c,
+            Err(e) => return e,
         };
         let result = store::with_ledger(Path::new(path), |full| {
             let view;
@@ -264,6 +250,94 @@ pub unsafe extern "C" fn gn_state(
             }
             ok(members)
         });
+        result.unwrap_or_else(store_fail)
+    })
+}
+
+/// An optional JSON array of compartment names.
+unsafe fn compartments_arg(compartments: *const c_char) -> Result<Option<Vec<String>>, Value> {
+    if compartments.is_null() {
+        return Ok(None);
+    }
+    let c = match arg(compartments).map(json::parse) {
+        Ok(Ok(v)) => v,
+        Ok(Err(e)) => return Err(fail("E_JSON", e.to_string())),
+        Err(e) => return Err(e),
+    };
+    match c.as_array() {
+        Some(items) if items.iter().all(|i| i.as_str().is_some()) => {
+            Ok(Some(items.iter().map(|i| i.as_str().unwrap().to_string()).collect()))
+        }
+        _ => Err(fail("E_ARG", "compartments must be an array of strings")),
+    }
+}
+
+/// Just the writers, as `gn_state` shows them (all, or those visible
+/// through `compartments`): what most callers of a full state dump need,
+/// without rendering every claim.
+///
+/// # Safety
+/// Non-null arguments must be valid NUL-terminated strings.
+#[no_mangle]
+pub unsafe extern "C" fn gn_writers(path: *const c_char, compartments: *const c_char) -> *mut c_char {
+    guarded(|| {
+        let path = match arg(path) {
+            Ok(p) => p,
+            Err(e) => return e,
+        };
+        let comps = match compartments_arg(compartments) {
+            Ok(c) => c,
+            Err(e) => return e,
+        };
+        let result = store::with_ledger(Path::new(path), |l| {
+            let none = crate::ledger::Selection::default();
+            let v = l.state.to_value_sel(comps.as_deref(), Some(&none));
+            ok(vec![("writers", v.get("writers").cloned().unwrap_or(Value::Null))])
+        });
+        result.unwrap_or_else(store_fail)
+    })
+}
+
+/// Part of the state, as `gn_state` shows it: the writers, plus only the
+/// claims, episodes and handoffs named in `select` (a JSON object with
+/// optional arrays "claims", "episodes", "handoffs"), as seen through
+/// `compartments` (null: all). Ids that do not exist or are not visible are
+/// simply absent.
+///
+/// # Safety
+/// Non-null arguments must be valid NUL-terminated strings.
+#[no_mangle]
+pub unsafe extern "C" fn gn_select(path: *const c_char, compartments: *const c_char, select: *const c_char) -> *mut c_char {
+    guarded(|| {
+        let (path, select) = match (arg(path), arg(select)) {
+            (Ok(p), Ok(s)) => (p, s),
+            (Err(e), _) | (_, Err(e)) => return e,
+        };
+        let comps = match compartments_arg(compartments) {
+            Ok(c) => c,
+            Err(e) => return e,
+        };
+        let sel = match json::parse(select) {
+            Ok(v) if v.as_object().is_some() => v,
+            Ok(_) => return fail("E_ARG", "select must be an object"),
+            Err(e) => return fail("E_JSON", e.to_string()),
+        };
+        let mut chosen = crate::ledger::Selection::default();
+        for (k, v) in sel.as_object().unwrap() {
+            let set = match k.as_str() {
+                "claims" => &mut chosen.claims,
+                "episodes" => &mut chosen.episodes,
+                "handoffs" => &mut chosen.handoffs,
+                _ => return fail("E_ARG", format!("select: unknown part '{k}'")),
+            };
+            match v.as_array() {
+                Some(ids) if ids.iter().all(|i| i.as_str().is_some()) => {
+                    set.extend(ids.iter().map(|i| i.as_str().unwrap().to_string()))
+                }
+                _ => return fail("E_ARG", format!("select: '{k}' must be an array of ids")),
+            }
+        }
+        let result = store::with_ledger(Path::new(path), |l| ok(vec![("state", l.state.to_value_sel(comps.as_deref(), Some(&chosen)))]));
         result.unwrap_or_else(store_fail)
     })
 }

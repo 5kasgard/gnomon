@@ -383,8 +383,15 @@ pub fn canonical(v: &Value) -> String {
     out
 }
 
-fn utf16_key(s: &str) -> Vec<u16> {
-    s.encode_utf16().collect()
+/// RFC 8785 member order: by UTF-16 code units. For ASCII keys (nearly
+/// all of them) that is byte order; otherwise the code units are compared
+/// as they are produced, without allocating.
+pub(crate) fn key_order(a: &str, b: &str) -> std::cmp::Ordering {
+    if a.is_ascii() && b.is_ascii() {
+        a.as_bytes().cmp(b.as_bytes())
+    } else {
+        a.encode_utf16().cmp(b.encode_utf16())
+    }
 }
 
 fn write_canonical(v: &Value, out: &mut String) {
@@ -392,7 +399,10 @@ fn write_canonical(v: &Value, out: &mut String) {
         Value::Null => out.push_str("null"),
         Value::Bool(true) => out.push_str("true"),
         Value::Bool(false) => out.push_str("false"),
-        Value::Int(n) => out.push_str(&n.to_string()),
+        Value::Int(n) => {
+            use std::fmt::Write;
+            let _ = write!(out, "{n}");
+        }
         Value::Str(s) => write_string(s, out),
         Value::Array(items) => {
             out.push('[');
@@ -406,7 +416,10 @@ fn write_canonical(v: &Value, out: &mut String) {
         }
         Value::Object(members) => {
             let mut sorted: Vec<&(String, Value)> = members.iter().collect();
-            sorted.sort_by(|a, b| utf16_key(&a.0).cmp(&utf16_key(&b.0)));
+            // Parsed canonical input is already in order: check before sorting.
+            if !sorted.windows(2).all(|w| key_order(&w[0].0, &w[1].0).is_le()) {
+                sorted.sort_by(|a, b| key_order(&a.0, &b.0));
+            }
             out.push('{');
             for (i, (k, val)) in sorted.into_iter().enumerate() {
                 if i > 0 {
@@ -423,7 +436,17 @@ fn write_canonical(v: &Value, out: &mut String) {
 
 fn write_string(s: &str, out: &mut String) {
     out.push('"');
-    for c in s.chars() {
+    // Runs of bytes that need no escaping are copied whole. Every byte that
+    // does is ASCII, so a run never ends inside a character.
+    let b = s.as_bytes();
+    let mut run = 0;
+    for (i, &x) in b.iter().enumerate() {
+        if x >= 0x20 && x != b'"' && x != b'\\' {
+            continue;
+        }
+        out.push_str(&s[run..i]);
+        run = i + 1;
+        let c = x as char;
         match c {
             '"' => out.push_str("\\\""),
             '\\' => out.push_str("\\\\"),
@@ -432,10 +455,13 @@ fn write_string(s: &str, out: &mut String) {
             '\n' => out.push_str("\\n"),
             '\r' => out.push_str("\\r"),
             '\t' => out.push_str("\\t"),
-            c if (c as u32) < 0x20 => out.push_str(&format!("\\u{:04x}", c as u32)),
-            c => out.push(c),
+            c => {
+                use std::fmt::Write;
+                let _ = write!(out, "\\u{:04x}", c as u32);
+            }
         }
     }
+    out.push_str(&s[run..]);
     out.push('"');
 }
 

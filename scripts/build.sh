@@ -8,5 +8,8 @@ case "$(uname -s)" in
   MINGW*|MSYS*|CYGWIN*) lib=gnomon_core.dll ;;
   *) lib=libgnomon_core.so ;;
 esac
-cp "target/release/$lib" "python/gnomon/$lib"
+# Copy then rename: a running process (an MCP server, a hook) keeps the
+# library it loaded; overwriting that file in place would crash it.
+cp "target/release/$lib" "python/gnomon/$lib.tmp"
+mv -f "python/gnomon/$lib.tmp" "python/gnomon/$lib"
 echo "built python/gnomon/$lib"

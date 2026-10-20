@@ -309,7 +309,7 @@ def run(memory, writer: str, *, record_time: Optional[str] = None,
     """
     from . import GateError
 
-    me = memory.state()["state"]["writers"].get(writer)
+    me = memory.writers().get(writer)
     if me is None:
         raise GateError("E_UNKNOWN_WRITER", f"writer '{writer}' is not registered")
     scope = [c for c in me["compartments"] if compartments is None or c in set(compartments)]

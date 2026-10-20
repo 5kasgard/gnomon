@@ -53,6 +53,8 @@ _SIGNATURES = {
     "gn_append": [ctypes.c_char_p, ctypes.c_char_p],
     "gn_verify": [ctypes.c_char_p, ctypes.c_int64],
     "gn_state": [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p],
+    "gn_writers": [ctypes.c_char_p, ctypes.c_char_p],
+    "gn_select": [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p],
     "gn_checkpoint": [ctypes.c_char_p, ctypes.c_int64, ctypes.c_char_p],
     "gn_query": [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p],
     "gn_resolve": [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p],

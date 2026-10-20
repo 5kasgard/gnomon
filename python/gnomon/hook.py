@@ -62,6 +62,20 @@ def _save_mark(log: str, session: str, offset: int, file_id: str) -> None:
     os.replace(tmp, p)
 
 
+def compaction_mark(log: str, session: str) -> Path:
+    """A file whose time says when this session's context was last
+    compacted: the MCP server then stops referring to what it showed
+    before, which the model may no longer have."""
+    return _state_path(log, session).with_suffix(".compacted")
+
+
+def _mark_compaction(log: str, session: str) -> None:
+    p = compaction_mark(log, session)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.touch()
+    os.utime(p)
+
+
 @contextlib.contextmanager
 def _locked(log: str, session: str):
     """One recorder per session at a time: overlapping hooks wait."""
@@ -212,7 +226,7 @@ def record(memory: Memory, log: str, writer: str, session: str, transcript: str,
         start = mark["offset"]
         if mark["file"] != file_id or st_.st_size < start:
             start = 0  # a new or rewritten transcript: read it from the beginning
-        w = memory.state()["state"]["writers"].get(writer, {})
+        w = memory.writers().get(writer, {})
         # The model's turns go under its registered name (or its id): only
         # those can be bound to it, and never a name that reads as "User".
         label = w.get("name") or writer
@@ -246,8 +260,8 @@ def start_context(memory: Memory, log: str, writer: str, frame: Optional[str] = 
                   budget_tokens: int = 2000) -> str:
     """What the model is told at the start of a session."""
     from .mcp import render_resume
-    writers = memory.state()["state"]["writers"]
-    session = memory.state()["state"]["writers"].get(writer, {}).get("session")
+    writers = memory.writers()
+    session = memory.writers().get(writer, {}).get("session")
     token = issue_token(log, writer, session)
     lines = [
         "Gnomon (verifiable memory) is attached to this session.",
@@ -283,8 +297,10 @@ def main(argv: Optional[list] = None) -> int:
             return 0
         memory = Memory(a.log)
         writer = instance_for(memory, a.writer, session, surface="claude-code")
-        compartment = a.compartment or memory.state()["state"]["writers"][writer]["compartments"][0]
+        compartment = a.compartment or memory.writers()[writer]["compartments"][0]
         transcript = event.get("transcript_path")
+        if name == "PreCompact":
+            _mark_compaction(a.log, session)
         if name in ("Stop", "SubagentStop", "PreCompact", "SessionEnd") and transcript:
             record(memory, a.log, writer, session, transcript, compartment, a.with_tools)
         elif name == "SessionStart":

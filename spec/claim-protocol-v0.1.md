@@ -987,6 +987,43 @@ which session and model left it, and for whom.
   parallel. Each event's hash is worked out once, from its exact line minus
   its top-level hash member. They are then replayed through the gate in
   order.
+- **Hashing** uses the processor's SHA-256 instructions where it has them
+  (x86-64 SHA extensions: Intel since Ice Lake, AMD since Zen), chosen at
+  run time and tested against the portable code at every length. Canonical
+  JSON copies runs of plain bytes whole and sorts members only when they are
+  out of order.
+- **A new process** (every hook, every new session) starts from a snapshot
+  of the verified state when there is a usable one: `<log>.d/snapshot`,
+  readable by its owner only. A snapshot is a cache, not a source of truth:
+  - it names the exact bytes it was made from (their length and SHA-256),
+    and is used only while the log still begins with exactly those bytes,
+    with as many lines as it has events and its last event's hash on the
+    last of them; events after them go through the gate as usual;
+  - it names the code that made it (a hash of the gate, schema, canonical
+    JSON, hashing, store and snapshot source), so another build never uses
+    it;
+  - it is sealed with HMAC-SHA-256 under a key of the user's own
+    (`snapshot.key` in `$GNOMON_STATE_DIR`, `$XDG_STATE_HOME/gnomon` or
+    `~/.local/state/gnomon`, owner only). Whoever can write beside the log
+    but cannot read that key cannot make a snapshot that is used: a forged
+    or damaged one is ignored, removed, and the log verified in full;
+  - its directory and file must be the user's own and writable by no one
+    else. It is written under a fresh name, never through an existing file
+    or link, then renamed into place, and never over one that covers more;
+  - decoding is bounded in depth (as canonical JSON is) and in allocation;
+  - it decodes to exactly the ledger a replay gives. An appended event is
+    held in memory exactly as a replay of its line would hold it, so state
+    never depends on how a draft was built;
+  - the full audit (`gn_verify`) never reads it.
+
+  Logs under 1,000 events get none, and neither do systems other than Unix
+  (for the key and ownership checks). A new one is saved, with no lock held
+  on the log, once the log has grown 1% past the last (at least 256 events,
+  at most 4,096), so a new process replays little.
+- **Partial state:** `gn_writers` (Python `Memory.writers`) returns only the
+  writers, and `gn_select` (`Memory.select`) the writers plus named claims,
+  episodes and handoffs, so callers that need a little of the state never
+  render all of it.
 - **In a long-lived process** (the MCP server), a verified log is cached:
   - A log that has only grown, from any process, has just its new lines
     checked, through the same gate.
@@ -1026,6 +1063,16 @@ token:
 - **A writer** is named only when it is not the speaker.
 - **Structured results** for recall and resume carry ids and scores, not the
   text again.
+- **What the model was already shown** is referred to, not repeated. Each
+  MCP connection notes the recall hits (and neighbouring turns) it showed in
+  full. A hit shown within the last 20 results is written as `^` with its
+  place. Words of 40 characters or fewer are always shown.
+  - When the host compacts the session's context, the `PreCompact` hook
+    leaves a mark beside the log (`<log>.d/hooks/<session hash>.compacted`).
+    The server sees it and forgets what it showed, since the model may no
+    longer have it.
+  - `repeat: true` shows everything in full. `--no-dedup` turns this off
+    for a server.
 
 `bench/tokens.py` measures the cost per item shown.
 
