@@ -1092,20 +1092,28 @@ expected to cost and risk next to one top-tier agent doing it all.
 | Quality control | An exact check (tests, arithmetic, dates: free and certain), a reviewing tier (priced, with a stated catch and false-alarm rate), or none. |
 | Escalation | A cascade: the cheapest tier first, the next only when a check fails. |
 | The night shift | Work that is not urgent goes to the Batch API at half price. |
-| Track records and promotion | Each finished part is a claim in a `firm/<kind>` frame by the worker that did it; each check is a verdict on it by another party. Per tier and kind of work, successes and failures update a Beta prior. Who is hired for what follows the record. |
-| Integrity | Gnomon's rules already apply: no one verifies their own work, sessions of one model count as one group, and every part is attributed. |
+| Work orders | A question in a `firm/<kind>` frame, posted by whoever assigns the work. |
+| Track records and promotion | A result is a claim in the same frame, by a model, that `answers` a work order posted by someone outside the worker's group. It counts once, settled by the verdicts on it from groups other than the worker's: one vote per group, majority wins, ties count for nothing. Per tier and kind of work, these update a Beta prior; who is hired for what follows the record. |
+| Integrity | No one posts their own work orders or judges their own model's work; only writers of kind `model` whose model id starts with a tier's prefix (`claude-haiku-`, …) count; the record is only what the reader can see. Gnomon refuses a party's verdict on its own party's claims, so models that review each other must be registered as parties of their own. |
 | Shift changes | Handoffs (section 13). |
 
 **The decision.** For one unit of work, every option is priced: each tier
 alone, and each rising cascade under each kind of check the work allows.
-Its cost is expected spend on tokens, plus the expected loss (the chance a
-wrong result is kept unnoticed, or nothing right is left at the top, times
-`stakes_usd`), plus the price of waiting for each further attempt
-(`step_usd`). The cheapest total wins. Parts run in parallel; the planner
-and integrator, and a floor of managers per span, are added on top.
+Its cost is expected spend on tokens, plus the expected loss
+(`stakes_usd` for a wrong result kept unnoticed; `detected_usd`, by default
+the same, for a part known not to be done because its last attempt was
+flagged), plus `step_usd` for each expected sequential round. The cheapest
+total wins; ties go to the option more likely right. A tier whose context
+window cannot hold a part is never given it. Parts run in parallel; the
+planner (writing work orders in requests of at most 32,000 tokens), the
+integrator (reading the top floor) and the floors of managers (each reading
+its own reports) are added on top. Inputs are validated: finite, in range,
+a known check.
 
-**The baseline** is one top-tier agent doing every part in turn, re-reading
-what it has done so far as prompt-cache hits, with its own chance of error.
+**The baseline** is one top-tier agent doing every part in turn with the
+best checks it can use, re-reading its work so far as prompt-cache hits
+(compacted to its desk once it outgrows it) and writing each part's prompt
+to the cache. Plan and baseline report tokens, loss and rounds separately.
 
 **Stated assumptions**, each to be replaced by the record:
 
@@ -1115,10 +1123,14 @@ what it has done so far as prompt-cache hits, with its own chance of error.
   to be no harder for the next, which flatters cascades);
 - summaries handed up a floor of 600 tokens.
 
+The comparison with the baseline is only as good as these assumptions:
+with independent attempts, a cascade with an exact check is close to
+certain to win on loss. Real measurements decide.
+
 **Not yet:** running the agents (the host does that: Claude Code's
 subagents or the API), learning how failures correlate across tiers,
-latency beyond a price per step, and measurements of plans against single
-agents on real work.
+pricing the risk of a bad plan or integration, latency beyond a price per
+round, and measurements of plans against single agents on real work.
 
 ## 16. Not yet in v0.1
 

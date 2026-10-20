@@ -317,7 +317,7 @@ again in full.
 | **Queries** | Datalog with recursion and stratified negation, under hard limits. Every answer has a proof down to log events, re-checked by an independent checker. Proofs are content-addressed: each rule is named by a hash of its text and each step by a hash of what it rests on. |
 | **Recall** | Ranked search with provenance on every hit, and dates resolved by the calendar. Every weight is tunable and every boost is explained on the hit. |
 | **Checkers** | Arithmetic with exact fractions and dates against the real calendar, acting as verifiers under the same rules as everyone else. |
-| **Teams of models** | `plan_team` shapes a firm for work that can be split: Haiku staff, Sonnet managers, an Opus executive, exact checks before reviewers, escalation on failure, the Batch API for work that can wait. Each option is priced as tokens plus expected loss from errors, from published prices and the verdicts on record, against one Opus agent doing it alone. |
+| **Teams of models** | `plan_team` shapes a firm for work that can be split: Haiku staff, Sonnet managers, an Opus executive, exact checks before reviewers, escalation on failure, the Batch API for work that can wait. Each option is priced as tokens plus expected loss from errors, from published prices and the verdicts on record, against one Opus agent doing it alone with the same checks. The assumptions behind the comparison are stated; real runs are next. |
 | **MCP server** | Standard library only, for current and older MCP clients. It is fuzzed, and tested in CI with the official MCP SDK. |
 
 The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
@@ -329,7 +329,7 @@ The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
   (`tests/incidents.rs`).
 - **Each milestone was attacked by a reviewer who didn't write it.** That
   covered the record, queries, the MCP server, recall, identity, the forum,
-  continuity, auto mode and performance, over 19 review rounds. Every confirmed finding is now a
+  continuity, auto mode and performance, over 20 review rounds. Every confirmed finding is now a
   regression test.
 - **The query engine has a second implementation to agree with.** It is
   checked against a deliberately naive evaluator on hundreds of random
@@ -338,7 +338,7 @@ The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
 - **The MCP server is tested hard.** It is fuzzed with thousands of
   malformed messages and driven in CI by the official MCP Python SDK.
 - **Recall was tested on data it was never tuned on.**
-- **Every platform:** 190 Rust tests and 207 Python tests run on Linux,
+- **Every platform:** 190 Rust tests and 213 Python tests run on Linux,
   macOS and Windows on every change.
 
 ```bash
