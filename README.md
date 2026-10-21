@@ -331,6 +331,41 @@ What the pilot does not show yet is where escalation earns its keep: no
 task here defeated Haiku. That needs longer, vaguer, multi-step work, and
 it is the next measurement.
 
+### Forms: an alphabet, not one org chart
+
+How a team should be organised depends on the work, and 2026's controlled
+studies of model teams say a good deal about when each arrangement helps.
+`gnomon.forms` turns that into sixteen letters (divide, assign, propose
+independently, select by a check, route to the expert, take turns,
+aggregate, critique, debate, bid, coordinate through the record, evolve,
+floors, escalate, independent assurance, solo), each with when it helps,
+when it hurts, and its evidence. A task's profile and five dials (effort,
+breadth, scrutiny, speed, thrift) spell a word:
+
+```
+exact check, 24 parallel parts, 3 model families:
+  C·D[16]·P[3]·V·K·X·I    assign up front; 16 at once (Amdahl's knee); 3 independent attempts
+                          across families; the tests pick; one repair if a test names the fault;
+                          cheapest tier first; assurance outside the workers' group
+open-ended design, Opus available:
+  Q[4]·A·I                four agents in turn, each reading the others' finished work and
+                          choosing its own role or abstaining; a draft from another family
+                          merged in; one independent reviewer
+six tightly coupled steps, Opus, reviewed:
+  S·P[2]·X·I[3]           one context (splitting loses detail a strong model would use);
+                          two attempts; three reviewers from distinct groups, majority rule
+```
+
+Each choice names the finding behind it, and the design lists what it
+rejected: no debate when there is an exact check (reading each other's
+full solutions erased model diversity within one round), no deliberation
+around a known expert (teams fell 6-41% short of their best member), no
+more than four voices, no self-claiming of work. The rules are priors: a
+contextual bandit (`Learner`) chooses among a short list of candidate
+forms and moves off the prior as the firm's record shows another paying
+better. Sources and the full rules are in the
+[spec, section 15.1](spec/claim-protocol-v0.1.md).
+
 ## What's in it
 
 | | |
@@ -346,6 +381,7 @@ it is the next measurement.
 | **Recall** | Ranked search with provenance on every hit, and dates resolved by the calendar. Every weight is tunable and every boost is explained on the hit. |
 | **Checkers** | Arithmetic with exact fractions and dates against the real calendar, acting as verifiers under the same rules as everyone else. |
 | **Teams of models** | `plan_team` shapes a firm for work that can be split: Haiku staff, Sonnet managers, an Opus executive, exact checks before reviewers, escalation on failure, the Batch API for work that can wait. Each option is priced as tokens plus expected loss from errors, from published prices and the verdicts on record, against one Opus agent doing it alone with the same checks. The assumptions behind the comparison are stated; real runs are next. |
+| **Forms** | An alphabet of sixteen organisational forms with dials (`gnomon.forms`, `design_team`): each letter carries when it helps, when it hurts and its evidence (measured in 2026 studies of model teams, or classic theory), and a contextual bandit learns from the record which form pays for which work. |
 | **Companies** | Organisation charts in the verified record: positions, appointments and dismissals, with authority checked by the gate (only those above may hire or fire; assurance answers to the owners alone). `gnomon.company` founds a firm with its powers kept apart, hires model instances into titles, takes a client's goal down through the levels, and reviews staff from independently judged results. |
 | **MCP server** | Standard library only, for current and older MCP clients. It is fuzzed, and tested in CI with the official MCP SDK. |
 
@@ -358,7 +394,7 @@ The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
   (`tests/incidents.rs`).
 - **Each milestone was attacked by a reviewer who didn't write it.** That
   covered the record, queries, the MCP server, recall, identity, the forum,
-  continuity, auto mode and performance, over 20 review rounds. Every confirmed finding is now a
+  continuity, auto mode and performance, over 21 review rounds. Every confirmed finding is now a
   regression test.
 - **The query engine has a second implementation to agree with.** It is
   checked against a deliberately naive evaluator on hundreds of random
@@ -367,7 +403,7 @@ The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
 - **The MCP server is tested hard.** It is fuzzed with thousands of
   malformed messages and driven in CI by the official MCP Python SDK.
 - **Recall was tested on data it was never tuned on.**
-- **Every platform:** 195 Rust tests and 218 Python tests run on Linux,
+- **Every platform:** 198 Rust tests and 231 Python tests run on Linux,
   macOS and Windows on every change.
 
 ```bash
@@ -394,8 +430,11 @@ bash scripts/build.sh && python3 -m unittest discover -s python/tests
 - [ ] **M9, the firm:** teams of models shaped to the work by price and
   track record (`plan_team`): Haiku staff, Sonnet managers and an Opus
   executive, floors by span of control, exact checks first, escalation on
-  failure, and hiring that follows the verdicts on record. Planning is
-  done. Next: running the teams and measuring them against single agents.
+  failure, and hiring that follows the verdicts on record. Planning,
+  organisation charts in the record, and an evidence-backed alphabet of
+  forms with a learner (`design_team`) are done. Next: running a real
+  multi-step goal through the company and measuring forms against single
+  agents.
 - [ ] **M10, storage that scales:** the log in immutable segments, synced to
   object storage (S3, Backblaze B2, Cloudflare R2), with private
   compartments encrypted before they leave your device.
