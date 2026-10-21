@@ -362,6 +362,22 @@ alone against hybrid (`bench/beam_dense.md`):
 Hybrid recalls more evidence and sends fewer tokens at every size.
 Questions that join facts across sessions gain most: 20.8 -> 32.7 at 1M.
 
+**The primary source first.** Ranking the person's own statements ahead
+of the assistant's longer replies, inside the same fused candidates, lifts
+recall@10 again and cuts tokens by about 70%. The rule was fixed on 500K
+and run once (`bench/beam_salience.md`):
+
+| Length | Hybrid | Own statements first | Tokens (hybrid → first) |
+|---|---|---|---|
+| 100K | 63.4 | 65.8 | 4,519 → 1,377 |
+| 1M | 46.4 | 50.3 | 3,893 → 1,061 |
+| 10M | 33.0 | 36.1 | 3,589 → 1,150 |
+
+It came out of a failed idea. Novelty at write time, the surprise a
+next-concept model would register, looked strong on the development set
+and added nothing on data it had not seen. The controls are what showed
+it.
+
 **Repairable storage.** `gnomon.parity` adds Reed-Solomon parity beside
 the log: 2 parity blocks for every 16 blocks of 4 KiB, 14.4% extra
 storage. Any 2 damaged blocks in a stripe are rebuilt byte for byte, and

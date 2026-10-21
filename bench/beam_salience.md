@@ -53,3 +53,33 @@ evidence is the assistant's, and summaries do not gain. A record where the
 answers live in other people's or tools' words would weigh sources
 differently. "Primary source" should mean the root of the information,
 not "the human".
+
+## Held-out result (one run; `beam_salience_results.json`)
+
+Recall@10, 95% intervals by conversation:
+
+| | Hybrid | Source + novelty (pre-registered) | User first (control) | Novelty alone (control) | Random (control) |
+|---|---|---|---|---|---|
+| 100K | 63.4 | 65.6 [62.7, 68.7] | **65.8** | 65.3 | 59.6 |
+| 1M | 46.4 [44.5, 48.4] | **50.5** [48.2, 53.0] | 50.3 | 49.8 | 44.1 |
+| 10M | 33.0 [29.5, 36.5] | 35.3 [32.0, 38.3] | **36.1** | 34.3 | 30.6 |
+| Median tokens, 1M | 3,893 | 1,780 | **1,061** | 2,169 | 4,233 |
+
+**What held:** ranking the person's own statements first raises recall at
+every size and needs 45-73% fewer tokens.
+
+**What did not:** novelty adds nothing beyond that on unseen data. Its
+edge on information extraction at 500K (68.2 against 63.2) reversed at
+100K (56.7 against 65.0 for plain hybrid) and did not hold at 10M (66.0
+against 70.0 for user first).
+
+**The verdict:** the simplest rule, the primary source first, is as good
+as the pre-registered one and cheaper. Novelty is dropped. Ordering and
+summaries are untouched by any of this.
+
+**Generalising it:** "primary source" means where the information
+originated, not "the human". In a record where facts come from tools,
+documents or other people, the root is those. Gnomon already records
+each statement's source (`speaker_is`, provenance), so the rule can be
+written as "derived text ranks after the text it derives from". BEAM only
+tests the case where the root is the user.
