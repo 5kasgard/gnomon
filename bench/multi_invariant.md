@@ -61,3 +61,8 @@ Nothing will be changed after the run.
 because it held every qualifying case before sampling. The 60 cases per
 file are now drawn by seeded reservoir sampling while streaming. It is
 still a seeded random sample of 60; only the sampling mechanics changed.
+That also ran out of memory (60 large cases held at once). The final
+version reads each file twice. The first pass counts the qualifying cases
+and draws 60 of their positions with `random.Random(20261021).sample`,
+which is the sampling first written down. The second pass processes one
+case at a time.
