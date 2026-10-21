@@ -70,7 +70,7 @@ def cases(path: Path, n: int, seed: int):
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("cmd", choices=["prepare"])
+    p.add_argument("cmd", choices=["prepare", "score"])
     p.add_argument("--convomem", required=True)
     p.add_argument("--out", required=True)
     p.add_argument("--cases", type=int, default=3)
@@ -78,6 +78,8 @@ def main():
     a = p.parse_args()
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
+    if a.cmd == "score":
+        return score(Path(a.convomem), out, a.cases, a.seed)
     for i, (conv, bs, qs) in enumerate(cases(Path(a.convomem), a.cases, a.seed)):
         cand = candidates(bs)
         lines = [f"[{k}] {s}" for k, (_, s) in enumerate(cand)]
@@ -88,6 +90,37 @@ def main():
         (out / f"history_{i}.map.json").write_text(json.dumps({"conv": conv, "map": [g for g, _ in cand],
                                                               "text": [s for _, s in cand]}), encoding="utf-8")
         print(conv, len(cand), "sentences", sum(len(s) + 8 for _, s in cand) // 4, "tokens")
+
+
+def score(path: Path, folder: Path, n: int, seed: int) -> None:
+    """Evidence present, per question (every question of each history):
+    in the hybrid top 10, in the situation model loaded whole, and in
+    both; with the situation model's size."""
+    import numpy as np
+    from model2vec import StaticModel
+    import multi
+    from beam import cluster_ci
+    model = StaticModel.from_pretrained(multi.MODEL)
+    rows, sizes = [], []
+    for i, (conv, bs, qs) in enumerate(multi.load_convomem([path], per_file=n, seed=seed, q_per_case=10**6)):
+        mp = json.loads((folder / f"history_{i}.map.json").read_text(encoding="utf-8"))
+        assert mp["conv"] == conv, (mp["conv"], conv)  # the same case the readers read
+        chosen = set()
+        for f in sorted(folder.glob(f"history_{i}_chunk*.sel")):
+            chosen |= {int(x) for x in re.findall(r"\d+", f.read_text()) if int(x) < len(mp["map"])}
+        kept = {mp["map"][c] for c in chosen}
+        sizes.append((len(chosen), len(mp["map"]), sum(len(mp["text"][c]) + 8 for c in chosen) // 4))
+        for d in multi.features(conv, bs, qs, model):
+            top = set(d["hybrid"][:10])
+            rows.append({"conv": conv, "top10": float(bool(top & d["ev"])), "situation": float(bool(kept & d["ev"])),
+                         "both": float(bool((top | kept) & d["ev"]))})
+    groups = lambda key: {c: [r[key] for r in rows if r["conv"] == c] for c in {r["conv"] for r in rows}}  # noqa: E731
+    out = {k: cluster_ci(groups(k)) for k in ("top10", "situation", "both")}
+    print(f"{len(rows)} questions in {len(sizes)} histories; situation models: "
+          + ", ".join(f"{a} of {b} sentences = {t:,} tokens" for a, b, t in sizes))
+    for k, (m, lo, hi) in out.items():
+        print(f"  evidence present, {k:10s} {m:5.1f}  [{lo}, {hi}] (by history)")
+    (folder / "score.json").write_text(json.dumps({"rows": len(rows), "sizes": sizes, **out}), encoding="utf-8")
 
 
 if __name__ == "__main__":
