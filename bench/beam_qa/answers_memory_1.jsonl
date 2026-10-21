@@ -1,0 +1,10 @@
+{"id": "m1_info0", "answer": "React 18.2 for the frontend, Node.js 18 for the backend, and PostgreSQL 14 for the database."}
+{"id": "m1_info1", "answer": "You said the memory store was on port 4000, though the memory-store service in your docker-compose file mapped port 5000:5000."}
+{"id": "m1_know0", "answer": "March 18, 2024, the adjusted milestone (you had earlier targeted March 15, 2024, and March 10, 2024 for the 95% accuracy goal)."}
+{"id": "m1_know1", "answer": "15 minutes (900 seconds), although you had earlier mentioned extending the TTL to 20 minutes."}
+{"id": "m1_temp0", "answer": "7 days, from the March 25, 2024 translation API integration deadline to the April 1, 2024 sprint review."}
+{"id": "m1_temp1", "answer": "Not mentioned."}
+{"id": "m1_mult0", "answer": "Your snippets give a current latency of 180ms and an 85% cache hit rate, and suggest checking Redis before the database, indexing the text column, and using asynchronous processing; franc v6.1.0 is not mentioned."}
+{"id": "m1_mult1", "answer": "Four: caching the last 10 messages per user session, storing conversation history, caching language detection results, and caching recent translations."}
+{"id": "m1_abst0", "answer": "You described yourself as a psychologist moving into AI chatbot development, but no school or specialization is mentioned."}
+{"id": "m1_abst1", "answer": "You reported a 90% satisfaction rate from user testing sessions of the multi-language switching feature."}

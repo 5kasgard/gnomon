@@ -15,6 +15,7 @@ or cited. Where something is a guess, it says so.
 | …against a corrected answer key | within half a point | `--audit errors.json` (dial481/locomo-audit) |
 | End-to-end answers (LoCoMo 5-9, 200 questions + 50 unanswerable) | F1 54.6 from Gnomon's top 10 (521 tokens) vs 61.7 from the whole conversation (22,818 tokens); abstains on 86% of unanswerable vs 78% | `bench/qa/score.py` |
 | Recall where the history cannot be read (BEAM, 100K-10M tokens) | top 10 (~5,500 tokens) holds 38.7 / 27.0 / 19.9% of evidence at 500K / 1M / 10M, against 13.5 / 3.1 / 0% in the last 200K tokens; at 100K the window wins (96.3 vs 45.1) | `python bench/beam.py --data BEAM` (`bench/beam_results.json`) |
+| Answers at 1M tokens (BEAM, Haiku, 100 questions / 10 conversations) | F1 33.6 and every number right on 54% from Gnomon's top 10, vs F1 8.8 and 5% from the last 128K tokens (same 3 conversations: +23 F1, ahead in all 3) | `bench/beam_qa/score.py` |
 | Cheap workers vs an LLM (spam, star ratings, sentiment) | see README "The floor" | `python bench/floor/run.py`, protocol fixed in `bench/floor/PROTOCOL.md` |
 | Form learner under change | change detection leaves regret in an unchanging world as it was (0.004-0.019) and cuts it after a change (0.13-0.20 to 0.08-0.16) | `tests/test_forms_stress.py` (simulated worlds, seeds held out) |
 
@@ -36,8 +37,9 @@ by tens of points (memoryatlas.dev). Consequences for Gnomon:
 - the benchmark where memory must win is one whose history cannot fit in
   context: BEAM and LongMemEval-M. BEAM's conversations are in git and
   are now measured (`bench/beam.py`, retrieval only, judge-free): the
-  crossover is between 100K and 500K tokens. Still to do: answers from a
-  reader on BEAM (memory vs the last 200K tokens), and LongMemEval-M and
+  crossover is between 100K and 500K tokens, and answers follow
+  (`bench/beam_qa`: memory ahead by 23 F1 at 1M). Still to do: a larger
+  answer run with a second reader model, and LongMemEval-M and
   static embedding models, which are on Hugging Face, which this
   workspace's network does not allow (claude.ai Settings > Capabilities).
 

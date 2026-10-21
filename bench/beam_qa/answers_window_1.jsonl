@@ -1,0 +1,10 @@
+{"id": "m1_info0", "answer": "React 18.2 (frontend), Node.js 18 (backend runtime), and PostgreSQL (database, no version given)."}
+{"id": "m1_info1", "answer": "Not mentioned"}
+{"id": "m1_know0", "answer": "Not mentioned"}
+{"id": "m1_know1", "answer": "Not mentioned"}
+{"id": "m1_temp0", "answer": "Not mentioned"}
+{"id": "m1_temp1", "answer": "Not mentioned"}
+{"id": "m1_mult0", "answer": "Not mentioned"}
+{"id": "m1_mult1", "answer": "Five: caching context retrieval queries, caching chatbot API responses, a fallback cache of the last 5 responses during GPT-4 outages, LRU caching for the memory store, and caching user sessions."}
+{"id": "m1_abst0", "answer": "Not mentioned"}
+{"id": "m1_abst1", "answer": "User testing sessions of the multi-language switching feature reached a 90% satisfaction rate."}

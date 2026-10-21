@@ -325,6 +325,29 @@ first query of a conversation builds the index (median 117 ms, p95 7.9 s).
 In a spot check, the cited message held the answer's numbers in 44 of 49
 questions, so BEAM's evidence ids are close to, not exactly, right.
 
+**Answers at 1M tokens.** Claude Haiku answered 100 questions from 10
+random 1M conversations (80 with a gold answer: facts, updated values,
+dates, cross-session counts; 20 about things never said) from Gnomon's top
+10 messages, and the same questions in 3 of those conversations from the
+last 128,000 tokens (`bench/beam_qa`, prompts in `bench/beam_qa/PROMPTS.md`).
+Judge-free:
+
+| Reading from | Answer F1 | Every number right | Wrongly "not mentioned" | Says "not mentioned" when it isn't there |
+|---|---|---|---|---|
+| Gnomon top 10, 10 conversations | **33.6** (25.5-41.4) | **54%** | 29% | 60% |
+| Gnomon top 10, the 3 window conversations | **32.1** | 60% | 25% | 50% |
+| Last 128K tokens, same 3 conversations | 8.8 | 5% | 83% | 83% |
+
+On the same questions, reading from memory beat reading the window by 23
+F1 points, higher in each of the 3 conversations (15.6, 20.6, 33.7) and on
+17 of 24 questions (2 worse). The window mostly says "not mentioned",
+correctly by its own lights: the evidence is not in it. That is the
+expected result, measured; the interval is wide (3 conversations) because
+the window condition costs ~128,000 tokens per conversation and was run
+only to confirm what evidence recall predicted. Memory's own errors are
+the ones recall predicts: when the evidence is missing from the top 10,
+Haiku says "not mentioned" (29%). One reader model, one run.
+
 ### Speed at scale
 
 Measured on a memory of 20,000 events, in a long-lived process like the MCP

@@ -1,0 +1,128 @@
+{
+ "Gnomon top 10, all conversations": {
+  "F1": [
+   [
+    33.6,
+    25.5,
+    41.4
+   ],
+   80
+  ],
+  "gold recall": [
+   [
+    44.9,
+    34.3,
+    55.2
+   ],
+   80
+  ],
+  "wrongly 'not mentioned'": [
+   [
+    28.8,
+    18.8,
+    38.8
+   ],
+   80
+  ],
+  "numbers right": [
+   [
+    53.7,
+    41.3,
+    65.2
+   ],
+   67
+  ],
+  "abstains when absent": [
+   [
+    60.0,
+    40.0,
+    80.0
+   ],
+   20
+  ]
+ },
+ "Gnomon top 10, window conversations": {
+  "F1": [
+   [
+    32.1,
+    20.6,
+    44.6
+   ],
+   24
+  ],
+  "gold recall": [
+   [
+    43.1,
+    26.5,
+    65.5
+   ],
+   24
+  ],
+  "wrongly 'not mentioned'": [
+   [
+    25.0,
+    25.0,
+    25.0
+   ],
+   24
+  ],
+  "numbers right": [
+   [
+    60.0,
+    33.3,
+    75.0
+   ],
+   20
+  ],
+  "abstains when absent": [
+   [
+    50.0,
+    0.0,
+    100.0
+   ],
+   6
+  ]
+ },
+ "Last 128K tokens, window conversations": {
+  "F1": [
+   [
+    8.8,
+    0.0,
+    15.7
+   ],
+   24
+  ],
+  "gold recall": [
+   [
+    9.3,
+    0.0,
+    16.9
+   ],
+   24
+  ],
+  "wrongly 'not mentioned'": [
+   [
+    83.3,
+    75.0,
+    100.0
+   ],
+   24
+  ],
+  "numbers right": [
+   [
+    5.0,
+    0.0,
+    16.7
+   ],
+   20
+  ],
+  "abstains when absent": [
+   [
+    83.3,
+    50.0,
+    100.0
+   ],
+   6
+  ]
+ }
+}
