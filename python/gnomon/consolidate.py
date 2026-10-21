@@ -156,8 +156,11 @@ class Tiers:
     part needs (every turn's directives, sentence counts for idf) is worked
     out once per state of the log and kept until the log grows."""
 
-    def __init__(self, memory, reader: str, speakers: Optional[set] = None):
-        self.memory, self.reader, self.speakers = memory, reader, speakers
+    def __init__(self, memory, reader: str, speakers: Optional[set] = None, ranker=None):
+        """`ranker`: a gnomon.rank.Ranker to order the warm tier's candidates
+        by the weak-signal weighting (words, meaning, surprise...); without
+        one, recall's own order is used."""
+        self.memory, self.reader, self.speakers, self.ranker = memory, reader, speakers, ranker
         self._at = None
 
     def _turns(self, as_of: Optional[str]):
@@ -194,9 +197,12 @@ class Tiers:
         prompt cache can hold it."""
         self._refresh(as_of)
         hot = standing(self.found, query, directive_budget)
-        r = self.memory.recall(self.reader, query, k=50, kinds=["turns"], as_of=as_of, **recall_opts)
-        hits = [{"pointer": f"{h['episode']}#{h['turn']}", "text": h["text"], "start": h["start"],
-                 "speaker": h["speaker"], "time": h["time"]} for h in r["hits"] if "episode" in h]
+        if self.ranker is not None:
+            hits = self.ranker.rank(query, k=50, as_of=as_of, **recall_opts)
+        else:
+            r = self.memory.recall(self.reader, query, k=50, kinds=["turns"], as_of=as_of, **recall_opts)
+            hits = [{"pointer": f"{h['episode']}#{h['turn']}", "text": h["text"], "start": h["start"],
+                     "speaker": h["speaker"], "time": h["time"]} for h in r["hits"] if "episode" in h]
         warm = select_sentences(query, hits, self.df, self.n_sent, budget)
         lines = []
         if hot:
