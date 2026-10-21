@@ -60,6 +60,8 @@ class Ranker:
         self.own = own or (lambda speaker: speaker.lower() not in _ASSISTANTS)
         self._at = None
         self._start = {}
+        self._hits, self._scores, self.last_orders, self._turns = {}, {}, {}, {}
+        self.calibration: Optional["Calibration"] = None
 
     def _refresh(self, as_of: Optional[str]) -> None:
         import numpy as np  # only with an embedder, which needs numpy anyway
@@ -103,19 +105,20 @@ class Ranker:
         self._index = {p: i for i, p in enumerate(order)}
         self._order, self._E, self._sur, self._at = order, E, sur, key
 
-    def rank(self, query: str, k: int = 10, as_of: Optional[str] = None, **recall_opts) -> list:
-        """[{"pointer", "speaker", "text", "start", "score"}], best first
-        (start: the turn's code-point offset in its episode)."""
+    def arms(self, query: str, as_of: Optional[str] = None, **recall_opts) -> dict:
+        """Every mechanism's order for `query`, best first, as pointers:
+        words, meaning, hybrid, own first and invariant (the default)."""
         r = self.memory.recall(self.reader, query, k=POOL, kinds=["turns"], as_of=as_of, **recall_opts)
-        words = [f"{h['episode']}#{h['turn']}" for h in r["hits"] if "episode" in h]
+        hits = [h for h in r["hits"] if "episode" in h]
+        words = [f"{h['episode']}#{h['turn']}" for h in hits]
+        self._hits = {f"{h['episode']}#{h['turn']}": h for h in hits}
+        self.last_orders = {"words": words}
         if self.embed is None:
-            return [{"pointer": p, "speaker": h["speaker"], "text": h["text"], "start": h["start"],
-                     "score": float(len(words) - i)}
-                    for i, (p, h) in enumerate(zip(words, [h for h in r["hits"] if "episode" in h])) if i < k]
+            return {"words": words}
         import numpy as np
         self._refresh(as_of)
         if not self._order:
-            return []
+            return {"words": words}
         qv = np.asarray(self.embed([query])[0], dtype=np.float32)
         qv /= max(float(np.linalg.norm(qv)), 1e-9)
         sims = self._E @ qv
@@ -140,7 +143,100 @@ class Ranker:
                  "own": float(self.own(speaker)), "number": float(bool(_NUM.search(text))),
                  "surprise": float(self._sur[idx[j]]), "topic_surprise": float(topic[j]),
                  "atypical": float(atyp[j])}
-            scored.append((sum(self.weights[n] * v for n, v in f.items()), p, speaker, text))
+            scored.append((sum(self.weights[n] * v for n, v in f.items()), p))
         scored.sort(key=lambda s: -s[0])
-        return [{"pointer": p, "speaker": sp, "text": tx, "start": self._start.get(p, 0), "score": round(s, 4)}
-                for s, p, sp, tx in scored[:k]]
+        self._scores = {p: sc for sc, p in scored}
+        rrf = lambda *orders: sorted({p for o in orders for p in o},  # noqa: E731
+                                     key=lambda p: -sum(1 / (61 + o.index(p)) for o in orders if p in o))
+        hybrid = rrf(words, dense)
+        own_first = sorted(hybrid[:POOL], key=lambda p: not self.own(self._turns[p][0]))
+        orders = {"words": words, "meaning": dense, "hybrid": hybrid, "own first": rrf(words, dense, own_first),
+                  "invariant": [p for _, p in scored]}
+        self.last_orders = orders
+        return orders
+
+    def _item(self, p: str, score: float) -> dict:
+        if p in self._turns:
+            speaker, text = self._turns[p]
+        else:
+            h = self._hits[p]
+            speaker, text = h["speaker"], h["text"]
+        start = self._start.get(p, self._hits[p]["start"] if p in self._hits else 0)
+        return {"pointer": p, "speaker": speaker, "text": text, "start": start, "score": round(score, 4)}
+
+    def rank(self, query: str, k: int = 10, as_of: Optional[str] = None, arm: Optional[str] = None,
+             **recall_opts) -> list:
+        """[{"pointer", "speaker", "text", "start", "score"}], best first
+        (start: the turn's code-point offset in its episode). `arm` picks the
+        mechanism (default: the calibrated choice, else invariant)."""
+        orders = self.arms(query, as_of=as_of, **recall_opts)
+        if "invariant" not in orders:
+            return [self._item(p, float(len(orders["words"]) - i)) for i, p in enumerate(orders["words"][:k])]
+        choice = arm or (self.calibration.choice() if self.calibration else "invariant")
+        got = orders.get(choice, orders["invariant"])
+        return [self._item(p, self._scores.get(p, 0.0)) for p in got[:k]]
+
+
+class Calibration:
+    """Per-memory choice of mechanism, learnt from use. Each time a reader
+    uses evidence (expands or cites pointers), `observe` records which
+    mechanism had that evidence in its top 10. `choice` keeps the default
+    unless another mechanism wins clearly: after at least `min_observations`,
+    its mean paired advantage over the observations is more than `z`
+    standard errors above zero. Simulated
+    on four datasets this lifts LoCoMo from 51.8 to 69.1 recall@10 after 50
+    observations and costs at most 0.1 where the default is already best
+    (bench/compartments.md)."""
+
+    ARMS = ("words", "meaning", "hybrid", "own first", "invariant")
+
+    def __init__(self, default: str = "invariant", z: float = 2.0, record: Optional[Callable] = None,
+                 min_observations: int = 10):
+        self.default, self.z, self.record, self.min_obs = default, z, record, min_observations
+        self.hits: list = []  # one dict per observation: arm -> 1.0 if it had the used evidence
+        self.current = default
+
+    def observe(self, orders: dict, used: Sequence[str], k: int = 10) -> Optional[str]:
+        used = set(used)
+        if not used:
+            return None
+        self.hits.append({a: float(bool(used & set(orders.get(a, [])[:k]))) for a in self.ARMS if a in orders})
+        before, self.current = self.current, self._decide()
+        if self.current != before and self.record:
+            self.record(before, self.current, len(self.hits))
+        return self.current
+
+    def _decide(self) -> str:
+        n = len(self.hits)
+        if n < self.min_obs:  # also guards the zero-variance case of a few identical observations
+            return self.default
+        best, best_z = self.default, self.z
+        for a in self.ARMS:
+            if a == self.default:
+                continue
+            diffs = [h.get(a, 0.0) - h.get(self.default, 0.0) for h in self.hits]
+            mean = sum(diffs) / n
+            var = sum((d - mean) ** 2 for d in diffs) / (n - 1)
+            se = (var / n) ** 0.5
+            zval = mean / se if se > 0 else (float("inf") if mean > 0 else 0.0)
+            if zval > best_z:
+                best, best_z = a, zval
+        return best
+
+    def choice(self) -> str:
+        return self.current
+
+
+def log_switch(memory, writer: str, compartment: str) -> Callable:
+    """A Calibration `record` callback that writes each change of mechanism
+    into the memory as a derived claim, so how the memory ranks is on the
+    record and can be reviewed or superseded."""
+    from . import claim
+
+    def record(before: str, after: str, n: int) -> None:
+        memory.remember(writer, claim(
+            f"Recall for this memory now ranks by '{after}' instead of '{before}': "
+            f"it held the evidence readers used clearly more often over {n} uses (paired, > 2 standard errors).",
+            speaker=writer, frame="gnomon/ranking", compartment=compartment, stance="decided",
+            truth="unknown", origin="derived"))
+    return record

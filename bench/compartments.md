@@ -66,9 +66,9 @@ over 200 random draws per n, scored on the remaining questions:
 
 | Environment | Default | n=5 | n=10 | n=20 | n=50 | Best possible |
 |---|---|---|---|---|---|---|
-| BEAM 500K | 62.7 | 62.6 | 62.7 | 62.6 | 62.7 | 62.7 |
+| BEAM 500K | 62.7 | 62.7 | 62.7 | 62.6 | 62.7 | 62.7 |
 | BEAM 1M | 50.1 | 50.1 | 50.1 | 50.1 | 50.1 | 50.3 |
-| LoCoMo | 51.8 | 53.4 | 55.2 | 61.1 | **69.1** | 70.4 |
+| LoCoMo | 51.8 | 51.8 | 55.2 | 61.1 | **69.1** | 70.4 |
 | LongMemEval-S | 83.6 | 83.6 | 83.6 | 83.6 | 83.6 | 83.6 |
 | ConvoMem | 72.7 | 72.7 | 72.7 | 72.7 | 72.6 | 72.7 |
 
@@ -85,3 +85,14 @@ the gain once feedback accumulates.
 
 The change itself is an event in the log, so the memory's choice of how to
 see is auditable and can be undone.
+
+**In the product** (`gnomon.rank.Calibration`, MCP server with `--meaning`):
+- Every `expand` of a pointer that `context` offered counts as one
+  observation.
+- The gate needs at least 10 observations. Below that the default stays,
+  which also rules out switching on a few identical observations with zero
+  variance; the simulation above applies the same minimum.
+- A switch is written into the memory as a derived claim in the frame
+  `gnomon/ranking`.
+- On a LoCoMo conversation the product's default and words arms reproduce
+  the bench (default 43.2 = 43.2; words 71.5).

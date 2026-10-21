@@ -685,8 +685,15 @@ class Server:
             from .consolidate import Tiers
             ranker = None
             if self.embed is not None:
-                from .rank import Ranker
+                from .rank import Calibration, Ranker, log_switch
                 ranker = Ranker(self.memory, self.writer, embed=self.embed)
+                comps = self.memory.writers()[self.writer]["compartments"]
+                # Which mechanism ranks this memory best is learnt from use:
+                # every `expand` of a pointer `context` offered is one
+                # observation; a switch is recorded as a claim in the memory.
+                ranker.calibration = Calibration(
+                    record=log_switch(self.memory, self.writer, comps[0]) if comps else None)
+            self._ranker = ranker
             self._tier_cache = Tiers(self.memory, self.writer, ranker=ranker)
         return self._tier_cache
 
@@ -701,6 +708,9 @@ class Server:
     def t_expand(self, a: dict) -> tuple[str, Any]:
         try:
             t = self._tiers().expand(a["pointer"])
+            ranker = getattr(self, "_ranker", None)
+            if ranker is not None and ranker.calibration is not None and ranker.last_orders:
+                ranker.calibration.observe(ranker.last_orders, [a["pointer"]])
         except (KeyError, IndexError, ValueError) as e:
             raise ToolError(f"cannot expand {a['pointer']!r}: {e}")
         return f"{_ts(t['time'])} {_line(t['speaker'])}: {t['text']}", {k: t[k] for k in ("pointer", "start", "end")}

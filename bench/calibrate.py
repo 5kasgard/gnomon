@@ -44,7 +44,9 @@ def main():
                 # ties go to the invariant model, the default
                 d0 = ARMS.index("invariant")
                 arm = d0
-                if GATED:
+                if GATED and len(fb) < 10:
+                    pass  # too few observations: keep the default, as gnomon.rank.Calibration does
+                elif GATED:
                     # switch only on a clear paired win: mean difference over
                     # the feedback questions more than 2 standard errors above 0
                     best_z = 2.0
