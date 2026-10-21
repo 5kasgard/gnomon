@@ -366,7 +366,7 @@ Questions that join facts across sessions gain most: 20.8 -> 32.7 at 1M.
 the log: 2 parity blocks for every 16 blocks of 4 KiB, 14.4% extra
 storage. Any 2 damaged blocks in a stripe are rebuilt byte for byte, and
 the hash chain then proves the repair. More damage than that is refused,
-never guessed. It protects 50 MiB in about half a second.
+never guessed. It is pure Python with no dependencies and protects 50 MiB in about 0.3 s.
 
 **Sentences instead of messages.** Gnomon's `context` gives the reader
 the sentences that match the question, each tagged with a pointer to its

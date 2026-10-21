@@ -16,7 +16,8 @@ its last stripes.
     check("memory.jsonl")        # {"damaged": [...], "repairable": bool}
     repair("memory.jsonl")       # rebuild damaged blocks in place
 
-No dependencies beyond numpy. A repaired log is then checked by its own
+No dependencies: pure Python, the field arithmetic done by bytes.translate
+and integer XOR. A repaired log is then checked by its own
 hash chain (`Memory.verify`), so a repair can never pass off wrong bytes.
 """
 
@@ -28,16 +29,17 @@ import os
 from pathlib import Path
 from typing import Optional
 
-import numpy as np
-
 BLOCK = 4096
 DATA = 16
 PARITY = 2
 FORMAT = 2
 
 # ------------------------------------------------------------- GF(256) maths
-_EXP = np.zeros(512, dtype=np.uint8)
-_LOG = np.zeros(256, dtype=np.int32)
+# Pure Python: a block is `bytes`; multiplying it by a constant is one
+# bytes.translate with that constant's 256-entry table (C speed), and adding
+# blocks is XOR of the blocks read as big integers.
+_EXP = [0] * 512
+_LOG = [0] * 256
 _x = 1
 for _i in range(255):
     _EXP[_i] = _x
@@ -45,68 +47,70 @@ for _i in range(255):
     _x <<= 1
     if _x & 0x100:
         _x ^= 0x11D  # x^8 + x^4 + x^3 + x^2 + 1
-_EXP[255:510] = _EXP[:255]
-# MUL[a] is a lookup table: MUL[a][b] = a*b in GF(256).
-MUL = np.zeros((256, 256), dtype=np.uint8)
-for _a in range(1, 256):
-    MUL[_a, 1:] = _EXP[(_LOG[_a] + _LOG[np.arange(1, 256)]) % 255]
+for _i in range(255, 512):
+    _EXP[_i] = _EXP[_i - 255]
+
+
+def _mul(a: int, b: int) -> int:
+    return 0 if a == 0 or b == 0 else _EXP[_LOG[a] + _LOG[b]]
+
+
+# _TABLE[a] maps each byte b to a*b, for bytes.translate.
+_TABLE = [bytes(_mul(a, b) for b in range(256)) for a in range(256)]
 
 
 def _inv(a: int) -> int:
     if a == 0:
         raise ZeroDivisionError("0 has no inverse in GF(256)")
-    return int(_EXP[255 - _LOG[a]])
+    return _EXP[255 - _LOG[a]]
 
 
-def _cauchy(rows: int, cols: int) -> np.ndarray:
+def _cauchy(rows: int, cols: int) -> list:
     """A Cauchy matrix 1/(x_i + y_j) with x_i = cols + i, y_j = j: every
     square submatrix is invertible, so any `rows` erasures are solvable."""
-    m = np.zeros((rows, cols), dtype=np.uint8)
-    for i in range(rows):
-        for j in range(cols):
-            m[i, j] = _inv((cols + i) ^ j)
-    return m
+    return [[_inv((cols + i) ^ j) for j in range(cols)] for i in range(rows)]
 
 
 _C = _cauchy(PARITY, DATA)
-_GEN = np.vstack([np.eye(DATA, dtype=np.uint8), _C])  # systematic generator
+_GEN = [[int(i == j) for j in range(DATA)] for i in range(DATA)] + _C  # systematic generator
 
 
-def _matmul(mat: np.ndarray, blocks: np.ndarray) -> np.ndarray:
-    """mat (r x k) times blocks (k x B) over GF(256)."""
-    out = np.zeros((mat.shape[0], blocks.shape[1]), dtype=np.uint8)
-    for i in range(mat.shape[0]):
-        acc = out[i]
-        for j in range(mat.shape[1]):
-            c = mat[i, j]
+def _matmul(mat: list, blocks: list) -> list:
+    """mat (r x k) times blocks (k byte strings of equal length) over GF(256)."""
+    n = len(blocks[0])
+    out = []
+    for row in mat:
+        acc = 0
+        for c, b in zip(row, blocks):
             if c:
-                acc ^= MUL[c][blocks[j]]
+                acc ^= int.from_bytes(b if c == 1 else b.translate(_TABLE[c]), "little")
+        out.append(acc.to_bytes(n, "little"))
     return out
 
 
-def _invert(m: np.ndarray) -> np.ndarray:
+def _invert(m: list) -> list:
     """Gauss-Jordan inverse of a square matrix over GF(256)."""
-    n = m.shape[0]
-    a = np.concatenate([m.astype(np.uint8), np.eye(n, dtype=np.uint8)], axis=1)
+    n = len(m)
+    a = [list(row) + [int(i == j) for j in range(n)] for i, row in enumerate(m)]
     for col in range(n):
-        piv = next(r for r in range(col, n) if a[r, col])
-        a[[col, piv]] = a[[piv, col]]
-        a[col] = MUL[_inv(int(a[col, col]))][a[col]]
+        piv = next(r for r in range(col, n) if a[r][col])
+        a[col], a[piv] = a[piv], a[col]
+        iv = _inv(a[col][col])
+        a[col] = [_mul(iv, x) for x in a[col]]
         for r in range(n):
-            if r != col and a[r, col]:
-                a[r] ^= MUL[int(a[r, col])][a[col]]
-    return a[:, n:]
+            if r != col and a[r][col]:
+                f = a[r][col]
+                a[r] = [x ^ _mul(f, y) for x, y in zip(a[r], a[col])]
+    return [row[n:] for row in a]
 
 
 # ------------------------------------------------------------------- stripes
 def _stripes(data: bytes):
-    """Yield (index, k x BLOCK array) for each stripe, zero-padded."""
+    """Yield (index, list of DATA blocks) for each stripe, zero-padded."""
     per = BLOCK * DATA
     for s in range(0, max(len(data), 1), per):
-        chunk = data[s:s + per]
-        buf = np.zeros(per, dtype=np.uint8)
-        buf[:len(chunk)] = np.frombuffer(chunk, dtype=np.uint8)
-        yield s // per, buf.reshape(DATA, BLOCK)
+        chunk = data[s:s + per].ljust(per, b"\0")
+        yield s // per, [chunk[j * BLOCK:(j + 1) * BLOCK] for j in range(DATA)]
 
 
 def _h(b) -> str:
@@ -139,7 +143,7 @@ def protect(path, *, previous: Optional[dict] = None) -> dict:
             continue
         par = _matmul(_C, blocks)
         stripes.append({"data": hashes, "parity_hash": [_h(p) for p in par]})
-        parity.append(par.tobytes())
+        parity.append(b"".join(par))
     body = {"format": FORMAT, "block": BLOCK, "data": DATA, "parity": PARITY, "length": len(data),
             "stripes": stripes}
     _write_side(side, body, b"".join(parity))
@@ -217,17 +221,15 @@ def repair(path) -> dict:
     for d in rep["damaged"]:
         idx, bad = d["stripe"], set(d["blocks"])
         st = body["stripes"][idx]
-        buf = np.zeros(per, dtype=np.uint8)
-        seg = data[idx * per:(idx + 1) * per]
-        buf[:len(seg)] = np.frombuffer(bytes(seg), dtype=np.uint8)
-        rows = list(buf.reshape(DATA, BLOCK)) + [np.frombuffer(p, dtype=np.uint8) for p in _parity_blocks(_side(path), idx)]
+        seg = bytes(data[idx * per:(idx + 1) * per]).ljust(per, b"\0")
+        rows = [seg[j * BLOCK:(j + 1) * BLOCK] for j in range(DATA)] + _parity_blocks(_side(path), idx)
         good = [i for i in range(DATA + PARITY) if i not in bad][:DATA]
-        dec = _invert(_GEN[good])
-        blocks = _matmul(dec, np.stack([rows[i] for i in good]))
+        dec = _invert([_GEN[i] for i in good])
+        blocks = _matmul(dec, [rows[i] for i in good])
         for j in sorted(b for b in bad if b < DATA):
             if _h(blocks[j]) != st["data"][j]:
                 raise ValueError(f"stripe {idx} block {j}: rebuilt bytes do not match their hash")
-        flat = blocks.reshape(-1).tobytes()
+        flat = b"".join(blocks)
         end = min(len(data), (idx + 1) * per)
         data[idx * per:end] = flat[:end - idx * per]
         fixed += len(bad)

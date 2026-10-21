@@ -12,8 +12,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import numpy as np  # noqa: E402
-
 from gnomon import Memory  # noqa: E402
 from gnomon.ingest import record_messages  # noqa: E402
 from gnomon.parity import BLOCK, DATA, PARITY, _C, _GEN, _invert, _matmul, check, protect, repair  # noqa: E402
@@ -21,14 +19,14 @@ from gnomon.parity import BLOCK, DATA, PARITY, _C, _GEN, _invert, _matmul, check
 
 class Field(unittest.TestCase):
     def test_every_choice_of_survivors_decodes(self):
-        rng = np.random.default_rng(1)
-        blocks = rng.integers(0, 256, size=(DATA, 64), dtype=np.uint8)
-        code = np.vstack([blocks, _matmul(_C, blocks)])
+        rng = random.Random(1)
+        blocks = [bytes(rng.randrange(256) for _ in range(64)) for _ in range(DATA)]
+        code = blocks + _matmul(_C, blocks)
         for _ in range(200):
-            lost = set(rng.choice(DATA + PARITY, size=PARITY, replace=False).tolist())
+            lost = set(rng.sample(range(DATA + PARITY), PARITY))
             good = [i for i in range(DATA + PARITY) if i not in lost][:DATA]
-            out = _matmul(_invert(_GEN[good]), code[good])
-            self.assertTrue(np.array_equal(out, blocks))
+            out = _matmul(_invert([_GEN[i] for i in good]), [code[i] for i in good])
+            self.assertEqual(out, blocks)
 
 
 class Repair(unittest.TestCase):
