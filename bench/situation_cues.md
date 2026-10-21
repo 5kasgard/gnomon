@@ -38,3 +38,37 @@ similarity. 50 questions where the evidence is in the situation model.
 **Next only if the check shows** top-20 coverage at least double the
 raw-similarity figure: a reader test giving each question its top-20
 facts.
+
+## Result: cues do not bridge it
+
+Run on 50 questions where the evidence is in the situation model. Coverage
+in the top k facts:
+
+| Ranked by | Top 5 | Top 10 | Top 20 | Top 50 |
+|---|---|---|---|---|
+| Fact, static embeddings | 10% | 12% | 18% | 30% |
+| Cue, static embeddings | 12% | 12% | 18% | 28% |
+| Fact and cue fused | 10% | 14% | 22% | 32% |
+| Fact, bge-small (a transformer, ONNX on CPU) | 8% | 14% | 20% | 24% |
+| Cue, bge-small | 6% | 12% | 18% | 26% |
+
+The bar set in advance (top-20 coverage double the raw figure) is not met,
+so there is no reader test for cues.
+
+Linking a request to the fact that should shape it ("set a stand-up time"
+to "the intern works 9 AM to 1 PM") is an inference. Neither similarity
+method makes it, with or without request-shaped cues. Writing the cues
+cost about 520K Haiku tokens.
+
+## Next: ask the reader to select before answering (fixed before running)
+
+Condition B2 changes only the instruction. The reader gets the same
+situation model, with its lines numbered. For each question it first
+lists up to 3 line numbers that should change its answer, then answers
+applying them.
+
+- **Measured directly:** whether a chosen line is evidence.
+- **Measured as before:** whether the answer uses the evidence (2+
+  distinctive words).
+- **Compared with** Haiku A (28.3%) and B (35.0%) on test history 0, 60
+  questions.
