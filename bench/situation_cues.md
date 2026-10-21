@@ -102,3 +102,46 @@ checked against the record.
     consolidation);
   - the profile's size in tokens.
 - **Compared with** A, B and B2 on the same 60 questions.
+
+## Result: consolidation into a profile (B3), test history 0
+
+The profile came out at 190 lines and about 4,400 tokens, against about
+48K for the situation model it condenses (about 11x smaller). It took
+about 198K Haiku tokens to write. The reader then took about 153K.
+
+| | A (top 10) | B (situation model) | B2 (select, then answer) | B3 (profile) |
+|---|---|---|---|---|
+| Uses the evidence (2+ words) | 28.3% | 35.0% | 36.7% | **25.0%** |
+| 1+ distinctive words | 53.3% | 55.0% | 68.3% | 58.3% |
+
+Split by whether the profile kept a citation to an evidence line:
+
+| | Questions | A | B2 | B3 |
+|---|---|---|---|---|
+| Profile cites the evidence | 22 | 27.3% | 45.5% | 31.8% |
+| Profile does not | 38 | 28.9% | 31.6% | 21.1% |
+
+Consolidation loses on both counts:
+
+- **It drops the evidence.** The profile cites an evidence line for 22 of
+  50 questions whose evidence was in the situation model (44%; the full
+  model had all 50).
+- **It blurs what it keeps.** Even where the evidence is cited, the reader
+  uses it less than with the raw lines and selection (31.8% vs 45.5%). A
+  condensed statement keeps the gist but loses the distinctive particulars
+  that make an answer specific.
+- **It distracts where it misses.** Where the evidence is absent, the
+  profile pulls answers below the top 10 alone (21.1% vs 28.9%).
+
+So for implicit connections, keep the situation model as raw sentences
+with pointers and have the reader select (B2), rather than summarising it.
+This matches what the sentence views showed for facts (beam_compress.md):
+selecting exact text beats rewriting it.
+
+One caveat on the data. Haiku noted while consolidating that the
+situation lines seem to come from several different people. ConvoMem's
+pre-mixed histories carry no person identifier, and no user turn
+introduces itself by name, so this cannot be checked from the data. If
+the filler conversations do come from other personas, any whole-history
+situation model is diluted on ConvoMem in a way a real user's history
+would not be.

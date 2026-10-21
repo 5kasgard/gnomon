@@ -160,12 +160,31 @@ def score(a):
     (out / "reader_results.json").write_text(json.dumps(res, indent=1, default=float), encoding="utf-8")
 
 
+def compare(a):
+    """Uses-the-evidence for any conditions answered on one history
+    (answers_<condition>_<history>.jsonl), on the questions all of them answered."""
+    out = Path(a.out)
+    gold = {g["id"]: g for g in json.loads((out.parent / f"{out.name}_gold.json").read_text())}
+    got = {c: load(out / f"answers_{c}_{a.history}.jsonl") for c in a.conditions}
+    ids = sorted(set.intersection(*(set(v) for v in got.values())) & {g for g in gold if gold[g]["distinct"]})
+    hits = lambda ans, g: sum(bool(re.search(rf"\b{re.escape(w)}", ans.lower())) for w in gold[g]["distinct"])  # noqa: E731
+    res = {"history": a.history, "n": len(ids)}
+    for c, v in got.items():
+        u2 = np.mean([hits(v[g], g) >= 2 for g in ids])
+        u1 = np.mean([hits(v[g], g) >= 1 for g in ids])
+        res[c] = {"uses_evidence": float(u2), "1plus": float(u1)}
+        print(f"{c:10s} uses the evidence {100 * u2:5.1f}%   [1+ words {100 * u1:5.1f}%]   ({len(ids)} questions)")
+    (out / f"compare_{a.history}.json").write_text(json.dumps(res, indent=1), encoding="utf-8")
+
+
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
-    p.add_argument("cmd", choices=["prepare", "pairs", "score"])
+    p.add_argument("cmd", choices=["prepare", "pairs", "score", "compare"])
+    p.add_argument("--history", type=int, default=0)
+    p.add_argument("--conditions", nargs="+", default=["A", "B"])
     p.add_argument("--convomem")
     p.add_argument("--dev")
     p.add_argument("--test")
     p.add_argument("--out", required=True)
     a = p.parse_args()
-    {"prepare": prepare, "pairs": pairs, "score": score}[a.cmd](a)
+    {"prepare": prepare, "pairs": pairs, "score": score, "compare": compare}[a.cmd](a)
