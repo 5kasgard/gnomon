@@ -114,7 +114,7 @@ def load_locomo(path: Path):
         yield f"locomo/{ci}", bs, qs
 
 
-def load_convomem(paths, min_context: int = 150, per_file: int = 60, seed: int = 20261021):
+def load_convomem(paths, min_context: int = 150, per_file: int = 60, seed: int = 20261021, q_per_case: int = 5):
     """ConvoMem pre-mixed test cases (Salesforce, CC BY-NC 4.0): the
     evidence conversations mixed among filler ones. Only histories of at
     least `min_context` conversations, `per_file` cases sampled per file
@@ -149,7 +149,10 @@ def load_convomem(paths, min_context: int = 150, per_file: int = 60, seed: int =
                     by_text.setdefault(msg["text"].strip(), set()).add(mid)
                 bs.append({"turns": [turn]})
             qs = []
-            for item in case["evidenceItems"]:
+            items = case["evidenceItems"]
+            if len(items) > q_per_case:
+                items = random.Random(f"{seed}-{kind}-{n}").sample(items, q_per_case)
+            for item in items:
                 ev = set()
                 for e in item.get("message_evidences", []):
                     ev |= by_text.get(e["text"].strip(), set())
@@ -211,13 +214,34 @@ def features(name, bs, qs, model, pool_n: int = 200) -> list:
     return out
 
 
-def dataset(name: str, loader, model, cache: Path) -> list:
+_MODEL = None
+
+
+def _child(args):
+    global _MODEL
+    if _MODEL is None:
+        from model2vec import StaticModel
+        _MODEL = StaticModel.from_pretrained(MODEL)
+    return features(*args, _MODEL)
+
+
+def dataset(name: str, loader, model, cache: Path, fresh_process: bool = False) -> list:
+    """With `fresh_process`, each case runs in a short-lived worker: the
+    recall core's analysis cache lives for the whole process and is capped
+    by count, not size, so thousands of large cases in one process
+    exhaust memory."""
     f = cache / f"multi_{name}.pkl"
     if f.exists():
         return pickle.loads(f.read_bytes())
     t0, out = time.time(), []
-    for conv, bs, qs in loader:
-        out += features(conv, bs, qs, model)
+    if fresh_process:
+        import multiprocessing as mp
+        with mp.get_context("spawn").Pool(1, maxtasksperchild=4) as pool:
+            for r in pool.imap(_child, ((c, b, q) for c, b, q in loader)):
+                out += r
+    else:
+        for conv, bs, qs in loader:
+            out += features(conv, bs, qs, model)
     f.write_bytes(pickle.dumps(out))
     print(f"features for {name}: {len(out)} questions in {time.time() - t0:.0f} s", flush=True)
     return out
@@ -240,7 +264,7 @@ if __name__ == "__main__":
         print("locomo questions", len(d), "reach", round(100 * np.mean([x["y"].sum() / len(x["ev"]) for x in d]), 1))
     if a.convomem:
         files = sorted(Path(a.convomem).glob("*_evidence.json"))
-        d = dataset("convomem", load_convomem(files), model, cache)
+        d = dataset("convomem", load_convomem(files), model, cache, fresh_process=True)
         print("convomem questions", len(d), "reach", round(100 * np.mean([x["y"].sum() / len(x["ev"]) for x in d]), 1))
     if a.lme:
         d = dataset("lme_s", load_lme(Path(a.lme)), model, cache)

@@ -66,3 +66,15 @@ version reads each file twice. The first pass counts the qualifying cases
 and draws 60 of their positions with `random.Random(20261021).sample`,
 which is the sampling first written down. The second pass processes one
 case at a time.
+
+**Second amendment, before any result.** Each ConvoMem case carries
+about 60 questions (18,000 in all), not one. Per case, 5 questions are
+now drawn with a seed derived from 20261021, kind and case number, which
+gives about 1,500 questions. Each case is processed in a fresh worker
+process.
+
+This run also found a product bug. The recall core's analysis cache
+lives for the whole process and is capped at 2,000,000 entries by count,
+not by size. It grew by about 90 MB per 14,000-message case and is never
+freed below the cap, so a long-running server over a large record could
+exhaust memory. It should be capped by bytes.
