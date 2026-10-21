@@ -114,6 +114,42 @@ def load_locomo(path: Path):
         yield f"locomo/{ci}", bs, qs
 
 
+def load_convomem(paths, min_context: int = 150, per_file: int = 60, seed: int = 20261021):
+    """ConvoMem pre-mixed test cases (Salesforce, CC BY-NC 4.0): the
+    evidence conversations mixed among filler ones. Only histories of at
+    least `min_context` conversations, `per_file` cases sampled per file
+    with a fixed seed. Evidence = the messages whose text equals one of
+    the case's evidence messages."""
+    import random
+    import ijson
+    for path in paths:
+        cases = []
+        with open(path, "rb") as f:
+            for i, case in enumerate(ijson.items(f, "item")):
+                if case.get("contextSize", 0) >= min_context:
+                    cases.append(case)
+        rng = random.Random(seed)
+        cases = rng.sample(cases, min(per_file, len(cases)))
+        kind = Path(path).stem
+        for n, case in enumerate(cases):
+            bs, mid, by_text = [], 0, {}
+            for conv in case["conversations"]:
+                turn = []
+                for msg in conv["messages"]:
+                    mid += 1
+                    role = "user" if msg["speaker"] == "user" else "assistant"
+                    turn.append({"id": mid, "role": role, "content": msg["text"]})
+                    by_text.setdefault(msg["text"].strip(), set()).add(mid)
+                bs.append({"turns": [turn]})
+            qs = []
+            for item in case["evidenceItems"]:
+                ev = set()
+                for e in item.get("message_evidences", []):
+                    ev |= by_text.get(e["text"].strip(), set())
+                qs.append({"question": item["question"], "category": kind, "ev": ev})
+            yield f"convomem/{kind}/{n}", bs, qs
+
+
 # ----------------------------------------------------------------- features
 def features(name, bs, qs, model, pool_n: int = 200) -> list:
     out = []
@@ -185,6 +221,7 @@ if __name__ == "__main__":
     p.add_argument("--beam")
     p.add_argument("--locomo")
     p.add_argument("--lme")
+    p.add_argument("--convomem", help="folder with the ConvoMem pre-mixed files (one per evidence kind)")
     p.add_argument("--cache", default="/tmp/beam_learn_cache")
     a = p.parse_args()
     from model2vec import StaticModel
@@ -194,6 +231,10 @@ if __name__ == "__main__":
     if a.locomo:
         d = dataset("locomo", load_locomo(Path(a.locomo)), model, cache)
         print("locomo questions", len(d), "reach", round(100 * np.mean([x["y"].sum() / len(x["ev"]) for x in d]), 1))
+    if a.convomem:
+        files = sorted(Path(a.convomem).glob("*_evidence.json"))
+        d = dataset("convomem", load_convomem(files), model, cache)
+        print("convomem questions", len(d), "reach", round(100 * np.mean([x["y"].sum() / len(x["ev"]) for x in d]), 1))
     if a.lme:
         d = dataset("lme_s", load_lme(Path(a.lme)), model, cache)
         print("lme questions", len(d), "reach", round(100 * np.mean([x["y"].sum() / len(x["ev"]) for x in d]), 1))
