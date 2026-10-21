@@ -420,6 +420,14 @@ seen (`bench/multi.md`, `bench/multi_invariant.md`):
 Eight weights do as well as sixty-six. Links nobody stated are where
 every method fails, so they are the next problem.
 
+The eight-weight ranking ships in `gnomon.rank` and orders the `context`
+tool's results. It reproduces the benchmark exactly (45.0 recall@10 on the
+same 231 LoCoMo questions) at about 7 ms a question. Turn it on with
+`python -m gnomon.mcp ... --meaning` after `pip install model2vec`.
+Without that, Gnomon ranks by recall alone and needs nothing beyond the
+standard library. Surprise is computed once per turn as the record grows,
+never again for turns already seen.
+
 **Repairable storage.** `gnomon.parity` adds Reed-Solomon parity beside
 the log: 2 parity blocks for every 16 blocks of 4 KiB, 14.4% extra
 storage. Any 2 damaged blocks in a stripe are rebuilt byte for byte, and

@@ -451,8 +451,11 @@ class ToolError(Exception):
 
 class Server:
     def __init__(self, log: str, writer: str, checker: Optional[str] = None, per_session: bool = False,
-                 session: Optional[str] = None, dedup: bool = True):
+                 session: Optional[str] = None, dedup: bool = True, embed=None):
         self.memory = Memory(log)
+        # Optional meaning layer for `context` (gnomon.rank); None keeps the
+        # server dependency-free and ranks by recall alone.
+        self.embed = embed
         # What this connection has already put in the model's context, so a
         # repeat is referred to rather than paid for again (see _seen).
         self.dedup = dedup
@@ -680,7 +683,11 @@ class Server:
     def _tiers(self):
         if getattr(self, "_tier_cache", None) is None:
             from .consolidate import Tiers
-            self._tier_cache = Tiers(self.memory, self.writer)
+            ranker = None
+            if self.embed is not None:
+                from .rank import Ranker
+                ranker = Ranker(self.memory, self.writer, embed=self.embed)
+            self._tier_cache = Tiers(self.memory, self.writer, ranker=ranker)
         return self._tier_cache
 
     def t_context(self, a: dict) -> tuple[str, Any]:
@@ -1254,11 +1261,20 @@ def main(argv: Optional[list[str]] = None) -> int:
     p.add_argument("--per-session", action="store_true",
                    help="start a new writer for this session, as an instance of --writer (which needs 'spawn')")
     p.add_argument("--session", help="this session's id, if the host has one (default: random)")
+    p.add_argument("--meaning", action="store_true",
+                   help="rank `context` by words, meaning and surprise (needs: pip install model2vec)")
     p.add_argument("--no-dedup", action="store_true",
                    help="always show recall hits in full, even if this session was shown them already")
     a = p.parse_args(argv)
+    embed = None
+    if a.meaning:
+        from .rank import static_embedder
+        embed = static_embedder()
+        if embed is None:
+            print("gnomon: --meaning needs model2vec (pip install model2vec)", file=sys.stderr)
+            return 2
     server = Server(a.log, a.writer, a.checker, per_session=a.per_session,
-                    session=a.session or os.environ.get("GNOMON_SESSION"), dedup=not a.no_dedup)
+                    session=a.session or os.environ.get("GNOMON_SESSION"), dedup=not a.no_dedup, embed=embed)
     try:
         writers = server.memory.writers()
     except GateError as e:
