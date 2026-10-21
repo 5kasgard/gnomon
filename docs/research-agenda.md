@@ -14,6 +14,9 @@ or cited. Where something is a guess, it says so.
 | Recall, session level (LoCoMo, all) | 86.7% top 5, 92.1% top 10 | same, `session@k` columns |
 | …against a corrected answer key | within half a point | `--audit errors.json` (dial481/locomo-audit) |
 | End-to-end answers (LoCoMo 5-9, 200 questions + 50 unanswerable) | F1 54.6 from Gnomon's top 10 (521 tokens) vs 61.7 from the whole conversation (22,818 tokens); abstains on 86% of unanswerable vs 78% | `bench/qa/score.py` |
+| Recall where the history cannot be read (BEAM, 100K-10M tokens) | top 10 (~5,500 tokens) holds 38.7 / 27.0 / 19.9% of evidence at 500K / 1M / 10M, against 13.5 / 3.1 / 0% in the last 200K tokens; at 100K the window wins (96.3 vs 45.1) | `python bench/beam.py --data BEAM` (`bench/beam_results.json`) |
+| Standing directives loaded with every recall (BEAM, fixed on 500K) | instructions 4-6% -> 91-94% and preferences 15-42% -> 43-74% at 100K and 1M held out; all questions +13-14 points for ~1,000 more tokens; at 10M only +4 (the store outgrows its 1,500-token budget) | `python bench/beam.py --consolidate`, `bench/beam_consolidate.md` |
+| Answers at 1M tokens (BEAM, Haiku, 100 questions / 10 conversations) | F1 33.6 and every number right on 54% from Gnomon's top 10, vs F1 8.8 and 5% from the last 128K tokens (same 3 conversations: +23 F1, ahead in all 3) | `bench/beam_qa/score.py` |
 | Cheap workers vs an LLM (spam, star ratings, sentiment) | see README "The floor" | `python bench/floor/run.py`, protocol fixed in `bench/floor/PROTOCOL.md` |
 | Form learner under change | change detection leaves regret in an unchanging world as it was (0.004-0.019) and cuts it after a change (0.13-0.20 to 0.08-0.16) | `tests/test_forms_stress.py` (simulated worlds, seeds held out) |
 
@@ -33,10 +36,13 @@ by tens of points (memoryatlas.dev). Consequences for Gnomon:
   `bench/qa`: the memory reader is behind on F1 but uses ~44x fewer
   tokens);
 - the benchmark where memory must win is one whose history cannot fit in
-  context: BEAM (1M and 10M tokens) and LongMemEval-M. **Blocked here:**
-  the datasets are on Hugging Face, which this workspace's network does
-  not allow. Allowing `huggingface.co` (claude.ai Settings > Capabilities)
-  unblocks BEAM, LongMemEval and static embedding models in one step.
+  context: BEAM and LongMemEval-M. BEAM's conversations are in git and
+  are now measured (`bench/beam.py`, retrieval only, judge-free): the
+  crossover is between 100K and 500K tokens, and answers follow
+  (`bench/beam_qa`: memory ahead by 23 F1 at 1M). Still to do: a larger
+  answer run with a second reader model, and LongMemEval-M and
+  static embedding models, which are on Hugging Face, which this
+  workspace's network does not allow (claude.ai Settings > Capabilities).
 
 **Unanswerable questions are scored by almost no one.** LoCoMo's 446
 adversarial questions are left out of every published score. Gnomon now
@@ -57,7 +63,17 @@ record should be strong: "not in the record" is a checkable answer.
 - the turn-level recall ceiling is lexical: multi-hop (46% at top 10) and
   open-domain (36%) questions need meaning, not words. A diversity rerank
   was tried and lowered recall; the next candidate is a semantic layer,
-  which needs model weights (blocked as above).
+  which needs model weights (blocked as above);
+- on BEAM, recall falls with length (45 / 39 / 27 / 20% at top 10 from
+  100K to 10M) and is near zero where the question cannot share words
+  with its evidence: standing instructions and preferences (0-42%) and
+  orderings and summaries spread over many messages (under 10% at 1M).
+  Standing directives now cover instructions at 100K-1M (above); at 10M
+  the store outgrows its budget and needs supersession. Coverage by part
+  of the record was tried and did nothing for orderings and summaries:
+  about 70% of their evidence is outside the top 200 by words, so they
+  need dated summaries written once (an offline model pass) or meaning.
+  At 10M the first query builds the index (p95 7.9 s).
 
 ## 3. Mechanisms that are missing or only half built
 

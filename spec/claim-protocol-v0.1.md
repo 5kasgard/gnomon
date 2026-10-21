@@ -1274,6 +1274,7 @@ independently written logs, storage in immutable segments with sync to
 object storage and client-side encryption, a hosted remote MCP endpoint
 with sign-in, a web viewer for people, arithmetic and aggregation in queries, HTTP
 transport for the MCP server, a persistent recall index (recall re-reads
-the visible memory on every request), and end-to-end question answering
-benchmarks, which need a language model to read the hits.
+the visible memory on every request; at 10M tokens the first query of a
+conversation takes seconds). End-to-end question answering is measured in
+`bench/qa` and `bench/beam_qa`, with a language model reading the hits.
 See the v1 implementation plan.

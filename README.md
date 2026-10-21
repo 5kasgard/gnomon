@@ -284,9 +284,93 @@ the gap: multi-hop answers improved (37 to 43) and single-hop ones got
 worse (71 to 66). This matches what audits of the field found: on
 conversations this short (about 23,000 tokens), reading everything beats
 retrieval, and memory earns its place on cost now and on histories too
-long to read later. The test that would show the second (BEAM, at 1-10
-million tokens) needs data from Hugging Face, which this workspace cannot
-reach yet. One reader model, one run per condition.
+long to read later (next section). One reader model, one run per
+condition.
+
+### Where memory has to win: histories too long to read
+
+[BEAM](https://github.com/mohammadtavakoli78/BEAM) (ICLR 2026) holds
+conversations of 100K, 500K, 1M and 10M tokens, with probing questions
+that name the messages holding their evidence. A model told to read "the
+whole conversation" past its context reads only the most recent part, so
+the comparison here is Gnomon's top 10 messages against the last 200,000
+tokens. Judge-free: the share of each question's evidence messages
+present (`python bench/beam.py --data BEAM`, results in
+`bench/beam_results.json`; nothing tuned on BEAM):
+
+| Conversation length | Questions | Gnomon top 10 (≈5,500 tokens) | Last 200K tokens | Most recent ≈5,500 tokens |
+|---|---|---|---|---|
+| 100K (median 147K) | 355 | 45.1 (41.4-48.8) | **96.3** (91.7-100) | 0.6 |
+| 500K | 629 | **38.7** (35.9-41.5) | 13.5 (11.5-16.0) | 0.9 |
+| 1M | 625 | **27.0** (24.9-29.1) | 3.1 (2.1-4.2) | 0.7 |
+| 10M | 176 | **19.9** (16.3-23.2) | 0.0 | 0.0 |
+
+95% intervals by conversation; tokens estimated at four characters. The crossover the LoCoMo result predicted
+is there: when the history fits, reading it wins; from 500K tokens up, a
+window holds little of the evidence and recall at a thirty-sixth of the
+tokens holds several times more. What the table does not show is answers: these
+are evidence-recall numbers, not BEAM's LLM-judged scores, and are not
+comparable to the vendor results published for it.
+
+The weak spots are stated by category (`by_category` in the results). Recall
+holds best where the question shares words with its evidence (contradiction
+pairs 50-74% at top 10, knowledge updates 42-81%, the message with the
+newest value retrieved 59-82% of the time) and fails where it cannot:
+instructions and preferences set long before and never echoed in the
+question (0-42%), and orderings and summaries whose evidence is spread
+over dozens of messages (under 10% at 1M). Recall also falls with length
+(45, 39, 27, 20 at top 10), and at 10M tokens the first query of a
+conversation builds the index (median 117 ms, p95 7.9 s).
+
+**Standing directives.** "Always use 24-hour time when I ask about
+meetings" is needed by "When is our next meeting?", which shares no words
+with it. `gnomon.consolidate` pulls such sentences ("Always…", "Never…",
+"I prefer…") out of what the user said and loads them with every recall
+inside a fixed 1,500-token budget, counted against the comparison window
+too. Fixed on 500K, then run once on the other sizes
+(`bench/beam_consolidate.md`; `python bench/beam.py --data BEAM --consolidate`, results in
+`bench/beam_consolidate_results.json`):
+
+| Length | All questions, top 10 | Instructions | Preferences | Median tokens |
+|---|---|---|---|---|
+| 100K (held out) | 45.1 → **59.0** | 3.8 → **90.8** | 41.5 → **73.9** | 5,902 |
+| 500K (tuned) | 38.7 → **52.1** | 17.4 → **90.5** | 20.2 → **64.3** | 6,243 |
+| 1M (held out) | 27.0 → **40.2** | 6.2 → **94.0** | 15.4 → **43.0** | 6,982 |
+| 10M (held out) | 19.9 → **24.3** | 0.0 → **38.8** | 19.2 → 19.2 | 7,037 |
+
+At 10M the user's directives come to about 5,300 tokens, over three times
+the budget, and picking among them by shared words loses most of the gain:
+the budget, not the idea, is the limit there, and is left as found rather
+than retuned on the held-out data. Covering order and summary questions by
+taking the best turn from each part of the record was tried and did
+nothing (the evidence is not among the top 200 by words to begin with);
+those need dated summaries written once, or meaning, not reordering.
+
+In a spot check, the cited message held the answer's numbers in 44 of 49
+questions, so BEAM's evidence ids are close to, not exactly, right.
+
+**Answers at 1M tokens.** Claude Haiku answered 100 questions from 10
+random 1M conversations (80 with a gold answer: facts, updated values,
+dates, cross-session counts; 20 about things never said) from Gnomon's top
+10 messages, and the same questions in 3 of those conversations from the
+last 128,000 tokens (`bench/beam_qa`, prompts in `bench/beam_qa/PROMPTS.md`).
+Judge-free:
+
+| Reading from | Answer F1 | Every number right | Wrongly "not mentioned" | Says "not mentioned" when it isn't there |
+|---|---|---|---|---|
+| Gnomon top 10, 10 conversations | **33.6** (25.5-41.4) | **54%** | 29% | 60% |
+| Gnomon top 10, the 3 window conversations | **32.1** | 60% | 25% | 50% |
+| Last 128K tokens, same 3 conversations | 8.8 | 5% | 83% | 83% |
+
+On the same questions, reading from memory beat reading the window by 23
+F1 points, higher in each of the 3 conversations (15.6, 20.6, 33.7) and on
+17 of 24 questions (2 worse). The window mostly says "not mentioned",
+correctly by its own lights: the evidence is not in it. That is the
+expected result, measured; the interval is wide (3 conversations) because
+the window condition costs ~128,000 tokens per conversation and was run
+only to confirm what evidence recall predicted. Memory's own errors are
+the ones recall predicts: when the evidence is missing from the top 10,
+Haiku says "not mentioned" (29%). One reader model, one run.
 
 ### Speed at scale
 
@@ -591,6 +675,7 @@ python/gnomon/        Python package (ctypes binding, standard library only)
   __main__.py         command line: init, register, verify, query, hooks
 python/tests/         end-to-end, oracle, multi-process, MCP and SDK tests
 bench/locomo.py       recall on LoCoMo (the dataset is not included)
+bench/beam.py         recall on BEAM, 100K-10M tokens, against a context window
 spec/                 the claim protocol
 ```
 
