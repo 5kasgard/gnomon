@@ -284,9 +284,46 @@ the gap: multi-hop answers improved (37 to 43) and single-hop ones got
 worse (71 to 66). This matches what audits of the field found: on
 conversations this short (about 23,000 tokens), reading everything beats
 retrieval, and memory earns its place on cost now and on histories too
-long to read later. The test that would show the second (BEAM, at 1-10
-million tokens) needs data from Hugging Face, which this workspace cannot
-reach yet. One reader model, one run per condition.
+long to read later (next section). One reader model, one run per
+condition.
+
+### Where memory has to win: histories too long to read
+
+[BEAM](https://github.com/mohammadtavakoli78/BEAM) (ICLR 2026) holds
+conversations of 100K, 500K, 1M and 10M tokens, with probing questions
+that name the messages holding their evidence. A model told to read "the
+whole conversation" past its context reads only the most recent part, so
+the comparison here is Gnomon's top 10 messages against the last 200,000
+tokens. Judge-free: the share of each question's evidence messages
+present (`python bench/beam.py --data BEAM`, results in
+`bench/beam_results.json`; nothing tuned on BEAM):
+
+| Conversation length | Questions | Gnomon top 10 (≈5,500 tokens) | Last 200K tokens | Most recent ≈5,500 tokens |
+|---|---|---|---|---|
+| 100K (median 147K) | 355 | 45.1 (41.4-48.8) | **96.3** (91.7-100) | 0.6 |
+| 500K | 629 | **38.7** (35.9-41.5) | 13.5 (11.5-16.0) | 0.9 |
+| 1M | 625 | **27.0** (24.9-29.1) | 3.1 (2.1-4.2) | 0.7 |
+| 10M | 176 | **19.9** (16.3-23.2) | 0.0 | 0.0 |
+
+95% intervals by conversation; tokens estimated at four characters. The crossover the LoCoMo result predicted
+is there: when the history fits, reading it wins; from 500K tokens up, a
+window holds little of the evidence and recall at a thirty-sixth of the
+tokens holds several times more. What the table does not show is answers: these
+are evidence-recall numbers, not BEAM's LLM-judged scores, and are not
+comparable to the vendor results published for it.
+
+The weak spots are stated by category (`by_category` in the results). Recall
+holds best where the question shares words with its evidence (contradiction
+pairs 50-74% at top 10, knowledge updates 42-81%, the message with the
+newest value retrieved 59-82% of the time) and fails where it cannot:
+instructions and preferences set long before and never echoed in the
+question (0-42%), and orderings and summaries whose evidence is spread
+over dozens of messages (under 10% at 1M). Those need proactive standing
+instructions and coverage-oriented retrieval, not better ranking. Recall
+also falls with length (45, 39, 27, 20 at top 10), and at 10M tokens the
+first query of a conversation builds the index (median 117 ms, p95 7.9 s).
+In a spot check, the cited message held the answer's numbers in 44 of 49
+questions, so BEAM's evidence ids are close to, not exactly, right.
 
 ### Speed at scale
 
@@ -591,6 +628,7 @@ python/gnomon/        Python package (ctypes binding, standard library only)
   __main__.py         command line: init, register, verify, query, hooks
 python/tests/         end-to-end, oracle, multi-process, MCP and SDK tests
 bench/locomo.py       recall on LoCoMo (the dataset is not included)
+bench/beam.py         recall on BEAM, 100K-10M tokens, against a context window
 spec/                 the claim protocol
 ```
 
