@@ -52,6 +52,10 @@ pub fn schema() -> Schema {
         ("episode", 3),
         ("participant", 2),
         ("handoff", 4),
+        ("position", 3),
+        ("holds", 3),
+        ("appointed", 4),
+        ("dismissed", 2),
         ("bound", 3),
         ("writer", 3),
         ("identity", 3),
@@ -66,6 +70,12 @@ pub fn schema() -> Schema {
 /// Built-in views: ordinary Datalog over the base relations, so anyone can
 /// read exactly what each one means.
 pub const VIEWS: &str = r#"
+% Organisations: U is above T in O (directly or through others).
+above(O, T, U) :- position(O, T, U), U != "".
+above(O, T, U) :- position(O, T, M), M != "", above(O, M, U).
+% B oversees W: B holds a position above one W holds.
+oversees(B, W) :- holds(W, O, T), above(O, T, U), holds(B, O, U).
+
 % Currently true and not under an open dispute.
 believed(C) :- truth(C, "true"), not disputed(C).
 % Currently false: refuted, or lost a ruling.
@@ -355,6 +365,30 @@ impl<'a> Builder<'a> {
             self.add(eng, "handoff", vec![s(cid), s(&c.frame), s(&c.writer), s(&c.record_time)], src)?;
         }
 
+        let need_org = ["position", "holds", "appointed", "dismissed"].iter().any(|r| self.needed.contains(r));
+        for p in st.positions.values().filter(|_| need_org) {
+            if !self.sees(&p.compartment) {
+                continue;
+            }
+            let src = self.src(&p.event);
+            let up = p.reports_to.clone().unwrap_or_default();
+            self.add(eng, "position", vec![s(&p.org), s(&p.title), s(&up)], src)?;
+        }
+        for (aid, a) in st.appointments.iter().filter(|_| need_org) {
+            if !self.sees(&a.compartment) {
+                continue;
+            }
+            let src = self.src(aid);
+            self.add(eng, "appointed", vec![s(aid), s(&a.holder), s(&a.org), s(&a.title)], src)?;
+            match &a.ended {
+                None => self.add(eng, "holds", vec![s(&a.holder), s(&a.org), s(&a.title)], src)?,
+                Some((ev, ..)) => {
+                    let end = self.src(ev);
+                    self.add(eng, "dismissed", vec![s(aid), s(ev)], end)?
+                }
+            }
+        }
+
         let episodes_needed = ["episode", "participant", "bound"].iter().any(|r| self.needed.contains(r));
         let need_6 = episodes_needed;
 
@@ -452,6 +486,9 @@ pub fn event_visible(ledger: &Ledger, visible: &[String], e: &Value) -> bool {
         "supersede" => st.supersessions.get(id).map(|x| sees(&x.compartment)).unwrap_or(false),
         "appeal" => st.appeals.get(id).map(|x| sees(&x.compartment)).unwrap_or(false),
         "handoff" => st.handoffs.get(id).map(|x| sees(&x.compartment)).unwrap_or(false),
+        "position" => sees(field("compartment")),
+        "appoint" => st.appointments.get(id).map(|x| sees(&x.compartment)).unwrap_or(false),
+        "dismiss" => st.appointments.get(field("appointment")).map(|x| sees(&x.compartment)).unwrap_or(false),
         "resolve" => {
             let d = field("dispute");
             st.supersessions.get(d).map(|x| sees(&x.compartment)).unwrap_or(false)

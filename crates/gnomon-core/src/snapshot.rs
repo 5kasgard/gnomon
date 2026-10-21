@@ -39,7 +39,7 @@ use std::sync::OnceLock;
 
 use crate::json::Value;
 use crate::ledger::{
-    AppealInfo, ClaimInfo, EpisodeInfo, HandoffInfo, Ledger, Resolution, State, SupersessionInfo, VerdictInfo,
+    AppealInfo, AppointmentInfo, ClaimInfo, PositionInfo, EpisodeInfo, HandoffInfo, Ledger, Resolution, State, SupersessionInfo, VerdictInfo,
     WriterInfo,
 };
 use crate::sha256::digest;
@@ -257,6 +257,18 @@ impl<A: Codec, B: Codec, C: Codec> Codec for (A, B, C) {
     }
 }
 
+impl<A: Codec, B: Codec, C: Codec, D: Codec> Codec for (A, B, C, D) {
+    fn enc(&self, w: &mut Vec<u8>) {
+        self.0.enc(w);
+        self.1.enc(w);
+        self.2.enc(w);
+        self.3.enc(w);
+    }
+    fn dec(r: &mut Reader) -> Option<Self> {
+        Some((A::dec(r)?, B::dec(r)?, C::dec(r)?, D::dec(r)?))
+    }
+}
+
 impl<T: Codec> Codec for BTreeMap<String, T> {
     fn enc(&self, w: &mut Vec<u8>) {
         self.len().enc(w);
@@ -375,8 +387,11 @@ codec_struct!(SupersessionInfo {
 codec_struct!(VerdictInfo { claim, result, writer, seq });
 codec_struct!(HandoffInfo { seq, compartment, frame, writer, record_time, body });
 codec_struct!(AppealInfo { claim, compartment, evidence, by, by_party, record_time, seq, appeal_parties, resolution });
+codec_struct!(PositionInfo { compartment, org, title, reports_to, duties, by, event, seq });
+codec_struct!(AppointmentInfo { compartment, org, title, holder, by, record_time, seq, ended });
 codec_struct!(State {
-    writers, episodes, claims, supersessions, verdicts, appeals, handoffs, appeals_by_claim, schema_version
+    writers, episodes, claims, supersessions, verdicts, appeals, handoffs, positions, appointments, appeals_by_claim,
+    schema_version
 });
 codec_struct!(Ledger { events, state });
 

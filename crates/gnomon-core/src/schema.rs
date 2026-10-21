@@ -34,6 +34,9 @@ pub const WRITER_KINDS: &[&str] = &["human", "model", "tool"];
 pub const CAPABILITIES: &[&str] = &["owner", "write", "verify", "govern", "spawn"];
 pub const EVENT_KINDS: &[&str] = &[
     "register",
+    "position",
+    "appoint",
+    "dismiss",
     "episode",
     "claim",
     "verdict",
@@ -693,6 +696,62 @@ pub const MAX_ITEMS: usize = 64;
 
 /// One line of text: no line breaks or tabs, so it cannot pass itself off
 /// as another line (another field, another writer) wherever it is shown.
+/// Longest title of a position.
+pub const MAX_TITLE: usize = 64;
+
+/// A position in an organisation: its title, whom it reports to (none: it
+/// answers to the organisation's owners), and its duties in one line.
+pub struct Position<'a> {
+    pub compartment: &'a str,
+    pub org: &'a str,
+    pub title: &'a str,
+    pub reports_to: Option<&'a str>,
+    pub duties: &'a str,
+}
+
+pub fn position(body: &Value) -> GateResult<Position<'_>> {
+    let f = Fields::of(body, "position")?;
+    f.only(&["compartment", "org", "title", "reports_to", "duties"])?;
+    let title = f.text("title", MAX_TITLE, false)?;
+    one_line(title, "position: 'title'")?;
+    let reports_to = f.opt_text("reports_to", MAX_TITLE)?;
+    if reports_to == Some(title) {
+        return Err(body_err("position: a position cannot report to itself"));
+    }
+    let duties = f.text("duties", 500, false)?;
+    one_line(duties, "position: 'duties'")?;
+    Ok(Position { compartment: f.ident("compartment")?, org: f.ident("org")?, title, reports_to, duties })
+}
+
+/// An appointment of a writer to a position.
+pub struct Appoint<'a> {
+    pub compartment: &'a str,
+    pub org: &'a str,
+    pub title: &'a str,
+    pub holder: &'a str,
+}
+
+pub fn appoint(body: &Value) -> GateResult<Appoint<'_>> {
+    let f = Fields::of(body, "appoint")?;
+    f.only(&["compartment", "org", "title", "holder"])?;
+    let title = f.text("title", MAX_TITLE, false)?;
+    Ok(Appoint { compartment: f.ident("compartment")?, org: f.ident("org")?, title, holder: f.ident("holder")? })
+}
+
+/// The end of an appointment, with the reason in one line.
+pub struct Dismiss<'a> {
+    pub appointment: &'a str,
+    pub reason: &'a str,
+}
+
+pub fn dismiss(body: &Value) -> GateResult<Dismiss<'_>> {
+    let f = Fields::of(body, "dismiss")?;
+    f.only(&["appointment", "reason"])?;
+    let reason = f.text("reason", 500, false)?;
+    one_line(reason, "dismiss: 'reason'")?;
+    Ok(Dismiss { appointment: f.text("appointment", 100, false)?, reason })
+}
+
 pub fn one_line(s: &str, what: &str) -> GateResult<()> {
     if s.chars().any(|c| matches!(c, '\n' | '\r' | '\t')) {
         return Err(body_err(format!("{what} is one line: no line breaks or tabs")));

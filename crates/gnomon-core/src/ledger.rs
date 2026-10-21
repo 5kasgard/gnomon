@@ -210,6 +210,39 @@ pub struct HandoffInfo {
     pub body: Value,
 }
 
+/// A position in an organisation (the latest definition of its title).
+#[derive(Clone, Debug, PartialEq)]
+pub struct PositionInfo {
+    pub compartment: String,
+    pub org: String,
+    pub title: String,
+    pub reports_to: Option<String>,
+    pub duties: String,
+    /// Who defined it last, and the event that did.
+    pub by: String,
+    pub event: String,
+    pub seq: usize,
+}
+
+/// A writer appointed to a position; `ended` once dismissed or resigned:
+/// (event, by whom, reason, when).
+#[derive(Clone, Debug, PartialEq)]
+pub struct AppointmentInfo {
+    pub compartment: String,
+    pub org: String,
+    pub title: String,
+    pub holder: String,
+    pub by: String,
+    pub record_time: String,
+    pub seq: usize,
+    pub ended: Option<(String, String, String, String)>,
+}
+
+/// The key of a position: organisation and title.
+pub fn position_key(org: &str, title: &str) -> String {
+    format!("{org}/{title}")
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct AppealInfo {
     pub claim: String,
@@ -247,6 +280,10 @@ pub struct State {
     pub verdicts: BTreeMap<String, VerdictInfo>,
     pub appeals: BTreeMap<String, AppealInfo>,
     pub handoffs: BTreeMap<String, HandoffInfo>,
+    /// Positions by "org/title".
+    pub positions: BTreeMap<String, PositionInfo>,
+    /// Appointments by event id.
+    pub appointments: BTreeMap<String, AppointmentInfo>,
     /// Appeal ids by claim, in log order (an index; not part of the view).
     pub appeals_by_claim: BTreeMap<String, Vec<String>>,
     pub schema_version: i64,
@@ -399,6 +436,9 @@ pub enum Change {
     Resolve { supersession: String, event: String, outcome: String, party: String },
     Appeal { event: String, info: AppealInfo },
     Handoff { event: String, info: HandoffInfo },
+    Position { info: PositionInfo },
+    Appoint { event: String, info: AppointmentInfo },
+    Dismiss { appointment: String, event: String, by: String, reason: String, time: String },
     ResolveAppeal { appeal: String, event: String, outcome: String, party: String },
     SchemaVersion(i64),
 }
@@ -566,6 +606,17 @@ fn commit(st: &mut State, checked: Checked, seq: usize) {
         Change::Handoff { event, mut info } => {
             info.seq = seq;
             st.handoffs.insert(event, info);
+        }
+        Change::Position { mut info } => {
+            info.seq = seq;
+            st.positions.insert(position_key(&info.org, &info.title), info);
+        }
+        Change::Appoint { event, mut info } => {
+            info.seq = seq;
+            st.appointments.insert(event, info);
+        }
+        Change::Dismiss { appointment, event, by, reason, time } => {
+            st.appointments.get_mut(&appointment).expect("checked").ended = Some((event, by, reason, time));
         }
         Change::Appeal { event, mut info } => {
             info.seq = seq;
@@ -1607,6 +1658,118 @@ fn check(
             })
         }
 
+        "position" => {
+            need(w, "write")?;
+            let p = schema::position(body)?;
+            need_compartment(w, p.compartment)?;
+            let key = position_key(p.org, p.title);
+            // One organisation lives in one compartment.
+            if st.positions.values().any(|x| x.org == p.org && x.compartment != p.compartment) {
+                return Err(not_found("organisation", p.org));
+            }
+            if let Some(up) = p.reports_to {
+                if !st.positions.contains_key(&position_key(p.org, up)) {
+                    return Err(not_found("position", up));
+                }
+                // No cycles: the title must not be above the one it reports to.
+                if st.chain_above(p.org, up).iter().any(|t| t == p.title) {
+                    return Err(err("E_ORG", "a position cannot report to one below it"));
+                }
+            }
+            // Who may define it: an owner or governor, or the holder of a
+            // position it reports to, directly or through others. For an
+            // existing title the same must hold of where it reported before.
+            let governs = w.capabilities.iter().any(|c| c == "owner" || c == "govern");
+            let may = |up: Option<&str>| governs || up.is_some_and(|u| st.holds_at_or_above(writer, p.org, u));
+            if !may(p.reports_to) {
+                return Err(err("E_ORG", "only an owner, a governor or a holder of a position above may define it"));
+            }
+            if let Some(old) = st.positions.get(&key) {
+                if !may(old.reports_to.as_deref()) {
+                    return Err(err("E_ORG", "only an owner, a governor or a holder of a position above may redefine it"));
+                }
+            }
+            done(Change::Position {
+                info: PositionInfo {
+                    compartment: p.compartment.to_string(),
+                    org: p.org.to_string(),
+                    title: p.title.to_string(),
+                    reports_to: p.reports_to.map(str::to_string),
+                    duties: p.duties.to_string(),
+                    by: writer.to_string(),
+                    event: event_id.to_string(),
+                    seq: 0,
+                },
+            })
+        }
+
+        "appoint" => {
+            need(w, "write")?;
+            let a = schema::appoint(body)?;
+            need_compartment(w, a.compartment)?;
+            let pos = st
+                .positions
+                .get(&position_key(a.org, a.title))
+                .filter(|x| x.compartment == a.compartment)
+                .ok_or_else(|| not_found("position", a.title))?;
+            if !st.writers.get(a.holder).map(|h| h.in_compartment(a.compartment)).unwrap_or(false) {
+                return Err(not_found("writer", a.holder));
+            }
+            let governs = w.capabilities.iter().any(|c| c == "owner" || c == "govern");
+            if a.holder == writer && !governs {
+                return Err(err("E_ORG", "no one appoints themselves"));
+            }
+            if !governs && !pos.reports_to.as_deref().is_some_and(|u| st.holds_at_or_above(writer, a.org, u)) {
+                return Err(err("E_ORG", "only an owner, a governor or a holder of a position above may appoint to it"));
+            }
+            if st.appointments.values().any(|x| x.ended.is_none() && x.org == a.org && x.title == a.title && x.holder == a.holder) {
+                return Err(err("E_DUPLICATE", "already holds this position"));
+            }
+            done(Change::Appoint {
+                event: event_id.to_string(),
+                info: AppointmentInfo {
+                    compartment: a.compartment.to_string(),
+                    org: a.org.to_string(),
+                    title: a.title.to_string(),
+                    holder: a.holder.to_string(),
+                    by: writer.to_string(),
+                    record_time: record_time.to_string(),
+                    seq: 0,
+                    ended: None,
+                },
+            })
+        }
+
+        "dismiss" => {
+            need(w, "write")?;
+            let d = schema::dismiss(body)?;
+            let ap = st
+                .appointments
+                .get(d.appointment)
+                .filter(|x| w.in_compartment(&x.compartment))
+                .ok_or_else(|| not_found("appointment", d.appointment))?;
+            if ap.ended.is_some() {
+                return Err(err("E_ORG", "that appointment has already ended"));
+            }
+            let governs = w.capabilities.iter().any(|c| c == "owner" || c == "govern");
+            let above = st
+                .positions
+                .get(&position_key(&ap.org, &ap.title))
+                .and_then(|p| p.reports_to.as_deref())
+                .is_some_and(|u| st.holds_at_or_above(writer, &ap.org, u));
+            // Resigning is always allowed.
+            if !(governs || above || ap.holder == writer) {
+                return Err(err("E_ORG", "only an owner, a governor, a holder of a position above, or the holder, may end it"));
+            }
+            done(Change::Dismiss {
+                appointment: d.appointment.to_string(),
+                event: event_id.to_string(),
+                by: writer.to_string(),
+                reason: d.reason.to_string(),
+                time: record_time.to_string(),
+            })
+        }
+
         "schema_change" => {
             need(w, "govern")?;
             let v = schema::schema_change(body)?;
@@ -1751,6 +1914,31 @@ impl State {
     /// State as a JSON value, restricted to `compartments` (None = all).
     /// A restricted view contains nothing from other compartments, not even
     /// their names.
+    /// The titles above `title` in `org`, nearest first (its own not
+    /// included).
+    pub fn chain_above(&self, org: &str, title: &str) -> Vec<String> {
+        let mut out = Vec::new();
+        let mut cur = self.positions.get(&position_key(org, title)).and_then(|p| p.reports_to.clone());
+        while let Some(t) = cur {
+            if out.contains(&t) || out.len() > self.positions.len() {
+                break; // defensive: the gate refuses cycles
+            }
+            cur = self.positions.get(&position_key(org, &t)).and_then(|p| p.reports_to.clone());
+            out.push(t);
+        }
+        out
+    }
+
+    /// Whether `writer` currently holds `title` in `org`, or a position
+    /// above it.
+    pub fn holds_at_or_above(&self, writer: &str, org: &str, title: &str) -> bool {
+        let mut line = vec![title.to_string()];
+        line.extend(self.chain_above(org, title));
+        self.appointments
+            .values()
+            .any(|a| a.ended.is_none() && a.holder == writer && a.org == org && line.contains(&a.title))
+    }
+
     pub fn to_value(&self, compartments: Option<&[String]>) -> Value {
         self.to_value_sel(compartments, None)
     }
@@ -1974,6 +2162,52 @@ impl State {
             })
             .collect();
 
+        // Organisations: whole (not part of a selection), as far as seen.
+        let positions: Vec<(String, Value)> = self
+            .positions
+            .iter()
+            .filter(|(_, p)| visible(&p.compartment) && sel.is_none())
+            .map(|(k, p)| {
+                (
+                    k.clone(),
+                    Value::obj(vec![
+                        ("compartment", Value::str(p.compartment.clone())),
+                        ("org", Value::str(p.org.clone())),
+                        ("title", Value::str(p.title.clone())),
+                        ("reports_to", p.reports_to.clone().map(Value::str).unwrap_or(Value::Null)),
+                        ("duties", Value::str(p.duties.clone())),
+                        ("by", Value::str(p.by.clone())),
+                        ("event", Value::str(p.event.clone())),
+                    ]),
+                )
+            })
+            .collect();
+        let appointments: Vec<(String, Value)> = self
+            .appointments
+            .iter()
+            .filter(|(_, a)| visible(&a.compartment) && sel.is_none())
+            .map(|(id, a)| {
+                let ended = a.ended.as_ref().map(|(e, by, reason, t)| {
+                    Value::obj(vec![
+                        ("event", Value::str(e.clone())),
+                        ("by", Value::str(by.clone())),
+                        ("reason", Value::str(reason.clone())),
+                        ("record_time", Value::str(t.clone())),
+                    ])
+                });
+                (
+                    id.clone(),
+                    Value::obj(vec![
+                        ("org", Value::str(a.org.clone())),
+                        ("title", Value::str(a.title.clone())),
+                        ("holder", Value::str(a.holder.clone())),
+                        ("by", Value::str(a.by.clone())),
+                        ("record_time", Value::str(a.record_time.clone())),
+                        ("ended", ended.unwrap_or(Value::Null)),
+                    ]),
+                )
+            })
+            .collect();
         let handoffs: Vec<(String, Value)> = self
             .handoffs
             .iter()
@@ -2057,6 +2291,8 @@ impl State {
             ("supersessions", Value::Object(supersessions)),
             ("appeals", Value::Object(appeals)),
             ("handoffs", Value::Object(handoffs)),
+            ("positions", Value::Object(positions)),
+            ("appointments", Value::Object(appointments)),
         ])
     }
 

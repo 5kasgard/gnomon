@@ -1097,6 +1097,26 @@ expected to cost and risk next to one top-tier agent doing it all.
 | Integrity | No one posts their own work orders or judges their own model's work; only writers of kind `model` whose model id starts with a tier's prefix (`claude-haiku-`, …) count; the record is only what the reader can see. Gnomon refuses a party's verdict on its own party's claims, so models that review each other must be registered as parties of their own. |
 | Shift changes | Handoffs (section 13). |
 
+**Organisations in the record.** Three events make an organisation's
+structure part of the verified log, with authority checked by the gate:
+
+- `position` {compartment, org, title, reports_to?, duties}: defines a
+  title and whom it reports to (none: the owners). One organisation lives
+  in one compartment; no position reports, through others, to itself.
+- `appoint` {compartment, org, title, holder}: puts a writer of that
+  compartment in a position. Many may hold one title; no one holds it twice
+  at once.
+- `dismiss` {appointment, reason}: ends an appointment.
+
+Owners and governors may do all three. Anyone else acts only on positions
+below one they currently hold (directly or through others): a Lead hires
+Engineers, an Engineer hires no one, and a dismissed Lead has no authority
+left. No one appoints themselves; anyone may resign. Queries see
+`position(O, T, ReportsTo)`, `holds(W, O, T)`, `appointed(A, W, O, T)` and
+`dismissed(A, E)`, and the views `above(O, T, U)` and `oversees(B, W)`;
+the independent checker establishes `position` and `holds` by folding the
+log itself, so a holding that has since ended no longer checks.
+
 **The decision.** For one unit of work, every option is priced: each tier
 alone, and each rising cascade under each kind of check the work allows.
 Its cost is expected spend on tokens, plus the expected loss
