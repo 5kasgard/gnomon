@@ -1076,7 +1076,70 @@ token:
 
 `bench/tokens.py` measures the cost per item shown.
 
-## 15. Not yet in v0.1
+## 15. The firm: teams of models
+
+A request that can be split is work for a firm. `gnomon.firm` (MCP
+`plan_team`) shapes one: who does each part, who checks it, who it
+escalates to, how many managers on how many floors, and what that is
+expected to cost and risk next to one top-tier agent doing it all.
+
+| A firm has | Here it is |
+|---|---|
+| Pay grades | Tiers priced from the published per-token prices (Haiku, Sonnet, Opus), read on the date in `PRICES_READ`. |
+| Desks | Context windows. Staff desks stay under Haiku's 100,000-token price rise; a manager's desk sets how many reports fit on it. |
+| Floors | Levels of management: a new floor when one floor of managers would have more than a desk's worth of reports. |
+| The executive | The top tier plans the split and integrates the parts: a mistake there costs every part. |
+| Quality control | An exact check (tests, arithmetic, dates: free and certain), a reviewing tier (priced, with a stated catch and false-alarm rate), or none. |
+| Escalation | A cascade: the cheapest tier first, the next only when a check fails. |
+| The night shift | Work that is not urgent goes to the Batch API at half price. |
+| Work orders | A question in a `firm/<kind>` frame, posted by whoever assigns the work. |
+| Track records and promotion | A result is a claim in the same frame, by a model, that `answers` a work order posted by someone outside the worker's group. It counts once, settled by the verdicts on it from groups other than the worker's: one vote per group, majority wins, ties count for nothing. Per tier and kind of work, these update a Beta prior; who is hired for what follows the record. |
+| Integrity | No one posts their own work orders or judges their own model's work; only writers of kind `model` whose model id starts with a tier's prefix (`claude-haiku-`, …) count; the record is only what the reader can see. Gnomon refuses a party's verdict on its own party's claims, so models that review each other must be registered as parties of their own. |
+| Shift changes | Handoffs (section 13). |
+
+**The decision.** For one unit of work, every option is priced: each tier
+alone, and each rising cascade under each kind of check the work allows.
+Its cost is expected spend on tokens, plus the expected loss
+(`stakes_usd` for a wrong result kept unnoticed; `detected_usd`, by default
+the same, for a part known not to be done because its last attempt was
+flagged), plus `step_usd` for each expected sequential round. The cheapest
+total wins; ties go to the option more likely right. A tier whose context
+window cannot hold a part is never given it. Parts run in parallel; the
+planner (writing work orders in requests of at most 32,000 tokens), the
+integrator (reading the top floor) and the floors of managers (each reading
+its own reports) are added on top. Inputs are validated: finite, in range,
+a known check.
+
+**The baseline** is one top-tier agent doing every part in turn with the
+best checks it can use, re-reading its work so far as prompt-cache hits
+(compacted to its desk once it outgrows it) and writing each part's prompt
+to the cache. Plan and baseline report tokens, loss and rounds separately.
+
+**Stated assumptions**, each to be replaced by the record:
+
+- priors per tier (`PRIORS`, as pseudo-counts);
+- reviewers' catch and false-alarm rates (`REVIEW`);
+- attempts independent of each other (a part one tier got wrong is taken
+  to be no harder for the next, which flatters cascades);
+- summaries handed up a floor of 600 tokens.
+
+**The pilot** (`bench/firm_pilot`): 24 exactly specified Python tasks, 12
+routine and 12 hard, each given to a Haiku 5.5 and a Sonnet 5.5
+sub-agent and graded by hidden tests. All 48 passed. Recorded as work
+orders, results and test verdicts, they are the record `plan_team` plans
+from. No task needed escalation, so the cascade itself is not yet
+measured.
+
+The comparison with the baseline is only as good as these assumptions:
+with independent attempts, a cascade with an exact check is close to
+certain to win on loss. Real measurements decide.
+
+**Not yet:** running the agents (the host does that: Claude Code's
+subagents or the API), learning how failures correlate across tiers,
+pricing the risk of a bad plan or integration, latency beyond a price per
+round, and measurements of plans against single agents on real work.
+
+## 16. Not yet in v0.1
 
 Signatures (writer identity is by registration only), multi-writer merge of
 independently written logs, storage in immutable segments with sync to

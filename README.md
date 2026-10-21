@@ -303,6 +303,34 @@ the last 20 results, and resets when the host compacts the session's
 context, since the model may no longer have it then. `repeat=true` shows it
 again in full.
 
+### The firm pilot: real work, graded by the computer
+
+Twenty-four Python tasks with exact specifications went to Claude
+sub-agents, one task per agent. Half were routine (slugs, Roman numerals,
+intervals, an LRU cache) and half hard (a linear-time regex engine, a
+Sudoku solver for minimal puzzles, exact linear algebra, UTF-8 decoding
+with maximal-subpart replacement, maximum flow, best rational
+approximation to 10^18). Hidden tests, checked against reference
+solutions, graded each result (`bench/firm_pilot`).
+
+| | Routine | Hard | Median time |
+|---|---|---|---|
+| Claude Haiku 5.5 | 12/12 | 12/12 | 22 s |
+| Claude Sonnet 5.5 | 12/12 | 12/12 | 12 s |
+
+On work this well specified, and checkable this exactly, the cheapest
+model did everything right, at a fortieth of Opus's price per token. The
+firm's job here is not to pay for more model than the work needs. Every
+result and verdict is recorded in a memory as the firm's books, and
+`plan_team` then plans from them (`python bench/firm_pilot/run.py`).
+For 24 more such parts, it expects Haiku staff with exact checks and
+escalation to cost $0.38 in tokens, against $0.92 for one Sonnet agent
+and $1.84 for one Opus agent.
+
+What the pilot does not show yet is where escalation earns its keep: no
+task here defeated Haiku. That needs longer, vaguer, multi-step work, and
+it is the next measurement.
+
 ## What's in it
 
 | | |
@@ -317,6 +345,7 @@ again in full.
 | **Queries** | Datalog with recursion and stratified negation, under hard limits. Every answer has a proof down to log events, re-checked by an independent checker. Proofs are content-addressed: each rule is named by a hash of its text and each step by a hash of what it rests on. |
 | **Recall** | Ranked search with provenance on every hit, and dates resolved by the calendar. Every weight is tunable and every boost is explained on the hit. |
 | **Checkers** | Arithmetic with exact fractions and dates against the real calendar, acting as verifiers under the same rules as everyone else. |
+| **Teams of models** | `plan_team` shapes a firm for work that can be split: Haiku staff, Sonnet managers, an Opus executive, exact checks before reviewers, escalation on failure, the Batch API for work that can wait. Each option is priced as tokens plus expected loss from errors, from published prices and the verdicts on record, against one Opus agent doing it alone with the same checks. The assumptions behind the comparison are stated; real runs are next. |
 | **MCP server** | Standard library only, for current and older MCP clients. It is fuzzed, and tested in CI with the official MCP SDK. |
 
 The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
@@ -328,7 +357,7 @@ The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
   (`tests/incidents.rs`).
 - **Each milestone was attacked by a reviewer who didn't write it.** That
   covered the record, queries, the MCP server, recall, identity, the forum,
-  continuity, auto mode and performance, over 19 review rounds. Every confirmed finding is now a
+  continuity, auto mode and performance, over 20 review rounds. Every confirmed finding is now a
   regression test.
 - **The query engine has a second implementation to agree with.** It is
   checked against a deliberately naive evaluator on hundreds of random
@@ -337,7 +366,7 @@ The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
 - **The MCP server is tested hard.** It is fuzzed with thousands of
   malformed messages and driven in CI by the official MCP Python SDK.
 - **Recall was tested on data it was never tuned on.**
-- **Every platform:** 190 Rust tests and 197 Python tests run on Linux,
+- **Every platform:** 190 Rust tests and 213 Python tests run on Linux,
   macOS and Windows on every change.
 
 ```bash
@@ -361,12 +390,17 @@ bash scripts/build.sh && python3 -m unittest discover -s python/tests
   proofs.
 - [x] **M8, continuity:** handoff and resume across sessions, models and
   apps; auto mode for Claude Code; resume fitted to a token budget.
-- [ ] **M9, storage that scales:** the log in immutable segments, synced to
+- [ ] **M9, the firm:** teams of models shaped to the work by price and
+  track record (`plan_team`): Haiku staff, Sonnet managers and an Opus
+  executive, floors by span of control, exact checks first, escalation on
+  failure, and hiring that follows the verdicts on record. Planning is
+  done. Next: running the teams and measuring them against single agents.
+- [ ] **M10, storage that scales:** the log in immutable segments, synced to
   object storage (S3, Backblaze B2, Cloudflare R2), with private
   compartments encrypted before they leave your device.
-- [ ] **M10, a hosted connector:** remote MCP with sign-in, so anyone can
+- [ ] **M11, a hosted connector:** remote MCP with sign-in, so anyone can
   add Gnomon to Claude or another AI app as a connector, from any device.
-- [ ] **M11, the commons:**
+- [ ] **M12, the commons:**
   - opt-in publishing from private memory;
   - signed posts;
   - independent memories merging;

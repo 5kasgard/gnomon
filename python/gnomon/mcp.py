@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import sys
 import traceback
 from typing import Any, Callable, Optional
@@ -341,6 +342,36 @@ TOOLS: list[dict] = [
         "title": "Verify the log",
         "description": "Replay the whole log through every rule and check its hash chain (pass or fail).",
         "inputSchema": {"type": "object", "additionalProperties": False},
+        "annotations": {"readOnlyHint": True, "openWorldHint": False},
+    },
+    {
+        "name": "plan_team",
+        "title": "Plan a team of models for a piece of work",
+        "description": (
+            "Shape a team for work you could split across agents: which model does each part (Haiku, Sonnet, "
+            "Opus), what checks it, who escalates, how many managers, and the expected cost and risk against one "
+            "Opus agent doing it alone. Priced from published prices and the track record on file: record each "
+            "finished part as a claim in frame `firm/<kind>`, and have someone else judge it with give_verdict."
+        ),
+        "inputSchema": _schema({
+            "kind": {"type": "string", "description": "The kind of work (e.g. code, extract, summarise, design)."},
+            "input_tokens": {"type": "integer", "minimum": 0, "maximum": 10_000_000,
+                             "description": "Prompt size of one part."},
+            "output_tokens": {"type": "integer", "minimum": 0, "maximum": 1_000_000,
+                              "description": "Output size of one part."},
+            "stakes_usd": {"type": "number", "minimum": 0, "maximum": 1e9,
+                           "description": "What a wrong part that goes unnoticed costs, in USD."},
+            "detected_usd": {"type": "number", "minimum": 0, "maximum": 1e9,
+                             "description": "What a part known not to be done costs (e.g. a person redoes it), "
+                                            "in USD (default: stakes_usd)."},
+            "check": {"type": "string", "enum": ["exact", "review", "none"],
+                      "description": "exact: the computer can check it (tests, arithmetic); review: another "
+                                     "model must; none."},
+            "parts": {"type": "integer", "minimum": 1, "maximum": 100000, "description": "Independent parts (default 1)."},
+            "urgent": {"type": "boolean", "description": "False allows the half-price Batch API (default true)."},
+            "step_usd": {"type": "number", "minimum": 0, "maximum": 1e6,
+                         "description": "What waiting for one more attempt costs, in USD (default 0)."},
+        }, ["kind", "input_tokens", "output_tokens", "stakes_usd"]),
         "annotations": {"readOnlyHint": True, "openWorldHint": False},
     },
 ]
@@ -695,6 +726,26 @@ class Server:
         self.writer = wid
         return f"Attached: you write as {title(writers, wid)}.", {"writer": wid}
 
+    def t_plan_team(self, a: dict) -> tuple[str, Any]:
+        from . import firm
+        try:
+            task = firm.Task(a["kind"], a["input_tokens"], a["output_tokens"], a["stakes_usd"], a.get("check", "none"),
+                             a.get("parts", 1), a.get("urgent", True), a.get("step_usd", 0.0),
+                             a.get("detected_usd"))
+            rec = firm.record_from(self.memory, self.writer)
+            p = firm.plan(task, rec)
+        except ValueError as e:
+            raise ToolError(str(e))
+        out = firm.as_dict(p)
+        out["record"] = firm.explain(rec, [task.kind])
+        on = sum(r["on_record"] for r in out["record"])
+        text = p.summary() + (f"\n  track record for '{task.kind}': {on} judged part(s)" if on else
+                              f"\n  no track record for '{task.kind}' yet: priors only")
+        if rec.truncated:
+            text += "\n  (the record was too large to read in full: only part of it was used)"
+        out["record_truncated"] = rec.truncated
+        return text, out
+
     def t_whoami(self, a: dict) -> tuple[str, Any]:
         full = self.memory.writers()
         # Only what this writer may see: others are named as far as they
@@ -1005,12 +1056,13 @@ def _check_args(schema: dict, args: dict) -> Optional[str]:
         t = p.get("type")
         ok = {"string": isinstance(v, str), "boolean": isinstance(v, bool),
               "integer": isinstance(v, int) and not isinstance(v, bool),
+              "number": isinstance(v, (int, float)) and not isinstance(v, bool) and (isinstance(v, int) or math.isfinite(v)),
               "array": isinstance(v, list), "object": isinstance(v, dict)}.get(t, True)
         if not ok:
             return f"'{k}' must be {t}"
         if "enum" in p and v not in p["enum"]:
             return f"'{k}' must be one of {p['enum']}"
-        if t == "integer" and (v < p.get("minimum", v) or v > p.get("maximum", v)):
+        if t in ("integer", "number") and (v < p.get("minimum", v) or v > p.get("maximum", v)):
             return f"'{k}' is out of range"
         if t == "array":
             if len(v) < p.get("minItems", 0):
