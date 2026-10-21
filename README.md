@@ -208,8 +208,11 @@ stored, only rebuilt by replaying the log, so two replays always agree.
 
 ## Measured
 
-Every number below is reproducible from `bench/`, with no model and no
-network involved.
+Every number below is reproducible from `bench/`. Recall and the core
+need no model and no network. The meaning-layer results use a small static
+embedding model (model2vec, downloaded once from Hugging Face), and the
+answer results use Claude Haiku as the reader. Each says so where it
+appears.
 
 ### Recall: finding the evidence
 
@@ -395,6 +398,27 @@ The learned weights reproduce what memory research describes, with no
 rule written in. Facts are found where a topic's pattern breaks:
 atypicality +1.86. Summaries are found where it holds: -0.79 for summary
 questions.
+
+**Across datasets, and what survives.** A weighting learned on BEAM alone
+did not transfer: on LoCoMo it scored 41.7 against 47.5 for the hybrid,
+and on LongMemEval-S 77.1 against 78.6. Two things fixed that.
+- **Noise during training** lifted LongMemEval-S from 77.1 to 80.7, and
+  from 76.0 to 82.4 when trained on BEAM and LoCoMo.
+- **Keeping only the signals whose weight keeps its sign** when fitted
+  separately on BEAM, LoCoMo and LongMemEval. Surprise when written was
+  the most stable of all: +1.00, +1.05 and +1.28.
+
+Trained on those three and tested once on ConvoMem, which none of it had
+seen (`bench/multi.md`, `bench/multi_invariant.md`):
+
+| ConvoMem, 150-300 conversations | Words | Hybrid | Own words first | Invariant model |
+|---|---|---|---|---|
+| All 1,061 questions | 66.2 | 69.9 | 71.3 | **72.7-73.3** |
+| Facts the assistant gave | 92.7 | 91.5 | 81.4 | 89.9-90.7 |
+| Implicit connections | 19.9 | 22.4 | 23.6 | 23.6-24.8 |
+
+Eight weights do as well as sixty-six. Links nobody stated are where
+every method fails, so they are the next problem.
 
 **Repairable storage.** `gnomon.parity` adds Reed-Solomon parity beside
 the log: 2 parity blocks for every 16 blocks of 4 KiB, 14.4% extra

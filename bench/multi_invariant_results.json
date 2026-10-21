@@ -1,0 +1,94 @@
+{
+ "convomem": {
+  "all": {
+   "words": [
+    66.2,
+    63.5,
+    69.0
+   ],
+   "hybrid": [
+    69.9,
+    67.1,
+    72.6
+   ],
+   "own first": [
+    71.3,
+    68.5,
+    74.0
+   ],
+   "full, noise": [
+    72.7,
+    70.2,
+    75.4
+   ],
+   "invariant": [
+    72.7,
+    69.9,
+    75.4
+   ],
+   "invariant, no noise": [
+    73.3,
+    70.7,
+    75.9
+   ]
+  },
+  "assistant_facts_evidence": {
+   "words": 92.7,
+   "hybrid": 91.5,
+   "own first": 81.4,
+   "full, noise": 90.3,
+   "invariant": 89.9,
+   "invariant, no noise": 90.7
+  },
+  "changing_evidence": {
+   "words": 62.9,
+   "hybrid": 67.8,
+   "own first": 74.1,
+   "full, noise": 73.1,
+   "invariant": 73.1,
+   "invariant, no noise": 73.7
+  },
+  "implicit_connection_evidence": {
+   "words": 19.9,
+   "hybrid": 22.4,
+   "own first": 23.6,
+   "full, noise": 23.6,
+   "invariant": 23.6,
+   "invariant, no noise": 24.8
+  },
+  "preference_evidence": {
+   "words": 42.7,
+   "hybrid": 50.8,
+   "own first": 56.9,
+   "full, noise": 54.4,
+   "invariant": 55.2,
+   "invariant, no noise": 56.0
+  },
+  "user_evidence": {
+   "words": 83.4,
+   "hybrid": 86.5,
+   "own first": 90.0,
+   "full, noise": 90.8,
+   "invariant": 90.0,
+   "invariant, no noise": 90.0
+  },
+  "median_tokens": {
+   "words": 419,
+   "hybrid": 406,
+   "own first": 398,
+   "full, noise": 404,
+   "invariant": 408,
+   "invariant, no noise": 407
+  }
+ },
+ "invariant_weights": {
+  "word*all": 1.5986427234695055,
+  "sim*all": 1.9724372368391283,
+  "dense_rank*all": 0.9057077451315322,
+  "own*all": 0.35904863373411855,
+  "number*all": 0.13317227944748705,
+  "surprise*all": 0.4483647258259664,
+  "topic_surprise*all": 0.40498729348196266,
+  "atypical*all": 0.15241122484397723
+ }
+}
