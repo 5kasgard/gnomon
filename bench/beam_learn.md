@@ -58,3 +58,54 @@ BEAM's questions come from templates. The cue weights could learn
 BEAM's phrasing rather than general regularities, and conversations at
 other sizes share those templates. A held-out size tests transfer to new
 conversations, not to new kinds of question or other people's records.
+
+## Held-out result (one run; `beam_learn_results.json`)
+
+Recall@10 with directives; 95% intervals by conversation:
+
+| | Hybrid | Own words first | **Learned** | Median tokens (hybrid / own / learned) |
+|---|---|---|---|---|
+| 500K (training, in-sample) | 57.5 | 61.5 | 65.3 | 4,069 / 1,268 / 609 |
+| 100K | 63.4 [60.3, 66.5] | 65.8 [62.5, 68.8] | **68.1** [65.6, 70.4] | 4,519 / 1,377 / **645** |
+| 1M | 46.4 [44.5, 48.4] | 50.3 [48.4, 52.4] | **53.1** [50.6, 55.7] | 3,893 / 1,061 / **454** |
+| 10M | 33.0 [29.5, 36.5] | 36.1 [32.3, 39.7] | 36.1 [32.9, 39.2] | 3,548 / 1,139 / **844** |
+
+At 100K and 1M the learned weighting recalls the most evidence while
+sending the fewest tokens. At 1M that is 454 tokens against 3,893 for the
+hybrid, about 8.6 times fewer, with 6.7 points more evidence. At 10M it
+ties own words first in recall, using fewer tokens.
+
+**What the weights learnt.** No rule was written in; the data set these:
+- **Atypical of its topic:** +1.86 overall but -0.79 for summary
+  questions. Facts sit where a topic's pattern breaks; gist sits where it
+  holds. These are the two routes to memory that schema research
+  describes: prediction error, and schema fit.
+- **The person's own words:** +3.01 for ordering questions and -2.55 for
+  summaries. "What did I bring up" is answered by the person's turns;
+  summaries are answered by the assistant's syntheses.
+- **Surprise when written:** +1.00 overall and +0.89 more for "when"
+  questions, but -0.64 for ordering and -0.77 for counts.
+- **Position in time:** negative for "when" and count questions, so
+  earlier messages are preferred there.
+
+**Limits.**
+- One training set, one run.
+- BEAM's question templates are shared across sizes. The cue weights
+  could carry BEAM phrasing that would not transfer to other people's
+  questions.
+- The gain shrinks at 10M.
+- Ordering and summaries stay low: the evidence is not among the
+  candidates (84.5% overall reach, much less for those two).
+
+## Also tried: changing the projection (`beam_project.py`)
+A rank-16 adjustment of the meaning space, trained contrastively on
+which messages answered which questions. Validated inside 500K only (25
+conversations trained, 10 held aside): dense recall@10 moved from 47.8 to
+50.1, with overlapping intervals.
+- Instructions rose from 25.0 to 54.2 and preferences from 40.8 to 52.5.
+- Multi-session questions fell from 64.0 to 54.0.
+
+This is not a result. It was not run on the held-out sizes, so as not to
+spend the one held-out run on a weak signal. A larger training set, or
+learning from real use (which pointers were expanded and cited), is the
+better route for it.
