@@ -85,6 +85,20 @@ class FormsTest(unittest.TestCase):
         self.assertNotIn("X", letters(compose(p, Dials(thrift=0.1))))
         self.assertIn("X", letters(compose(p, Dials(thrift=0.9))))
 
+    def test_a_workload_gets_a_toolmaker_a_floor_and_batches(self):
+        d = compose(Profile(repeats=1_000_000, check="review"))
+        self.assertEqual(letters(d)[:3], ["T", "F", "N"])
+        self.assertEqual([s.size for s in d.stages if s.letter == "F"], [2])  # two tiers, never more
+        self.assertTrue(any("probe" in w.lower() for w in d.warnings))
+        small = compose(Profile(repeats=2000))
+        self.assertNotIn("T", letters(small))
+        self.assertIn("F", letters(small))
+        # Open-ended or not narrow: no floor.
+        self.assertNotIn("F", letters(compose(Profile(repeats=10**6, open_ended=True))))
+        self.assertNotIn("F", letters(compose(Profile(repeats=10**6, narrow=False))))
+        for k in ("T", "F", "N"):
+            self.assertIn(k, ALPHABET)
+
     def test_bad_input_is_refused(self):
         for bad in ({"parts": 0}, {"parallel": 1.5}, {"coupling": "medium"}, {"check": "maybe"}, {"tier": "gpt"}):
             with self.assertRaises(ValueError):
@@ -123,7 +137,7 @@ class FormsTest(unittest.TestCase):
             text, out = srv.tool("design_team", {"check": "exact", "families": 3, "effort": 0.8})
             self.assertTrue(out["word"].startswith("P[") and "V" in out["word"], out["word"])
             self.assertIn("Interaction Tax", " ".join(out["stages"][0]["sources"]))
-            for bad in ({"parallel": True}, {"effort": 3}, {"tier": "gpt"}, {"expert": "yes"}, {"nonsense": 1}):
+            for bad in ({"parallel": True}, {"effort": 3}, {"tier": "gpt"}, {"expert": "yes"}, {"repeats": 0}, {"nonsense": 1}):
                 msg = srv.handle({"jsonrpc": "2.0", "id": 3, "method": "tools/call",
                                   "params": {"name": "design_team", "arguments": bad}})
                 self.assertTrue(msg.get("result", {}).get("isError") or "error" in msg, (bad, msg))

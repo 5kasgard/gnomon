@@ -331,14 +331,70 @@ What the pilot does not show yet is where escalation earns its keep: no
 task here defeated Haiku. That needs longer, vaguer, multi-step work, and
 it is the next measurement.
 
+### The floor: many cheap workers, measured
+
+Can lots of very cheap workers do the grunt work instead of one capable
+model? We measured it on two real, human-labelled workloads
+(`bench/floor`): 5,574 SMS messages (spam or not) and 10,000 Yelp reviews
+(which star rating, 1-5). The cheap workers were a program written once
+from general knowledge, naive Bayes (every word a dumb voter), a swarm of
+300 boosted one-question stumps, and a linear model. The capable worker was
+Claude Haiku, reading and judging 300 items of each.
+
+| | Spam: accuracy | Reviews: exact stars | Cost per million items |
+|---|---|---|---|
+| Program, no labels | 98.5% | 37.4% | under 1 cent (100,000 items per CPU-second) |
+| Swarm of 300 stumps, all labels | 97.2% | 45.1% | under 1 cent |
+| Linear model, 1,000 human labels | 98.7% | 48.8% | about 1 cent |
+| Linear model trained on 300 Haiku labels only | 97.9% | 44.6% | about 1 cent, plus $0.002 of labelling |
+| Claude Haiku, every item | 99.7% (95%: 98.1-99.9) | 66.0% (60.5-71.1) | $6.81 spam, $20.09 reviews (Opus: $272, $804) |
+| **Floor:** linear model, least confident 10% to Haiku | 300/300 on the probe | 49.7% | $0.68 spam, $2.01 reviews |
+
+On narrow, easy work the floor wins outright: the linear model alone
+matched Haiku on the probe for almost nothing, and escalating its doubts
+did the rest. On fuzzy work it does not: no cheap worker came close to
+Haiku on reviews, and the floor saved money only in proportion to the
+quality it gave up. A swarm of dumb voters never beat one simple linear
+model. The 2026 literature says the same at larger scale: an agent that
+builds a cheap artifact for a workload can keep 95% of its quality at
+889x lower cost, but most agents lost a quarter or more and many lost to a
+naive distilled 0.6B model (arXiv 2610.08775); a small model running an
+adapter compiled by a bigger one beat prompting a 32B model per input
+(2607.02512); two tiers beat one by 2-8 points but a third adds nothing
+(2605.06350); batching 25-100 items per request cuts cost by 80% for under
+2 points (2604.03684). Cautions: 300 items per probe gives wide intervals;
+the spam program was written by a model that may have seen this dataset;
+Haiku's price makes per-item calls already cheap, so the floor's case is
+strongest against higher tiers and at very large volume.
+
+So the firm now has a toolmaker, a floor and batching among its forms
+(`T`, `F`, `N`): for a workload, build the cheap worker once, check it on a
+probe the model labels, let it answer what it is sure of, and send the rest
+to one capable tier in batches. `design_team` proposes this whenever there
+are thousands of items under one instruction.
+
+### Agents are not people
+
+Organisation science was written for people. Models have different
+strengths and weaknesses, and the forms follow the measurements, not the
+analogy:
+
+| Cheap for models | Hard for models | So the firm |
+|---|---|---|
+| Cloning a worker, instantly, any number | Copies of one model are not independent: they fail together | draws on several model families, and counts copies of one model once |
+| Changing role mid-task (no retraining) | Judging their own work: self-critique lost to simply sampling again at equal cost | never lets a worker grade itself; counts votes, runs a check, or asks someone outside |
+| Writing a program for a repetitive job | Knowing when they are wrong (confidence is a weak signal) | builds the cheap worker, then measures it on a probe before trusting it |
+| Reading fast, working in parallel without fatigue | Deferring to an expert: teams average the expert away | routes to the expert instead of holding a meeting |
+| Starting fresh, without fatigue or grudges | Remembering anything between sessions | keeps its memory in the record |
+
 ### Forms: an alphabet, not one org chart
 
 How a team should be organised depends on the work, and 2026's controlled
 studies of model teams say a good deal about when each arrangement helps.
-`gnomon.forms` turns that into sixteen letters (divide, assign, propose
+`gnomon.forms` turns that into nineteen letters (divide, assign, propose
 independently, select by a check, route to the expert, take turns,
 aggregate, critique, debate, bid, coordinate through the record, evolve,
-floors, escalate, independent assurance, solo), each with when it helps,
+floors, escalate, independent assurance, solo, and for workloads a toolmaker, a floor of cheap workers, and batching), each with when it helps,
 when it hurts, and its evidence. A task's profile and five dials (effort,
 breadth, scrutiny, speed, thrift) spell a word:
 
@@ -381,7 +437,7 @@ better. Sources and the full rules are in the
 | **Recall** | Ranked search with provenance on every hit, and dates resolved by the calendar. Every weight is tunable and every boost is explained on the hit. |
 | **Checkers** | Arithmetic with exact fractions and dates against the real calendar, acting as verifiers under the same rules as everyone else. |
 | **Teams of models** | `plan_team` shapes a firm for work that can be split: Haiku staff, Sonnet managers, an Opus executive, exact checks before reviewers, escalation on failure, the Batch API for work that can wait. Each option is priced as tokens plus expected loss from errors, from published prices and the verdicts on record, against one Opus agent doing it alone with the same checks. The assumptions behind the comparison are stated; real runs are next. |
-| **Forms** | An alphabet of sixteen organisational forms with dials (`gnomon.forms`, `design_team`): each letter carries when it helps, when it hurts and its evidence (measured in 2026 studies of model teams, or classic theory), and a contextual bandit learns from the record which form pays for which work. |
+| **Forms** | An alphabet of nineteen organisational forms with dials (`gnomon.forms`, `design_team`): each letter carries when it helps, when it hurts and its evidence (measured in 2026 studies of model teams, or classic theory), and a contextual bandit learns from the record which form pays for which work. |
 | **Companies** | Organisation charts in the verified record: positions, appointments and dismissals, with authority checked by the gate (only those above may hire or fire; assurance answers to the owners alone). `gnomon.company` founds a firm with its powers kept apart, hires model instances into titles, takes a client's goal down through the levels, and reviews staff from independently judged results. |
 | **MCP server** | Standard library only, for current and older MCP clients. It is fuzzed, and tested in CI with the official MCP SDK. |
 
@@ -403,7 +459,7 @@ The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
 - **The MCP server is tested hard.** It is fuzzed with thousands of
   malformed messages and driven in CI by the official MCP Python SDK.
 - **Recall was tested on data it was never tuned on.**
-- **Every platform:** 198 Rust tests and 231 Python tests run on Linux,
+- **Every platform:** 198 Rust tests and 232 Python tests run on Linux,
   macOS and Windows on every change.
 
 ```bash

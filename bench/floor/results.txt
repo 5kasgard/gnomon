@@ -1,0 +1,42 @@
+
+== sms: 5574 items, scored on 2637 unseen ==
+worker     labels         acc  spam_recall  $/1M items items/cpu-s
+majority   -            0.873        0.000        0.00  1000000000
+rules      0            0.985        0.899        0.00      104039
+voters     50 human     0.942        0.693        0.00       77149
+voters     200 human    0.960        0.696        0.00       66461
+voters     1000 human   0.975        0.815        0.00       75255
+voters     2637 human   0.986        0.899        0.00       58243
+stumps     50 human     0.860        0.472        0.00       28158
+stumps     200 human    0.947        0.615        0.00       24553
+stumps     1000 human   0.957        0.713        0.00       22866
+stumps     2637 human   0.972        0.809        0.00       22881
+linear     50 human     0.940        0.719        0.00       14832
+linear     200 human    0.972        0.827        0.00       14036
+linear     1000 human   0.987        0.934        0.00       12645
+linear     2637 human   0.989        0.955        0.00       13118
+bottled    300 llm      0.979        0.881        0.00       14750
+llm        -            0.997        1.000        6.81   (measured on 300, 95% (0.981, 0.999); sonnet $136.24, opus $272.48)
+floor, 1000 human labels: 0%→0.997, 10%→1.000, 20%→1.000, 30%→1.000, 50%→1.000, 70%→1.000, 100%→0.997
+floor, bottled from the llm: 0%→0.953, 10%→0.980, 20%→0.990, 30%→1.000, 50%→1.000, 70%→1.000, 100%→0.997
+
+== yelp: 10000 items, scored on 4850 unseen ==
+worker     labels         acc   within_one  $/1M items items/cpu-s
+majority   -            0.348        0.827        0.00  1000000000
+rules      0            0.374        0.849        0.00       29633
+voters     50 human     0.334        0.685        0.00       10897
+voters     200 human    0.395        0.801        0.00       10617
+voters     1000 human   0.403        0.820        0.00        9295
+voters     4850 human   0.435        0.821        0.00        7849
+stumps     50 human     0.326        0.711        0.00        8568
+stumps     200 human    0.336        0.749        0.00        8283
+stumps     1000 human   0.402        0.810        0.00        6782
+stumps     4850 human   0.451        0.850        0.00        6011
+linear     50 human     0.348        0.711        0.01        1939
+linear     200 human    0.406        0.809        0.01        1671
+linear     1000 human   0.488        0.880        0.01        1680
+linear     4850 human   0.536        0.923        0.01        1567
+bottled    300 llm      0.446        0.849        0.01        1613
+llm        -            0.660        0.987       20.09   (measured on 300, 95% (0.605, 0.711); sonnet $401.75, opus $803.5)
+floor, 1000 human labels: 0%→0.463, 10%→0.497, 20%→0.503, 30%→0.523, 50%→0.580, 70%→0.637, 100%→0.660
+floor, bottled from the llm: 0%→0.363, 10%→0.413, 20%→0.443, 30%→0.473, 50%→0.517, 70%→0.570, 100%→0.660

@@ -380,7 +380,8 @@ TOOLS: list[dict] = [
         "description": (
             "Spell how a team should be organised for this work from an alphabet of forms (split, assign, "
             "propose independently, select by a check, route to the expert, take turns, aggregate, critique, "
-            "escalate, review independently, ...), each chosen by a stated rule with the research it rests on "
+            "build a cheap program or model for a workload, a floor of cheap workers that escalates its doubts, "
+            "batch, escalate, review independently, ...), each chosen by a stated rule with the research it rests on "
             "and the alternatives weighed. Dials from 0 to 1 set effort, breadth (model diversity), scrutiny, "
             "speed and thrift. Use plan_team to price which models fill the form."
         ),
@@ -400,6 +401,9 @@ TOOLS: list[dict] = [
                      "description": "Strongest tier available (default sonnet)."},
             "families": {"type": "integer", "minimum": 1, "maximum": 1000,
                          "description": "Distinct model families available (default 1)."},
+            "repeats": {"type": "integer", "minimum": 1, "maximum": 10**12,
+                        "description": "Items sharing one instruction (a workload), default 1."},
+            "narrow": {"type": "boolean", "description": "With repeats: one fixed question per item (default true)."},
             **{k: {"type": "number", "minimum": 0, "maximum": 1, "description": f"Dial: {k} (default 0.5)."}
                for k in ("effort", "breadth", "scrutiny", "speed", "thrift")},
         }, []),

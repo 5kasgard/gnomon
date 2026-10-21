@@ -94,6 +94,39 @@ SOURCES = {
     "stigmergy": ("Grassé 1959; Heylighen 2016; FunSearch, Romera-Paredes et al. 2024",
                   "Coordination through traces left in a shared medium (scores, notes, failure causes) instead of "
                   "messages; evolutionary search keeps a population diverse by selection, not conversation."),
+    "bottled": ("Sonthalia et al. 2026, Agent in a Bottle (arXiv 2610.08775)",
+                "Agents given a whole workload of millions of items can build a cheap artifact (a program, a small "
+                "trained model) instead of calling the model per item: Opus 5 kept 95% of its per-item F1 at 889x "
+                "lower cost on attribute extraction and 82% at 657x on relevance; but 48 of 60 runs fell below "
+                "per-item quality and 31 of 60 lost to naive distillation (label with a cheap model, fine-tune a "
+                "0.6B student) on the same budget."),
+    "paw": ("Zhang et al. 2026, Program-as-Weights (arXiv 2607.02512)",
+            "A large model compiles a fuzzy function once into a 23 MB adapter for a 0.6B interpreter, which then "
+            "beats prompting a 32B model per input (73.8% vs 68.7%) at a fiftieth of the memory, 30 tokens/s on a "
+            "laptop; code written by a model instead reached 36%."),
+    "batching": ("Pipal et al. 2026, Classifying one text at a time wastes 80% (arXiv 2604.03684)",
+                 "Putting 25-100 items in one request (and up to 10 questions per item) cut cost by over 80% with "
+                 "under 2 points of accuracy lost for six of eight models; Claude Haiku lost at most 1.1 points up "
+                 "to 1,000 items."),
+    "cascade": ("Bouchard 2026, Is Escalation Worth It? (arXiv 2605.06350); Wang et al. 2026, Dynamic LLM "
+                "Routers are Often Misguided (arXiv 2610.02762)",
+                "A cheap model escalating to a strong one beat the best single model at equal budget by 2-8 "
+                "points, but a third tier added nothing in 118 of 135 comparisons; no commercial router beat "
+                "random choice between two well-chosen models at matched cost: the roster matters more than the "
+                "router."),
+    "sampling": ("Mirzaei 2026, Sample More, Reflect Less (arXiv 2607.28576); Sunkaraneni et al. 2026, "
+                 "Inference-Time Amplification of Weak Reasoning Models (arXiv 2605.14163)",
+                 "At equal tokens, no self-critique, reflection or debate method beat plain repeated sampling with "
+                 "a vote; every method where the model judged its own work lost (by 4-14 points). Eight samples "
+                 "from a small model plus a good selector recovered 78-85% of the gap to the best-of-eight oracle; "
+                 "a computer check (tests, a plan checker) matched a learned selector at 6x fewer tokens."),
+    "floor": ("Gnomon bench/floor (this repository, 2026-10-21)",
+              "On 5,574 real SMS messages a linear model on 1,000 human labels matched Claude Haiku on a 300-item "
+              "probe (99.7% each) at under a cent per million items against $6.81, and with its least confident "
+              "10% sent to Haiku got all 300 right; trained only on Haiku's labels for 300 items it needed 30% "
+              "sent up. On 10,000 Yelp reviews (stars 1-5) no cheap worker came close (53.6% vs Haiku's 66%) and "
+              "the floor's savings came only in proportion to quality given up. A swarm of 300 boosted "
+              "one-question stumps never beat one linear model."),
     "hayek": ("Hayek 1945; Vickrey 1961", "Prices and bids gather knowledge no planner has; a second-price "
               "auction makes bidding one's true estimate the best strategy."),
 }
@@ -170,7 +203,9 @@ ALPHABET = {
                "Faults a checker or reviewer can point to (a violated constraint, a failing test).",
                "Vague faults: critique steers solutions toward the trivial (57% regressions).",
                (_e("tax", "knapsack feasibility 10/10 with critique vs 2/10; 0/10 vs 6/10 when faults are "
-                          "hard to locate"),), "mutual adjustment"),
+                          "hard to locate"),
+                _e("sampling", "self-critique lost to more samples at equal tokens; a computer check does not")),
+               "mutual adjustment"),
         Letter("B", "Debate", "Agents exchange and argue full answers over rounds.",
                "Same-model teams on factual questions; resisting a manipulator.",
                "Mixed model families (diversity erased in one round); expertise asymmetry.",
@@ -205,6 +240,25 @@ ALPHABET = {
                "A check that can tell failure (exact, or a review).", "No check: failures go unseen.",
                (_e("condorcet", "a cascade's expected cost falls when early tiers usually succeed", "theory"),),
                "standardised outputs"),
+        Letter("T", "Toolmaker (bottle)", "A capable model builds a cheap artifact once (a program, a small "
+                                          "trained model, an adapter) that then does the repetitive work.",
+               "Many items under one instruction: the build cost is spread over all of them.",
+               "Few items; open-ended work; when the artifact cannot be checked against labels.",
+               (_e("bottled", "95% of quality at 889x lower cost at best; most agents lost a quarter or more"),
+                _e("paw", "a compiled 0.6B worker beat prompting a 32B model per input"),
+                _e("floor", "on spam, a program and a linear model matched the model's accuracy")),
+               "standardised skills"),
+        Letter("F", "Floor", "Many cheap workers (code, small models, the cheapest tier) answer what they are "
+                             "confident about; the rest go up to one capable tier.",
+               "High-volume, narrow work where confidence separates easy items from hard ones.",
+               "Fuzzy work where the cheap worker's confidence does not track its errors; more than two tiers.",
+               (_e("cascade", "two tiers gain 2-8 points over one; a third adds nothing on average"),
+                _e("floor", "spam: matched the model for almost nothing; reviews: savings only in proportion to loss")),
+               "standardised outputs"),
+        Letter("N", "Batch", "Many items, and several questions about each, in one request.",
+               "Classification and extraction at volume.", "Long items, or tasks whose items interfere.",
+               (_e("batching", "80% cheaper, under 2 points lost up to 100 items per request"),),
+               "standardised work"),
         Letter("I", "Independent assurance", "Someone outside the workers' group judges the result; reviewers "
                                             "from distinct groups, majority rule.",
                "Anything that matters, and anything without an exact check.",
@@ -237,6 +291,8 @@ class Profile:
     tier: str = "sonnet"  # the strongest tier available to the firm
     families: int = 1  # distinct model families available (diversity)
     context_parts: int = 40  # parts one planner can brief and integrate
+    repeats: int = 1  # items that share one instruction (a workload: classify these 100,000 messages)
+    narrow: bool = True  # with repeats: one fixed question per item, so cheap workers can learn it
 
     def __post_init__(self):
         if not isinstance(self.parts, int) or isinstance(self.parts, bool) or not 1 <= self.parts <= 1_000_000:
@@ -244,7 +300,9 @@ class Profile:
         if isinstance(self.parallel, bool) or not isinstance(self.parallel, (int, float)) \
                 or not 0.0 <= self.parallel <= 1.0:
             raise ValueError("parallel must be a number from 0 to 1")
-        for name in ("locatable", "expert", "open_ended", "adversarial", "graded"):
+        if not isinstance(self.repeats, int) or isinstance(self.repeats, bool) or not 1 <= self.repeats <= 10**12:
+            raise ValueError("repeats must be a whole number from 1 to 10^12")
+        for name in ("locatable", "expert", "open_ended", "adversarial", "graded", "narrow"):
             if not isinstance(getattr(self, name), bool):
                 raise ValueError(f"{name} must be true or false")
         if self.coupling not in ("low", "high"):
@@ -262,7 +320,8 @@ class Profile:
         """The context the learner sees: bounded, interpretable numbers."""
         return [1.0, float(self.parallel), float(self.coupling == "high"), float(self.check == "exact"),
                 float(self.check == "review"), float(self.expert), float(self.open_ended),
-                float(self.tier in STRONG), min(math.log10(self.parts) / 3, 1.0), float(self.adversarial)]
+                float(self.tier in STRONG), min(math.log10(self.parts) / 3, 1.0), float(self.adversarial),
+                min(math.log10(self.repeats) / 6, 1.0)]
 
 
 @dataclass(frozen=True)
@@ -361,6 +420,24 @@ def compose(profile: Profile, dials: Optional[Dials] = None) -> Design:
     warnings: list = []
     calls = 0.0
     rounds = 0
+
+    # 0. A workload: many items under one instruction.
+    if p.repeats >= 1000 and p.narrow and not p.open_ended:
+        if p.repeats >= 10_000:
+            stages.append(Stage("T", 1, f"{p.repeats:,} items: build a program or small model once and let it do "
+                                        "the bulk; label a probe of a few hundred items with the model first, "
+                                        "and keep the artifact only if it holds up on them",
+                                ("bottled", "paw", "floor")))
+            considered.append(("per-item model calls", "cost grows with every item; an artifact's barely does"))
+        stages.append(Stage("F", 2, "the cheap worker answers what it is confident about; its least confident "
+                                    "items go to one capable tier", ("cascade", "floor")))
+        considered.append(("a third tier", "added nothing on average in 118 of 135 comparisons"))
+        b = 25 if d.thrift < 0.7 else 100
+        stages.append(Stage("N", b, f"{b} items per request to the capable tier", ("batching",)))
+        warnings.append("a floor pays only where the cheap worker is nearly as good and its confidence tracks "
+                        "its errors: on spam it matched the model for almost nothing; on five-star reviews it "
+                        "saved only what it gave up in quality. Measure on the probe first")
+        calls += 0.2  # share of items expected to reach the capable tier (measured: 10-30% on easy work)
 
     # 1. Shape across parts: split, and who assigns.
     workers = workers_for(p.parallel, p.parts, d.speed) if p.coupling == "low" else 1
@@ -504,7 +581,7 @@ class Learner:
     when the bound says the chance is worth it; with no data the composed
     form (first candidate) wins ties."""
 
-    def __init__(self, alpha: float = 0.6, dim: int = 10):
+    def __init__(self, alpha: float = 0.6, dim: int = 11):
         self.alpha = alpha
         self.dim = dim
         self.arms: dict = {}  # word -> {"A_inv": [[...]], "b": [...], "n": int}

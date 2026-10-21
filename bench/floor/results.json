@@ -1,0 +1,538 @@
+{
+ "sms": {
+  "task": "sms",
+  "items": 5574,
+  "eval_items": 2637,
+  "workers": [
+   {
+    "worker": "majority",
+    "labels": "-",
+    "acc": 0.8729616989002654,
+    "spam_recall": 0.0,
+    "spam_precision": 0.0,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 1000000000,
+    "note": "always the commonest answer"
+   },
+   {
+    "worker": "rules",
+    "labels": "0",
+    "acc": 0.9848312476298824,
+    "spam_recall": 0.8985074626865671,
+    "spam_precision": 0.9804560260586319,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 104039,
+    "note": "program from general knowledge"
+   },
+   {
+    "worker": "voters",
+    "labels": "50 human",
+    "acc": 0.9423587409935533,
+    "spam_recall": 0.6925373134328359,
+    "spam_precision": 0.8256227758007118,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 77149,
+    "note": ""
+   },
+   {
+    "worker": "voters",
+    "labels": "200 human",
+    "acc": 0.9601820250284414,
+    "spam_recall": 0.6955223880597015,
+    "spam_precision": 0.9872881355932204,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 66461,
+    "note": ""
+   },
+   {
+    "worker": "voters",
+    "labels": "1000 human",
+    "acc": 0.975350777398559,
+    "spam_recall": 0.8149253731343283,
+    "spam_precision": 0.9891304347826086,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 75255,
+    "note": ""
+   },
+   {
+    "worker": "voters",
+    "labels": "2637 human",
+    "acc": 0.9859689040576413,
+    "spam_recall": 0.8985074626865671,
+    "spam_precision": 0.9901315789473685,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 58243,
+    "note": ""
+   },
+   {
+    "worker": "stumps",
+    "labels": "50 human",
+    "acc": 0.8600682593856656,
+    "spam_recall": 0.4716417910447761,
+    "spam_precision": 0.4514285714285714,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 28158,
+    "note": ""
+   },
+   {
+    "worker": "stumps",
+    "labels": "200 human",
+    "acc": 0.9465301478953356,
+    "spam_recall": 0.6149253731343284,
+    "spam_precision": 0.944954128440367,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 24553,
+    "note": ""
+   },
+   {
+    "worker": "stumps",
+    "labels": "1000 human",
+    "acc": 0.9571482745544179,
+    "spam_recall": 0.7134328358208956,
+    "spam_precision": 0.93359375,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 22866,
+    "note": ""
+   },
+   {
+    "worker": "stumps",
+    "labels": "2637 human",
+    "acc": 0.9715585893060296,
+    "spam_recall": 0.808955223880597,
+    "spam_precision": 0.9609929078014184,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 22881,
+    "note": ""
+   },
+   {
+    "worker": "linear",
+    "labels": "50 human",
+    "acc": 0.9404626469472885,
+    "spam_recall": 0.7194029850746269,
+    "spam_precision": 0.7927631578947368,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 14832,
+    "note": ""
+   },
+   {
+    "worker": "linear",
+    "labels": "200 human",
+    "acc": 0.9719378081152825,
+    "spam_recall": 0.826865671641791,
+    "spam_precision": 0.9453924914675768,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 14036,
+    "note": ""
+   },
+   {
+    "worker": "linear",
+    "labels": "1000 human",
+    "acc": 0.9867273416761472,
+    "spam_recall": 0.9343283582089552,
+    "spam_precision": 0.9601226993865031,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 12645,
+    "note": ""
+   },
+   {
+    "worker": "linear",
+    "labels": "2637 human",
+    "acc": 0.9886234357224118,
+    "spam_recall": 0.9552238805970149,
+    "spam_precision": 0.9552238805970149,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 13118,
+    "note": ""
+   },
+   {
+    "worker": "bottled",
+    "labels": "300 llm",
+    "acc": 0.9787637466818354,
+    "spam_recall": 0.8805970149253731,
+    "spam_precision": 0.9485530546623794,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 14750,
+    "note": "one-off labelling cost $0.0020"
+   }
+  ],
+  "llm": {
+   "worker": "llm (haiku)",
+   "acc": 0.9966666666666667,
+   "spam_recall": 1.0,
+   "spam_precision": 0.9803921568627451,
+   "measured_on": 300,
+   "acc_95": [
+    0.981,
+    0.999
+   ],
+   "usd_per_million": 6.81,
+   "usd_per_million_batch_api": 3.41,
+   "sonnet_usd_per_million": 136.24,
+   "opus_usd_per_million": 272.48
+  },
+  "floor": {
+   "1000 human labels": {
+    "curve": [
+     {
+      "to_llm": 0.0,
+      "acc": 0.9967,
+      "usd_per_million": 0.0
+     },
+     {
+      "to_llm": 0.1,
+      "acc": 1.0,
+      "usd_per_million": 0.68
+     },
+     {
+      "to_llm": 0.2,
+      "acc": 1.0,
+      "usd_per_million": 1.36
+     },
+     {
+      "to_llm": 0.3,
+      "acc": 1.0,
+      "usd_per_million": 2.04
+     },
+     {
+      "to_llm": 0.5,
+      "acc": 1.0,
+      "usd_per_million": 3.41
+     },
+     {
+      "to_llm": 0.7,
+      "acc": 1.0,
+      "usd_per_million": 4.77
+     },
+     {
+      "to_llm": 1.0,
+      "acc": 0.9967,
+      "usd_per_million": 6.81
+     }
+    ],
+    "best": {
+     "to_llm": 0.1,
+     "acc": 1.0,
+     "usd_per_million": 0.68
+    },
+    "cheapest_matching_llm": {
+     "to_llm": 0.0,
+     "acc": 0.9967,
+     "usd_per_million": 0.0
+    }
+   },
+   "bottled from the llm": {
+    "curve": [
+     {
+      "to_llm": 0.0,
+      "acc": 0.9533,
+      "usd_per_million": 0.0
+     },
+     {
+      "to_llm": 0.1,
+      "acc": 0.98,
+      "usd_per_million": 0.68
+     },
+     {
+      "to_llm": 0.2,
+      "acc": 0.99,
+      "usd_per_million": 1.36
+     },
+     {
+      "to_llm": 0.3,
+      "acc": 1.0,
+      "usd_per_million": 2.04
+     },
+     {
+      "to_llm": 0.5,
+      "acc": 1.0,
+      "usd_per_million": 3.41
+     },
+     {
+      "to_llm": 0.7,
+      "acc": 1.0,
+      "usd_per_million": 4.77
+     },
+     {
+      "to_llm": 1.0,
+      "acc": 0.9967,
+      "usd_per_million": 6.81
+     }
+    ],
+    "best": {
+     "to_llm": 0.3,
+     "acc": 1.0,
+     "usd_per_million": 2.04
+    },
+    "cheapest_matching_llm": {
+     "to_llm": 0.3,
+     "acc": 1.0,
+     "usd_per_million": 2.04
+    }
+   },
+   "llm_alone": {
+    "acc": 0.9967,
+    "usd_per_million": 6.81
+   }
+  }
+ },
+ "yelp": {
+  "task": "yelp",
+  "items": 10000,
+  "eval_items": 4850,
+  "workers": [
+   {
+    "worker": "majority",
+    "labels": "-",
+    "acc": 0.34824742268041237,
+    "within_one": 0.8272164948453609,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 1000000000,
+    "note": "always the commonest answer"
+   },
+   {
+    "worker": "rules",
+    "labels": "0",
+    "acc": 0.37381443298969075,
+    "within_one": 0.849278350515464,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 29633,
+    "note": "program from general knowledge"
+   },
+   {
+    "worker": "voters",
+    "labels": "50 human",
+    "acc": 0.33422680412371136,
+    "within_one": 0.6847422680412372,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 10897,
+    "note": ""
+   },
+   {
+    "worker": "voters",
+    "labels": "200 human",
+    "acc": 0.39505154639175255,
+    "within_one": 0.8008247422680412,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 10617,
+    "note": ""
+   },
+   {
+    "worker": "voters",
+    "labels": "1000 human",
+    "acc": 0.40329896907216495,
+    "within_one": 0.8204123711340207,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 9295,
+    "note": ""
+   },
+   {
+    "worker": "voters",
+    "labels": "4850 human",
+    "acc": 0.4350515463917526,
+    "within_one": 0.8208247422680413,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 7849,
+    "note": ""
+   },
+   {
+    "worker": "stumps",
+    "labels": "50 human",
+    "acc": 0.32556701030927837,
+    "within_one": 0.7111340206185567,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 8568,
+    "note": ""
+   },
+   {
+    "worker": "stumps",
+    "labels": "200 human",
+    "acc": 0.3356701030927835,
+    "within_one": 0.748659793814433,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 8283,
+    "note": ""
+   },
+   {
+    "worker": "stumps",
+    "labels": "1000 human",
+    "acc": 0.4024742268041237,
+    "within_one": 0.8098969072164949,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 6782,
+    "note": ""
+   },
+   {
+    "worker": "stumps",
+    "labels": "4850 human",
+    "acc": 0.4509278350515464,
+    "within_one": 0.8501030927835052,
+    "usd_per_million": 0.0,
+    "items_per_cpu_second": 6011,
+    "note": ""
+   },
+   {
+    "worker": "linear",
+    "labels": "50 human",
+    "acc": 0.34783505154639177,
+    "within_one": 0.7109278350515464,
+    "usd_per_million": 0.01,
+    "items_per_cpu_second": 1939,
+    "note": ""
+   },
+   {
+    "worker": "linear",
+    "labels": "200 human",
+    "acc": 0.4063917525773196,
+    "within_one": 0.808659793814433,
+    "usd_per_million": 0.01,
+    "items_per_cpu_second": 1671,
+    "note": ""
+   },
+   {
+    "worker": "linear",
+    "labels": "1000 human",
+    "acc": 0.48762886597938143,
+    "within_one": 0.8797938144329897,
+    "usd_per_million": 0.01,
+    "items_per_cpu_second": 1680,
+    "note": ""
+   },
+   {
+    "worker": "linear",
+    "labels": "4850 human",
+    "acc": 0.5362886597938145,
+    "within_one": 0.9232989690721649,
+    "usd_per_million": 0.01,
+    "items_per_cpu_second": 1567,
+    "note": ""
+   },
+   {
+    "worker": "bottled",
+    "labels": "300 llm",
+    "acc": 0.44556701030927837,
+    "within_one": 0.8490721649484536,
+    "usd_per_million": 0.01,
+    "items_per_cpu_second": 1613,
+    "note": "one-off labelling cost $0.0060"
+   }
+  ],
+  "llm": {
+   "worker": "llm (haiku)",
+   "acc": 0.66,
+   "within_one": 0.9866666666666667,
+   "measured_on": 300,
+   "acc_95": [
+    0.605,
+    0.711
+   ],
+   "usd_per_million": 20.09,
+   "usd_per_million_batch_api": 10.04,
+   "sonnet_usd_per_million": 401.75,
+   "opus_usd_per_million": 803.5
+  },
+  "floor": {
+   "1000 human labels": {
+    "curve": [
+     {
+      "to_llm": 0.0,
+      "acc": 0.4633,
+      "usd_per_million": 0.0
+     },
+     {
+      "to_llm": 0.1,
+      "acc": 0.4967,
+      "usd_per_million": 2.01
+     },
+     {
+      "to_llm": 0.2,
+      "acc": 0.5033,
+      "usd_per_million": 4.02
+     },
+     {
+      "to_llm": 0.3,
+      "acc": 0.5233,
+      "usd_per_million": 6.03
+     },
+     {
+      "to_llm": 0.5,
+      "acc": 0.58,
+      "usd_per_million": 10.04
+     },
+     {
+      "to_llm": 0.7,
+      "acc": 0.6367,
+      "usd_per_million": 14.06
+     },
+     {
+      "to_llm": 1.0,
+      "acc": 0.66,
+      "usd_per_million": 20.09
+     }
+    ],
+    "best": {
+     "to_llm": 1.0,
+     "acc": 0.66,
+     "usd_per_million": 20.09
+    },
+    "cheapest_matching_llm": {
+     "to_llm": 1.0,
+     "acc": 0.66,
+     "usd_per_million": 20.09
+    }
+   },
+   "bottled from the llm": {
+    "curve": [
+     {
+      "to_llm": 0.0,
+      "acc": 0.3633,
+      "usd_per_million": 0.0
+     },
+     {
+      "to_llm": 0.1,
+      "acc": 0.4133,
+      "usd_per_million": 2.01
+     },
+     {
+      "to_llm": 0.2,
+      "acc": 0.4433,
+      "usd_per_million": 4.02
+     },
+     {
+      "to_llm": 0.3,
+      "acc": 0.4733,
+      "usd_per_million": 6.03
+     },
+     {
+      "to_llm": 0.5,
+      "acc": 0.5167,
+      "usd_per_million": 10.04
+     },
+     {
+      "to_llm": 0.7,
+      "acc": 0.57,
+      "usd_per_million": 14.06
+     },
+     {
+      "to_llm": 1.0,
+      "acc": 0.66,
+      "usd_per_million": 20.09
+     }
+    ],
+    "best": {
+     "to_llm": 1.0,
+     "acc": 0.66,
+     "usd_per_million": 20.09
+    },
+    "cheapest_matching_llm": {
+     "to_llm": 1.0,
+     "acc": 0.66,
+     "usd_per_million": 20.09
+    }
+   },
+   "llm_alone": {
+    "acc": 0.66,
+    "usd_per_million": 20.09
+   }
+  }
+ }
+}
