@@ -466,9 +466,22 @@ of the same share (`bench/situation_distil.py`).
 Haiku answering with the situation model used the evidence more often:
 38.2% against 30.1% judge-free, and a blinded judge preferred it 33 to 25
 with 65 ties. That is far less than the jump in presence. The reader has
-to find the one line that applies among about 1,900. So the next lever is
-precision: tens of standing circumstances, not thousands of sentences
-(`bench/situation_reader.md`).
+to find the one line that applies among about 1,900 (`bench/situation_reader.md`).
+
+Three pre-registered attempts at precision, on one test history (60
+questions, `bench/situation_cues.md`):
+
+| Reader gets | Uses the evidence |
+|---|---|
+| Top 10 messages | 28.3% |
+| + situation model | 35.0% |
+| + situation model, select lines first, then answer | **36.7%** |
+| + a cited profile condensed from it (11x smaller) | 25.0% |
+
+Retrieval cues written at encoding time did not help either. Condensing
+loses: the profile kept the evidence for 44% of questions, the reader used
+it less even where kept, and it distracted where it missed. As with facts,
+selecting exact text beats rewriting it.
 
 **Compartments: the right mechanism depends on the record.** Within a
 dataset, choosing the method by question type gains 0.3-2.2 points. Across
