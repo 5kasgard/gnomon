@@ -120,13 +120,14 @@ SOURCES = {
                  "a vote; every method where the model judged its own work lost (by 4-14 points). Eight samples "
                  "from a small model plus a good selector recovered 78-85% of the gap to the best-of-eight oracle; "
                  "a computer check (tests, a plan checker) matched a learned selector at 6x fewer tokens."),
-    "floor": ("Gnomon bench/floor (this repository, 2026-10-21)",
+    "floor": ("Gnomon bench/floor (this repository, 2026-10-21; protocol in bench/floor/PROTOCOL.md)",
               "On 5,574 real SMS messages a linear model on 1,000 human labels matched Claude Haiku on a 300-item "
-              "probe (99.7% each) at under a cent per million items against $6.81, and with its least confident "
-              "10% sent to Haiku got all 300 right; trained only on Haiku's labels for 300 items it needed 30% "
-              "sent up. On 10,000 Yelp reviews (stars 1-5) no cheap worker came close (53.6% vs Haiku's 66%) and "
-              "the floor's savings came only in proportion to quality given up. A swarm of 300 boosted "
-              "one-question stumps never beat one linear model."),
+              "probe (99.7% each) at about a cent per million items against $9.81; with the escalation share "
+              "chosen on half the probe and scored on the other, it escalated nothing. On 10,000 Yelp reviews "
+              "(stars 1-5) no cheap worker came close (48.8% vs Haiku's 66%) and the floor sent everything up. On "
+              "positive/negative sentiment the floor matched Haiku at a seventh of the cost, or fell 2 points "
+              "short, depending on how Haiku's '3 stars' answers are read. Swarms of dumb nodes (300 boosted "
+              "stumps; Mycel's nuclei) never beat one linear model on text."),
     "hayek": ("Hayek 1945; Vickrey 1961", "Prices and bids gather knowledge no planner has; a second-price "
               "auction makes bidding one's true estimate the best strategy."),
 }
@@ -311,10 +312,10 @@ class Profile:
             raise ValueError("check must be exact, review or none")
         if self.tier not in TIERS:
             raise ValueError(f"tier must be one of {', '.join(TIERS)}")
-        for name in ("families", "context_parts"):
+        for name, lo in (("families", 1), ("context_parts", 2)):
             v = getattr(self, name)
-            if not isinstance(v, int) or isinstance(v, bool) or not 1 <= v <= 1000:
-                raise ValueError(f"{name} must be a whole number from 1 to 1000")
+            if not isinstance(v, int) or isinstance(v, bool) or not lo <= v <= 1000:
+                raise ValueError(f"{name} must be a whole number from {lo} to 1000")
 
     def features(self) -> list:
         """The context the learner sees: bounded, interpretable numbers."""
@@ -369,6 +370,12 @@ class Design:
     @property
     def word(self) -> str:
         return "·".join(s.spell() for s in self.stages)
+
+    @property
+    def shape(self) -> str:
+        """The word without sizes: what the learner tells apart (sizes
+        follow the dials, and keying on them would split the evidence)."""
+        return "·".join(s.letter for s in self.stages)
 
     def as_dict(self) -> dict:
         return {
@@ -574,21 +581,71 @@ def reward(quality: float, cost_usd: float, budget_usd: float, thrift: float = 0
     return float(quality) - thrift * min(cost_usd / budget_usd, 2.0)
 
 
+def _inverse(m: list) -> list:
+    """Gauss-Jordan inverse of a small positive-definite matrix."""
+    n = len(m)
+    a = [list(row) + [float(i == j) for j in range(n)] for i, row in enumerate(m)]
+    for c in range(n):
+        p = max(range(c, n), key=lambda r: abs(a[r][c]))
+        a[c], a[p] = a[p], a[c]
+        piv = a[c][c]
+        if abs(piv) < 1e-12:
+            raise ValueError("singular matrix")
+        a[c] = [v / piv for v in a[c]]
+        for r in range(n):
+            if r != c and a[r][c] != 0.0:
+                f = a[r][c]
+                a[r] = [x - f * y for x, y in zip(a[r], a[c])]
+    return [row[n:] for row in a]
+
+
 class Learner:
     """LinUCB over forms: per form, a ridge regression of reward on the
     task's features, chosen by its upper confidence bound (Li et al. 2010;
     used for protocol routing by IMACS). Untried forms are explored only
     when the bound says the chance is worth it; with no data the composed
-    form (first candidate) wins ties."""
+    form (first candidate) wins ties.
 
-    def __init__(self, alpha: float = 0.6, dim: int = 11):
-        self.alpha = alpha
-        self.dim = dim
-        self.arms: dict = {}  # word -> {"A_inv": [[...]], "b": [...], "n": int}
+    `decay` below 1 forgets old evidence (discounted LinUCB, Russac et al.
+    2019): every update shrinks all forms' evidence by that factor, so a
+    form that used to pay but stopped (a new model, a changed workload) is
+    noticed. It is a trade, measured in tests/test_forms_stress.py (four
+    task types, four forms, the best and worst forms swapping at round
+    600): in the 100 rounds after the change, regret per round fell from
+    0.13-0.19 (decay 1) to 0.08-0.09 (decay 0.995); in a world that does not
+    change it rose from 0.01 to 0.04. The default is 1 (no forgetting):
+    change detection (below) does as well after a change without the cost."""
+
+    def __init__(self, alpha: float = 0.6, dim: int = 11, decay: float = 1.0, ridge: float = 1.0,
+                 key: str = "shape", detect: float = 8.0):
+        if not 0.5 <= decay <= 1.0:
+            raise ValueError("decay must be from 0.5 to 1")
+        if key not in ("shape", "word"):
+            raise ValueError("key must be shape or word")
+        if detect < 0:
+            raise ValueError("detect must be 0 (off) or positive")
+        if not ridge > 0:
+            raise ValueError("ridge must be positive")
+        self.alpha, self.dim, self.decay, self.ridge, self.key = alpha, dim, decay, ridge, key
+        # Change detection (Page-Hinkley on each form's prediction errors,
+        # in units of their own running spread): when a form's rewards drift
+        # from what it predicts by more than `detect` standard deviations
+        # (cumulative), its evidence is reset to the prior and re-learnt.
+        # 0 turns it off. Measured in simulation on seeds not used to choose
+        # it (10 worlds per noise level 0.05, 0.15, 0.3): at 8, regret in a
+        # world that never changes was identical to no detection (0.004,
+        # 0.007, 0.019; at most 0.2 false alarms per 1,200 rounds); in the
+        # 100 rounds after the best and worst forms swap it fell from 0.13,
+        # 0.17, 0.20 to 0.08, 0.11, 0.16. Plain forgetting (decay 0.995)
+        # recovered about as fast but cost 0.036-0.046 when nothing changed.
+        self.detect = detect
+        self.alarms = 0
+        self.arms: dict = {}  # word -> {"A": [[...]], "b": [...], "n": int}
+        self._inv: dict = {}
 
     def _arm(self, word: str) -> dict:
         if word not in self.arms:
-            self.arms[word] = {"A_inv": [[float(i == j) for j in range(self.dim)] for i in range(self.dim)],
+            self.arms[word] = {"A": [[self.ridge * float(i == j) for j in range(self.dim)] for i in range(self.dim)],
                                "b": [0.0] * self.dim, "n": 0}
         return self.arms[word]
 
@@ -596,32 +653,83 @@ class Learner:
     def _mv(m, v):
         return [sum(a * b for a, b in zip(row, v)) for row in m]
 
+    def _A_inv(self, word: str) -> list:
+        if word not in self._inv:
+            self._inv[word] = _inverse(self._arm(word)["A"])
+        return self._inv[word]
+
     def score(self, word: str, x: list) -> float:
         a = self._arm(word)
-        theta = self._mv(a["A_inv"], a["b"])
+        inv = self._A_inv(word)
+        theta = self._mv(inv, a["b"])
         mean = sum(t * xi for t, xi in zip(theta, x))
-        width = math.sqrt(max(sum(xi * yi for xi, yi in zip(x, self._mv(a["A_inv"], x))), 0.0))
+        width = math.sqrt(max(sum(xi * yi for xi, yi in zip(x, self._mv(inv, x))), 0.0))
         return mean + self.alpha * width
+
+    def name(self, design) -> str:
+        """The arm a design counts under (a string is taken as given)."""
+        return design if isinstance(design, str) else getattr(design, self.key)
 
     def choose(self, profile: Profile, designs: list) -> Design:
         x = profile.features()
-        scored = [(self.score(d.word, x) + (1e-9 if i == 0 else 0.0), -i, d) for i, d in enumerate(designs)]
+        scored = [(self.score(self.name(d), x) + (1e-9 if i == 0 else 0.0), -i, d) for i, d in enumerate(designs)]
         return max(scored, key=lambda t: (t[0], t[1]))[2]
 
-    def update(self, profile: Profile, word: str, r: float) -> None:
+    def update(self, profile: Profile, design, r: float) -> None:
+        """Record reward `r` for `design` (a Design, or its arm name)."""
+        word = self.name(design)
         x = profile.features()
-        a = self._arm(word)
-        Ax = self._mv(a["A_inv"], x)
-        denom = 1.0 + sum(xi * y for xi, y in zip(x, Ax))
-        a["A_inv"] = [[a["A_inv"][i][j] - Ax[i] * Ax[j] / denom for j in range(self.dim)] for i in range(self.dim)]
+        self._arm(word)
+        if self.detect > 0:
+            a0 = self.arms[word]
+            if a0["n"] >= 5:
+                inv = self._A_inv(word)
+                e = r - sum(t * xi for t, xi in zip(self._mv(inv, a0["b"]), x))
+                # Page-Hinkley on prediction errors scaled by their own
+                # running spread, so the threshold means the same at any
+                # noise level: `detect` is in standard deviations.
+                ph = a0.setdefault("ph", {"n": 0, "mean": 0.0, "m2": 0.0, "up": 0.0, "lo": 0.0, "dn": 0.0,
+                                          "hi": 0.0})
+                ph["n"] += 1
+                d0 = e - ph["mean"]
+                ph["mean"] += d0 / ph["n"]
+                ph["m2"] += d0 * (e - ph["mean"])
+                sd = math.sqrt(ph["m2"] / (ph["n"] - 1)) if ph["n"] > 1 else 0.0
+                if ph["n"] >= 10 and sd > 0:
+                    z = e / max(sd, 1e-3)
+                    ph["up"] += z - 0.5
+                    ph["lo"] = min(ph["lo"], ph["up"])
+                    ph["dn"] += z + 0.5
+                    ph["hi"] = max(ph["hi"], ph["dn"])
+                    if ph["up"] - ph["lo"] > self.detect or ph["hi"] - ph["dn"] > self.detect:
+                        self.arms[word] = {"A": [[self.ridge * float(i == j) for j in range(self.dim)]
+                                                 for i in range(self.dim)], "b": [0.0] * self.dim, "n": 0}
+                        self._inv.pop(word, None)
+                        self.alarms += 1
+        g = self.decay
+        for w, a in self.arms.items():
+            if g < 1.0:
+                # Discount toward the prior, so the matrix stays invertible.
+                a["A"] = [[g * a["A"][i][j] + (1 - g) * self.ridge * float(i == j) for j in range(self.dim)]
+                          for i in range(self.dim)]
+                a["b"] = [g * v for v in a["b"]]
+                self._inv.pop(w, None)
+        a = self.arms[word]
+        a["A"] = [[a["A"][i][j] + x[i] * x[j] for j in range(self.dim)] for i in range(self.dim)]
         a["b"] = [bi + r * xi for bi, xi in zip(a["b"], x)]
         a["n"] += 1
+        self._inv.pop(word, None)
 
     def to_dict(self) -> dict:
-        return {"alpha": self.alpha, "dim": self.dim, "arms": self.arms}
+        return {"alpha": self.alpha, "dim": self.dim, "decay": self.decay, "ridge": self.ridge, "key": self.key,
+                "detect": self.detect, "arms": self.arms}
 
     @classmethod
     def from_dict(cls, d: dict) -> "Learner":
-        lr = cls(d["alpha"], d["dim"])
-        lr.arms = d["arms"]
+        lr = cls(d["alpha"], d["dim"], d.get("decay", 1.0), d.get("ridge", 1.0), d.get("key", "word"),
+                 d.get("detect", 0.0))
+        for w, a in d["arms"].items():
+            if "A_inv" in a:  # an older save
+                a = {"A": _inverse(a["A_inv"]), "b": a["b"], "n": a["n"]}
+            lr.arms[w] = a
         return lr

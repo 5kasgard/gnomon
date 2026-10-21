@@ -1,0 +1,151 @@
+{
+ "memory": {
+  "missing": 0,
+  "f1_all_1_4": [
+   54.6,
+   5.1
+  ],
+  "f1_all_1_4_conversation_bootstrap": [
+   54.6,
+   50.0,
+   58.0
+  ],
+  "f1_multi-hop": [
+   37.2,
+   8.2
+  ],
+  "f1_open-domain": [
+   34.2,
+   19.6
+  ],
+  "f1_single-hop": [
+   70.7,
+   6.9
+  ],
+  "f1_temporal": [
+   45.0,
+   10.0
+  ],
+  "abstained_on_adversarial": [
+   86.0,
+   9.7
+  ],
+  "abstained_on_answerable": [
+   7.5,
+   3.7
+  ]
+ },
+ "memory30": {
+  "missing": 0,
+  "f1_all_1_4": [
+   54.0,
+   4.7
+  ],
+  "f1_all_1_4_conversation_bootstrap": [
+   54.0,
+   50.0,
+   58.8
+  ],
+  "f1_multi-hop": [
+   43.1,
+   7.8
+  ],
+  "f1_open-domain": [
+   31.5,
+   19.1
+  ],
+  "f1_single-hop": [
+   65.5,
+   6.8
+  ],
+  "f1_temporal": [
+   47.9,
+   10.1
+  ],
+  "abstained_on_adversarial": [
+   74.0,
+   12.3
+  ],
+  "abstained_on_answerable": [
+   5.0,
+   3.0
+  ]
+ },
+ "full": {
+  "missing": 0,
+  "f1_all_1_4": [
+   61.7,
+   4.7
+  ],
+  "f1_all_1_4_conversation_bootstrap": [
+   61.7,
+   58.7,
+   65.1
+  ],
+  "f1_multi-hop": [
+   52.3,
+   8.7
+  ],
+  "f1_open-domain": [
+   30.2,
+   18.1
+  ],
+  "f1_single-hop": [
+   71.3,
+   6.4
+  ],
+  "f1_temporal": [
+   61.2,
+   10.1
+  ],
+  "abstained_on_adversarial": [
+   78.0,
+   11.6
+  ],
+  "abstained_on_answerable": [
+   2.0,
+   1.9
+  ]
+ },
+ "memory_minus_full_f1": {
+  "per_question": [
+   -7.0,
+   3.9
+  ],
+  "conversation_bootstrap": [
+   -7.0,
+   -10.8,
+   -3.8
+  ],
+  "per_conversation": {
+   "5": -9.5,
+   "6": -2.1,
+   "7": -5.6,
+   "8": -13.4,
+   "9": -4.5
+  }
+ },
+ "memory30_minus_full_f1": {
+  "per_question": [
+   -7.7,
+   3.7
+  ],
+  "conversation_bootstrap": [
+   -7.7,
+   -10.8,
+   -4.4
+  ],
+  "per_conversation": {
+   "5": -5.4,
+   "6": -2.2,
+   "7": -7.5,
+   "8": -10.4,
+   "9": -13.0
+  }
+ },
+ "context_tokens_per_question": {
+  "full": 22818,
+  "memory": 521,
+  "memory30": 1435
+ }
+}

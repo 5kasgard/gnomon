@@ -229,14 +229,64 @@ conversations 5–9, all questions:
 | Evidence found in the top… | 1 | 5 | 10 | 25 | 50 |
 |---|---|---|---|---|---|
 | Keyword search (BM25) alone | 26.4% | 49.2% | 57.2% | 65.5% | 71.3% |
-| **Gnomon recall** | **35.8%** | **65.4%** | **74.2%** | **82.3%** | **86.5%** |
+| **Gnomon recall** | **35.9%** | **65.6%** | **74.4%** | **82.6%** | **86.7%** |
 | DRAGON, a trained neural retriever (LoCoMo paper) | – | 58.8% | 67.5% | 79.9% | 84.8% |
 
 Gnomon is ahead of the neural retriever at every depth reported, in under
-2 ms per question on one CPU core. Reproduce it with
+2 ms per question on one CPU core. (Since 2026-10-21 evidence entries
+holding two turn ids are split and malformed ones dropped, which moved
+Gnomon's row by at most 0.3 points; the BM25 row predates that.)
+
+**Against systems people use.** Most memory systems report recall by
+session rather than by turn: did the right sessions come back? Measured
+the same way, over all 1,979 questions with well-formed evidence, Gnomon finds
+**86.7%** of evidence sessions in its top 5 and **92.1%** in its top 10.
+MemPalace, the most-starred open-source memory system, publishes 83.7% and
+88.9% for its best configuration without an LLM reranker (embeddings plus
+keywords, top 5 and 10), and 60.3% at top 10 for embeddings alone. It
+reports no held-out split for LoCoMo; Gnomon's choices were made on half
+of it.
+
+**Against a corrected answer key.** An independent audit of LoCoMo
+(github.com/dial481/locomo-audit) found 6.4% of its answers wrong and some
+evidence citations pointing at the wrong turn. Scored against the corrected
+citations (`--audit errors.json`), Gnomon's held-out recall moves by at most
+half a point, so the numbers above do not lean on the errors.
+
+**Tried and kept out:** spreading the top hits across sessions (so
+questions whose evidence spans sessions get more of it) lowered recall at
+every depth on the tuning conversations (R@5 69.8 to 68.3 at the mildest
+setting), so it ships switched off. Reproduce it with
 `python bench/locomo.py --split test`. DRAGON's numbers are from the paper
 over the whole dataset, so the comparison is indicative; see the
 [spec](spec/claim-protocol-v0.1.md#11-recall-m5) for method and caveats.
+
+### Answers, not just evidence: memory against the whole conversation
+
+Finding the evidence is half the job; a model still has to answer from it.
+On 200 random answerable questions and 50 unanswerable ones from the
+held-out conversations 5-9, Claude Haiku answered three ways: from
+Gnomon's top 10 recalled turns, from its top 30, and from the whole
+conversation (`bench/qa`, prompts in `bench/qa/PROMPTS.md`). Scored
+without an LLM judge (token F1 against the gold answer, as in the LoCoMo
+paper; LoCoMo's usual judge accepted 63% of deliberately wrong answers in
+an audit):
+
+| Reading from | Answer F1 (95%, by conversation) | Says "not mentioned" when it isn't there | Wrongly says it when it is | Context per question |
+|---|---|---|---|---|
+| Gnomon, top 10 turns | 54.6 (50.0-58.0) | 86% | 7.5% | **521 tokens** |
+| Gnomon, top 30 turns | 54.0 (50.0-58.8) | 74% | 5.0% | 1,435 tokens |
+| The whole conversation | **61.7** (58.7-65.1) | 78% | 2.0% | 22,818 tokens |
+
+The whole conversation wins by 7 points (95%: 3.8-10.8, lower in all five
+conversations), at 44 times the tokens. More recalled turns did not close
+the gap: multi-hop answers improved (37 to 43) and single-hop ones got
+worse (71 to 66). This matches what audits of the field found: on
+conversations this short (about 23,000 tokens), reading everything beats
+retrieval, and memory earns its place on cost now and on histories too
+long to read later. The test that would show the second (BEAM, at 1-10
+million tokens) needs data from Hugging Face, which this workspace cannot
+reach yet. One reader model, one run per condition.
 
 ### Speed at scale
 
@@ -334,38 +384,60 @@ it is the next measurement.
 ### The floor: many cheap workers, measured
 
 Can lots of very cheap workers do the grunt work instead of one capable
-model? We measured it on two real, human-labelled workloads
-(`bench/floor`): 5,574 SMS messages (spam or not) and 10,000 Yelp reviews
-(which star rating, 1-5). The cheap workers were a program written once
-from general knowledge, naive Bayes (every word a dumb voter), a swarm of
-300 boosted one-question stumps, and a linear model. The capable worker was
-Claude Haiku, reading and judging 300 items of each.
+model? Measured on three real, human-labelled workloads (`bench/floor`,
+protocol fixed in advance in `bench/floor/PROTOCOL.md`): 5,574 SMS
+messages (spam or not), 10,000 Yelp reviews (which star rating, 1-5), and
+the same reviews as positive or negative. The cheap workers: a program
+written once from general knowledge, naive Bayes (every word a dumb
+voter), a swarm of 300 boosted one-question stumps, Mycel's dumb nuclei
+(github.com/5kasgard/mycel, in the configuration its own protocol froze),
+and a linear model. The capable worker: Claude Haiku, reading and judging
+300 items of each. Cheap workers are scored on 2,600-4,800 items none of
+them trained on.
 
-| | Spam: accuracy | Reviews: exact stars | Cost per million items |
-|---|---|---|---|
-| Program, no labels | 98.5% | 37.4% | under 1 cent (100,000 items per CPU-second) |
-| Swarm of 300 stumps, all labels | 97.2% | 45.1% | under 1 cent |
-| Linear model, 1,000 human labels | 98.7% | 48.8% | about 1 cent |
-| Linear model trained on 300 Haiku labels only | 97.9% | 44.6% | about 1 cent, plus $0.002 of labelling |
-| Claude Haiku, every item | 99.7% (95%: 98.1-99.9) | 66.0% (60.5-71.1) | $6.81 spam, $20.09 reviews (Opus: $272, $804) |
-| **Floor:** linear model, least confident 10% to Haiku | 300/300 on the probe | 49.7% | $0.68 spam, $2.01 reviews |
+| | Spam | Stars (exact) | Sentiment | Cost per million items |
+|---|---|---|---|---|
+| Program, no labels | 98.5% | 37.4% | 86.1% | under 1 cent (12,000-100,000 items per CPU-second) |
+| Swarm of 300 stumps, all labels | 97.2% | 45.1% | 87.9% | under 1 cent |
+| Mycel, all labels | 97.4% | 44.3% | 86.9% | under 1 cent |
+| Linear model, 1,000 human labels | 98.7% | 48.8% | 90.5% | about 1 cent |
+| Linear model trained on 300 Haiku labels only | 97.9% | 44.6% | 85.4% | about 1 cent, plus under 1 cent of labelling |
+| Claude Haiku, every item | 99.7% (98.1-99.9) | 66.0% (60.5-71.1) | 92.5% (88.6-95.2) | $9.81 spam, $23.09 reviews (Opus: $392, $924) |
+| **Floor**, escalation share chosen on half the probe, scored on the other | 99.7%, nothing escalated | no saving: it escalates everything | 92.5% at $3.46 | |
 
-On narrow, easy work the floor wins outright: the linear model alone
-matched Haiku on the probe for almost nothing, and escalating its doubts
-did the rest. On fuzzy work it does not: no cheap worker came close to
-Haiku on reviews, and the floor saved money only in proportion to the
-quality it gave up. A swarm of dumb voters never beat one simple linear
-model. The 2026 literature says the same at larger scale: an agent that
-builds a cheap artifact for a workload can keep 95% of its quality at
-889x lower cost, but most agents lost a quarter or more and many lost to a
-naive distilled 0.6B model (arXiv 2610.08775); a small model running an
-adapter compiled by a bigger one beat prompting a 32B model per input
+What this says, and how sure it is:
+- **Narrow, easy work: the floor wins outright.** On spam the linear model
+  alone matched Haiku on the probe for almost nothing (on the larger
+  evaluation set it scored a point lower, so the probe flatters it a
+  little).
+- **Fuzzy work: no free lunch.** On star ratings no cheap worker came close,
+  and the floor's choice, made out of sample, was to send everything up.
+- **In between, it depends on details.** On sentiment the floor matched
+  Haiku at a seventh of the cost, but Haiku was asked for stars and said
+  "3" on 18 of the 254 items; counted as wrong, that lowers Haiku to 92.5%.
+  Read as positive, Haiku scores 98.0% and the floor falls short (96.1% at
+  $8.08); read as negative, they tie (94.1% and 94.5% at $4.62). An
+  independent review caught this; all three readings are in
+  `results.json`.
+- **Many dumb nodes do not beat one simple model on text.** The swarm of
+  stumps and Mycel's nuclei landed together, a point or more below one
+  linear model. A first Mycel configuration of our own choosing barely
+  learnt at all (it is still reported, as `mycel-1st`); Mycel's own frozen
+  configuration did far better, so how it is set up matters more than
+  anything here. Mycel was built for numeric streams, not text.
+- **Cautions.** 300 items per probe gives intervals of ±2-5 points; the
+  spam program was written by a model that may have seen this dataset;
+  Haiku's price makes per-item calls already cheap, so the floor's case is
+  strongest against higher tiers and at very large volume.
+
+The 2026 literature says the same at larger scale: an agent that builds a
+cheap artifact for a workload can keep 95% of its quality at 889x lower
+cost, but most agents lost a quarter or more and many lost to a naive
+distilled 0.6B model (arXiv 2610.08775); a small model running an adapter
+compiled by a bigger one beat prompting a 32B model per input
 (2607.02512); two tiers beat one by 2-8 points but a third adds nothing
 (2605.06350); batching 25-100 items per request cuts cost by 80% for under
-2 points (2604.03684). Cautions: 300 items per probe gives wide intervals;
-the spam program was written by a model that may have seen this dataset;
-Haiku's price makes per-item calls already cheap, so the floor's case is
-strongest against higher tiers and at very large volume.
+2 points (2604.03684).
 
 So the firm now has a toolmaker, a floor and batching among its forms
 (`T`, `F`, `N`): for a workload, build the cheap worker once, check it on a
@@ -450,7 +522,7 @@ The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
   (`tests/incidents.rs`).
 - **Each milestone was attacked by a reviewer who didn't write it.** That
   covered the record, queries, the MCP server, recall, identity, the forum,
-  continuity, auto mode and performance, over 21 review rounds. Every confirmed finding is now a
+  continuity, auto mode and performance, over 22 review rounds. Every confirmed finding is now a
   regression test.
 - **The query engine has a second implementation to agree with.** It is
   checked against a deliberately naive evaluator on hundreds of random
@@ -459,7 +531,7 @@ The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
 - **The MCP server is tested hard.** It is fuzzed with thousands of
   malformed messages and driven in CI by the official MCP Python SDK.
 - **Recall was tested on data it was never tuned on.**
-- **Every platform:** 198 Rust tests and 232 Python tests run on Linux,
+- **Every platform:** 198 Rust tests and 238 Python tests run on Linux,
   macOS and Windows on every change.
 
 ```bash

@@ -299,3 +299,53 @@ class Company:
             out.append({"writer": w, "titles": sorted(titles), "tier": tier, "judged": n, "right": s,
                         "p_right": round(p, 4), "proposal": act})
         return out
+
+
+# ------------------------------------------------------- preregistration
+
+PREREG = re.compile(r"^Preregistered protocol sha256:([0-9a-f]{64})$")
+
+
+def preregister(memory: Memory, writer: str, protocol: str, *, compartment: str, frame: str = "prereg") -> dict:
+    """Record a protocol (how an experiment will be run and judged) before
+    any result exists: a decided claim whose whole statement is the
+    protocol's SHA-256, in frame `prereg`. Returns the claim id and hash.
+
+    What this does and does not prove: the log's hash chain fixes the order
+    of events, so a registration provably precedes any result recorded
+    after it in the same log. It does not prove wall-clock time, and whoever
+    holds the log file could rebuild it in another order; publishing the
+    chain's head hash somewhere public (a commit, a post) closes that gap.
+    Nor does it reveal results seen before the registration: say so in the
+    protocol."""
+    import hashlib
+    digest = hashlib.sha256(protocol.encode("utf-8")).hexdigest()
+    cid = memory.remember(writer, claim(f"Preregistered protocol sha256:{digest}", speaker=writer, frame=frame,
+                                        compartment=compartment, stance="decided", truth="true", origin="manual",
+                                        confidence=9000))
+    return {"claim": cid, "sha256": digest}
+
+
+def check_preregistration(memory: Memory, claim_id: str, protocol: str, result_claim: str,
+                          compartment: str, frame: str = "prereg", writer: Optional[str] = None) -> dict:
+    """Whether `claim_id` is a preregistration (frame, stance, and a
+    statement that is exactly a protocol hash) of exactly `protocol`,
+    recorded before `result_claim`, by `writer` if given, and not since
+    superseded. Order is the log's order, which the hash chain fixes."""
+    import hashlib
+    st = memory.state(compartments=[compartment])["state"]
+    claims = st["claims"]
+    reg, res = claims.get(claim_id), claims.get(result_claim)
+    if reg is None or res is None:
+        return {"ok": False, "why": "claim not found"}
+    body = reg["body"]
+    m = PREREG.match(body.get("statement", ""))
+    digest = hashlib.sha256(protocol.encode("utf-8")).hexdigest()
+    checks = {
+        "is_registration": bool(m) and body.get("frame") == frame and body.get("stance") == "decided",
+        "same_protocol": bool(m) and m.group(1) == digest,
+        "registered_first": reg["order"] < res["order"],
+        "by_writer": writer is None or reg.get("author") == writer,
+        "not_superseded": not any(x.get("old") == claim_id for x in st.get("supersessions", {}).values()),
+    }
+    return {"ok": all(checks.values()), **checks}

@@ -74,6 +74,11 @@ pub struct Tuning {
     pub window: i64,
     pub session: i64,
     pub when: i64,
+    /// Diversity, in thousandths: each later hit from a conversation that
+    /// already has one higher up keeps this share of its score (1000 = off).
+    /// Questions whose evidence spans conversations need more than one of
+    /// them near the top.
+    pub diverse: i64,
 }
 
 impl Default for Tuning {
@@ -93,6 +98,7 @@ impl Default for Tuning {
             window: 1500,
             session: 1200,
             when: 500,
+            diverse: 1000,
         }
     }
 }
@@ -192,6 +198,12 @@ impl Request {
                     "window" => tuning.window = num(x)?,
                     "session" => tuning.session = num(x)?,
                     "when" => tuning.when = num(x)?,
+                    "diverse" => {
+                        tuning.diverse = num(x)?;
+                        if tuning.diverse > 1000 {
+                            return Err(rerr("tuning 'diverse' is at most 1000 (1000 is off)"));
+                        }
+                    }
                     _ => return Err(rerr(format!("unknown tuning '{k}'"))),
                 }
             }
@@ -1387,6 +1399,33 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
             .unwrap_or(std::cmp::Ordering::Equal)
             .then(a.1.cmp(&b.1))
     });
+    if tune.diverse < 1000 && !order.is_empty() {
+        // Greedy: each pick keeps `diverse` of its score per hit already
+        // taken from its conversation. Only the best 4k are considered.
+        let d = tune.diverse as f64 / 1000.0;
+        let mut pool: Vec<(f64, usize)> = order.iter().take(4 * req.k.max(1)).cloned().collect();
+        let mut taken: HashMap<&str, i32> = HashMap::new();
+        let mut out = Vec::with_capacity(req.k);
+        while out.len() < req.k && !pool.is_empty() {
+            let (best, _) = pool
+                .iter()
+                .enumerate()
+                .map(|(j, &(x, i))| {
+                    (
+                        j,
+                        x * d.powi(*taken.get(units[i].item.as_str()).unwrap_or(&0)),
+                    )
+                })
+                .fold(
+                    (0usize, f64::MIN),
+                    |acc, (j, x)| if x > acc.1 { (j, x) } else { acc },
+                );
+            let (x, i) = pool.remove(best);
+            *taken.entry(units[i].item.as_str()).or_default() += 1;
+            out.push((x, i));
+        }
+        order = out;
+    }
     order.truncate(req.k);
     let mut scored: Vec<(f64, usize, Vec<(String, f64)>, bool)> = Vec::new();
     for (score, i) in order {
