@@ -1,0 +1,422 @@
+{
+ "BEAM 500K": {
+  "categories": {
+   "contradiction_resolution": {
+    "n": 70,
+    "meaning": 73.5,
+    "hybrid": 82.1,
+    "own first": 85.7,
+    "invariant": 85.7,
+    "best": "own first"
+   },
+   "event_ordering": {
+    "n": 70,
+    "meaning": 5.1,
+    "hybrid": 5.2,
+    "own first": 7.4,
+    "invariant": 7.7,
+    "best": "invariant"
+   },
+   "information_extraction": {
+    "n": 70,
+    "meaning": 42.9,
+    "hybrid": 56.4,
+    "own first": 63.2,
+    "invariant": 67.1,
+    "best": "invariant"
+   },
+   "instruction_following": {
+    "n": 70,
+    "meaning": 90.0,
+    "hybrid": 91.2,
+    "own first": 92.6,
+    "invariant": 91.9,
+    "best": "own first"
+   },
+   "knowledge_update": {
+    "n": 69,
+    "meaning": 71.1,
+    "hybrid": 76.3,
+    "own first": 81.2,
+    "invariant": 80.1,
+    "best": "own first"
+   },
+   "multi_session_reasoning": {
+    "n": 70,
+    "meaning": 53.2,
+    "hybrid": 52.8,
+    "own first": 60.1,
+    "invariant": 63.6,
+    "best": "invariant"
+   },
+   "preference_following": {
+    "n": 70,
+    "meaning": 67.7,
+    "hybrid": 68.1,
+    "own first": 71.0,
+    "invariant": 72.4,
+    "best": "invariant"
+   },
+   "summarization": {
+    "n": 70,
+    "meaning": 7.9,
+    "hybrid": 11.5,
+    "own first": 9.6,
+    "invariant": 10.7,
+    "best": "hybrid"
+   },
+   "temporal_reasoning": {
+    "n": 70,
+    "meaning": 72.1,
+    "hybrid": 74.5,
+    "own first": 83.5,
+    "invariant": 85.1,
+    "best": "invariant"
+   }
+  },
+  "all": {
+   "meaning": 53.69442363318706,
+   "hybrid": 57.5393784904704,
+   "own first": 61.54988611689497,
+   "invariant": 62.67531408055823
+  },
+  "router_ceiling": 62.959332651774034
+ },
+ "BEAM 1M": {
+  "categories": {
+   "contradiction_resolution": {
+    "n": 70,
+    "meaning": 52.0,
+    "hybrid": 59.7,
+    "own first": 65.5,
+    "invariant": 65.7,
+    "best": "invariant"
+   },
+   "event_ordering": {
+    "n": 70,
+    "meaning": 4.6,
+    "hybrid": 3.9,
+    "own first": 5.6,
+    "invariant": 5.6,
+    "best": "invariant"
+   },
+   "information_extraction": {
+    "n": 70,
+    "meaning": 33.9,
+    "hybrid": 42.5,
+    "own first": 45.4,
+    "invariant": 46.9,
+    "best": "invariant"
+   },
+   "instruction_following": {
+    "n": 70,
+    "meaning": 94.0,
+    "hybrid": 95.2,
+    "own first": 96.0,
+    "invariant": 95.5,
+    "best": "own first"
+   },
+   "knowledge_update": {
+    "n": 70,
+    "meaning": 62.7,
+    "hybrid": 65.4,
+    "own first": 75.4,
+    "invariant": 73.8,
+    "best": "own first"
+   },
+   "multi_session_reasoning": {
+    "n": 70,
+    "meaning": 26.3,
+    "hybrid": 32.7,
+    "own first": 36.6,
+    "invariant": 37.8,
+    "best": "invariant"
+   },
+   "preference_following": {
+    "n": 69,
+    "meaning": 45.3,
+    "hybrid": 46.9,
+    "own first": 49.5,
+    "invariant": 46.8,
+    "best": "own first"
+   },
+   "summarization": {
+    "n": 66,
+    "meaning": 3.4,
+    "hybrid": 5.5,
+    "own first": 5.1,
+    "invariant": 4.7,
+    "best": "hybrid"
+   },
+   "temporal_reasoning": {
+    "n": 70,
+    "meaning": 56.1,
+    "hybrid": 63.5,
+    "own first": 70.6,
+    "invariant": 71.7,
+    "best": "invariant"
+   }
+  },
+  "all": {
+   "meaning": 42.284029071267284,
+   "hybrid": 46.4038120873708,
+   "own first": 50.25482892598119,
+   "invariant": 50.11920602222206
+  },
+  "router_ceiling": 50.727059126577515
+ },
+ "BEAM 10M": {
+  "categories": {
+   "contradiction_resolution": {
+    "n": 20,
+    "meaning": 40.7,
+    "hybrid": 49.7,
+    "own first": 54.7,
+    "invariant": 55.7,
+    "best": "invariant"
+   },
+   "event_ordering": {
+    "n": 20,
+    "meaning": 2.5,
+    "hybrid": 1.7,
+    "own first": 2.1,
+    "invariant": 2.4,
+    "best": "meaning"
+   },
+   "information_extraction": {
+    "n": 20,
+    "meaning": 50.0,
+    "hybrid": 61.0,
+    "own first": 70.0,
+    "invariant": 66.0,
+    "best": "own first"
+   },
+   "instruction_following": {
+    "n": 20,
+    "meaning": 38.8,
+    "hybrid": 38.8,
+    "own first": 38.8,
+    "invariant": 38.8,
+    "best": "meaning"
+   },
+   "knowledge_update": {
+    "n": 20,
+    "meaning": 42.6,
+    "hybrid": 64.8,
+    "own first": 71.5,
+    "invariant": 72.8,
+    "best": "invariant"
+   },
+   "multi_session_reasoning": {
+    "n": 20,
+    "meaning": 15.2,
+    "hybrid": 19.2,
+    "own first": 25.7,
+    "invariant": 25.0,
+    "best": "own first"
+   },
+   "preference_following": {
+    "n": 20,
+    "meaning": 26.7,
+    "hybrid": 27.5,
+    "own first": 27.5,
+    "invariant": 29.2,
+    "best": "invariant"
+   },
+   "summarization": {
+    "n": 16,
+    "meaning": 2.3,
+    "hybrid": 3.9,
+    "own first": 2.4,
+    "invariant": 2.3,
+    "best": "hybrid"
+   },
+   "temporal_reasoning": {
+    "n": 20,
+    "meaning": 18.6,
+    "hybrid": 24.9,
+    "own first": 25.4,
+    "invariant": 24.9,
+    "best": "own first"
+   }
+  },
+  "all": {
+   "meaning": 26.9020114348516,
+   "hybrid": 33.04161806956341,
+   "own first": 36.08346704055677,
+   "invariant": 35.969411563537776
+  },
+  "router_ceiling": 36.712543705611154
+ },
+ "LoCoMo": {
+  "categories": {
+   "multi-hop": {
+    "n": 282,
+    "meaning": 8.2,
+    "hybrid": 18.4,
+    "own first": 22.4,
+    "invariant": 21.6,
+    "words": 39.1,
+    "best": "words"
+   },
+   "open-domain": {
+    "n": 92,
+    "meaning": 12.5,
+    "hybrid": 16.6,
+    "own first": 27.7,
+    "invariant": 25.4,
+    "words": 32.1,
+    "best": "words"
+   },
+   "single-hop": {
+    "n": 841,
+    "meaning": 32.1,
+    "hybrid": 57.8,
+    "own first": 52.2,
+    "invariant": 62.4,
+    "words": 84.5,
+    "best": "words"
+   },
+   "temporal": {
+    "n": 320,
+    "meaning": 29.6,
+    "hybrid": 55.0,
+    "own first": 45.1,
+    "invariant": 57.9,
+    "words": 71.8,
+    "best": "words"
+   }
+  },
+  "all": {
+   "meaning": 26.048246541731885,
+   "hybrid": 47.50423403000526,
+   "own first": 43.77265580005568,
+   "invariant": 51.781440717635384,
+   "words": 70.39919465440587
+  },
+  "router_ceiling": 70.39919465440587
+ },
+ "LongMemEval-S": {
+  "categories": {
+   "knowledge-update": {
+    "n": 78,
+    "meaning": 88.0,
+    "hybrid": 87.0,
+    "own first": 92.8,
+    "invariant": 91.1,
+    "words": 80.0,
+    "best": "own first"
+   },
+   "multi-session": {
+    "n": 133,
+    "meaning": 73.5,
+    "hybrid": 68.9,
+    "own first": 79.9,
+    "invariant": 78.3,
+    "words": 52.7,
+    "best": "own first"
+   },
+   "single-session-assistant": {
+    "n": 56,
+    "meaning": 89.3,
+    "hybrid": 91.1,
+    "own first": 75.0,
+    "invariant": 89.3,
+    "words": 94.6,
+    "best": "words"
+   },
+   "single-session-preference": {
+    "n": 30,
+    "meaning": 66.7,
+    "hybrid": 68.3,
+    "own first": 71.1,
+    "invariant": 69.4,
+    "words": 44.4,
+    "best": "own first"
+   },
+   "single-session-user": {
+    "n": 70,
+    "meaning": 82.3,
+    "hybrid": 89.6,
+    "own first": 91.4,
+    "invariant": 89.8,
+    "words": 90.6,
+    "best": "own first"
+   },
+   "temporal-reasoning": {
+    "n": 133,
+    "meaning": 73.0,
+    "hybrid": 74.7,
+    "own first": 84.1,
+    "invariant": 81.8,
+    "words": 63.3,
+    "best": "own first"
+   }
+  },
+  "all": {
+   "meaning": 78.22067587641118,
+   "hybrid": 78.62979055258468,
+   "own first": 83.58251782531195,
+   "invariant": 83.55327540106951,
+   "words": 69.2726916221034
+  },
+  "router_ceiling": 85.78251782531194
+ },
+ "ConvoMem": {
+  "categories": {
+   "assistant_facts_evidence": {
+    "n": 247,
+    "meaning": 74.9,
+    "hybrid": 91.5,
+    "own first": 81.4,
+    "invariant": 89.9,
+    "words": 92.7,
+    "best": "words"
+   },
+   "changing_evidence": {
+    "n": 255,
+    "meaning": 55.5,
+    "hybrid": 67.8,
+    "own first": 74.1,
+    "invariant": 73.1,
+    "words": 62.9,
+    "best": "own first"
+   },
+   "implicit_connection_evidence": {
+    "n": 82,
+    "meaning": 12.6,
+    "hybrid": 22.4,
+    "own first": 23.6,
+    "invariant": 23.6,
+    "words": 19.9,
+    "best": "own first"
+   },
+   "preference_evidence": {
+    "n": 248,
+    "meaning": 37.9,
+    "hybrid": 50.8,
+    "own first": 56.9,
+    "invariant": 55.2,
+    "words": 42.7,
+    "best": "own first"
+   },
+   "user_evidence": {
+    "n": 229,
+    "meaning": 73.8,
+    "hybrid": 86.5,
+    "own first": 90.0,
+    "invariant": 90.0,
+    "words": 83.4,
+    "best": "own first"
+   }
+  },
+  "all": {
+   "meaning": 56.53471567703424,
+   "hybrid": 69.87119070059691,
+   "own first": 71.28495130380144,
+   "invariant": 72.65158655356582,
+   "words": 66.24253848570531
+  },
+  "router_ceiling": 73.92397109644988
+ }
+}

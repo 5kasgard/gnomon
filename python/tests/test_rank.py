@@ -86,5 +86,35 @@ class Ranking(unittest.TestCase):
         self.assertIn("Tuesday", c["view"][0]["text"])
 
 
+
+class Calibrating(unittest.TestCase):
+    def orders(self, used_in):
+        base = {a: [f"x{i}" for i in range(10)] for a in ("words", "meaning", "hybrid", "own first", "invariant")}
+        for a in used_in:
+            base[a] = ["used"] + base[a][:9]
+        return base
+
+    def test_switches_only_on_a_clear_win_and_records_it(self):
+        from gnomon.rank import Calibration
+        switches = []
+        c = Calibration(record=lambda b, a, n: switches.append((b, a, n)))
+        for _ in range(3):  # too little evidence: stays put
+            c.observe(self.orders({"words"}), ["used"])
+        self.assertEqual(c.choice(), "invariant")
+        for _ in range(10):
+            c.observe(self.orders({"words"}), ["used"])
+        self.assertEqual(c.choice(), "words")
+        self.assertEqual(switches[0][:2], ("invariant", "words"))
+
+    def test_noise_does_not_switch(self):
+        import random
+        from gnomon.rank import Calibration
+        rng = random.Random(1)
+        c = Calibration()
+        for _ in range(200):
+            c.observe(self.orders({rng.choice(["words", "invariant", "meaning"])}), ["used"])
+        self.assertEqual(c.choice(), "invariant")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -455,6 +455,19 @@ questions, `bench/situation.md`):
 
 This is evidence presence, not answers. A reader run is next.
 
+**Compartments: the right mechanism depends on the record.** Within a
+dataset, choosing the method by question type gains 0.3-2.2 points. Across
+datasets the winner flips. Plain words score 70.4 on LoCoMo, where the
+blend scores 51.8. On LongMemEval the blend scores 83.6 and words 69.3.
+
+A router reading only the question could not tell which case it was in
+(leave-one-dataset-out, it lost everywhere). What works is calibrating each
+memory from its own use. Keep the default until the evidence the reader
+actually uses shows another method clearly winning: more than 2 standard
+errors on paired feedback. Simulated with 50 feedback questions, that lifts
+LoCoMo from 51.8 to 69.1 and changes nothing (at most 0.1) where the
+default is already best (`bench/compartments.md`).
+
 **Repairable storage.** `gnomon.parity` adds Reed-Solomon parity beside
 the log: 2 parity blocks for every 16 blocks of 4 KiB, 14.4% extra
 storage. Any 2 damaged blocks in a stripe are rebuilt byte for byte, and

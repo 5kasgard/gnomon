@@ -1,0 +1,164 @@
+{
+ "BEAM": {
+  "arms": {
+   "words": 52.12289138280683,
+   "meaning": 53.69442363318706,
+   "hybrid": 57.5393784904704,
+   "own first": 61.54988611689497,
+   "invariant": 62.67531408055823
+  },
+  "routed": [
+   58.0,
+   55.1,
+   60.9
+  ],
+  "per_question_oracle": 66.31383789300301,
+  "chosen": {
+   "words": 290,
+   "meaning": 0,
+   "hybrid": 0,
+   "own first": 0,
+   "invariant": 339
+  },
+  "trained_on": [
+   "LoCoMo",
+   "LongMemEval-S",
+   "ConvoMem"
+  ]
+ },
+ "LoCoMo": {
+  "arms": {
+   "words": 70.39919465440587,
+   "meaning": 26.048246541731885,
+   "hybrid": 47.50423403000526,
+   "own first": 43.77265580005568,
+   "invariant": 51.781440717635384
+  },
+  "routed": [
+   51.8,
+   47.6,
+   56.1
+  ],
+  "per_question_oracle": 73.22816373093195,
+  "chosen": {
+   "words": 0,
+   "meaning": 0,
+   "hybrid": 0,
+   "own first": 0,
+   "invariant": 1535
+  },
+  "trained_on": [
+   "BEAM",
+   "LongMemEval-S",
+   "ConvoMem"
+  ]
+ },
+ "LongMemEval-S": {
+  "arms": {
+   "words": 69.2726916221034,
+   "meaning": 78.22067587641118,
+   "hybrid": 78.62979055258468,
+   "own first": 83.58251782531195,
+   "invariant": 83.55327540106951
+  },
+  "routed": [
+   80.1,
+   76.8,
+   83.0
+  ],
+  "per_question_oracle": 88.15322192513368,
+  "chosen": {
+   "words": 186,
+   "meaning": 0,
+   "hybrid": 0,
+   "own first": 0,
+   "invariant": 314
+  },
+  "trained_on": [
+   "BEAM",
+   "LoCoMo",
+   "ConvoMem"
+  ]
+ },
+ "ConvoMem": {
+  "arms": {
+   "words": 66.24253848570531,
+   "meaning": 56.53471567703424,
+   "hybrid": 69.87119070059691,
+   "own first": 71.28495130380144,
+   "invariant": 72.65158655356582
+  },
+  "routed": [
+   68.1,
+   64.5,
+   71.6
+  ],
+  "per_question_oracle": 77.97675149230285,
+  "chosen": {
+   "words": 524,
+   "meaning": 0,
+   "hybrid": 0,
+   "own first": 0,
+   "invariant": 537
+  },
+  "trained_on": [
+   "BEAM",
+   "LoCoMo",
+   "LongMemEval-S"
+  ]
+ },
+ "BEAM 1M": {
+  "arms": {
+   "words": 40.2371695219191,
+   "meaning": 42.284029071267284,
+   "hybrid": 46.4038120873708,
+   "own first": 50.25482892598119,
+   "invariant": 50.11920602222206
+  },
+  "routed": [
+   45.2,
+   43.3,
+   47.3
+  ],
+  "per_question_oracle": 54.5997047348167,
+  "chosen": {
+   "words": 328,
+   "meaning": 0,
+   "hybrid": 0,
+   "own first": 0,
+   "invariant": 297
+  },
+  "trained_on": [
+   "LoCoMo",
+   "LongMemEval-S",
+   "ConvoMem"
+  ]
+ },
+ "BEAM 10M": {
+  "arms": {
+   "words": 24.314081888356256,
+   "meaning": 26.9020114348516,
+   "hybrid": 33.04161806956341,
+   "own first": 36.08346704055677,
+   "invariant": 35.96941156353778
+  },
+  "routed": [
+   31.3,
+   27.4,
+   35.8
+  ],
+  "per_question_oracle": 39.46712310254627,
+  "chosen": {
+   "words": 82,
+   "meaning": 0,
+   "hybrid": 0,
+   "own first": 0,
+   "invariant": 94
+  },
+  "trained_on": [
+   "LoCoMo",
+   "LongMemEval-S",
+   "ConvoMem"
+  ]
+ }
+}
