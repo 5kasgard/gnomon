@@ -85,3 +85,50 @@ prefix.
 
 These are input tokens only. Facts present in a view are not the same as
 correct answers: a reader run on the sentence view is the next test.
+
+## v3: a fairer message view (correction)
+
+The message view in v1 and v2 stopped at the first message that did not
+fit, so at small budgets it often used only part of its tokens. That
+flattered the sentence view. v3 cuts the overflowing message to fill the
+budget. The v2 column is kept beside it. Same check, same sizes:
+
+| Tokens | 1M messages v2 | 1M messages, filled | 1M sentences | 1M random |
+|---|---|---|---|---|
+| 250 | 8.5 | 20.8 | **26.6** | 6.7 |
+| 500 | 11.5 | 23.9 | **33.7** | 9.9 |
+| 1,000 | 22.0 | 29.4 | **41.1** | 14.8 |
+| 2,000 | 35.1 | 39.3 | **50.7** | 18.7 |
+| 4,000 | 47.9 | 49.4 | **59.1** | 28.1 |
+| 8,000 | 59.7 | 60.1 | **67.9** | 34.5 |
+
+100K and 500K follow the same pattern (`beam_compress_results.json`).
+The fair gap at 1,000 tokens is about 12 points, not 20.
+
+## Answers: the reader test (`beam_qa/make_views.py`, `score_views.py`)
+
+Haiku answered the same 100 questions from 10 random 1M conversations as
+`beam_qa`, given one view at a fixed budget. The prompt was fixed in
+`beam_qa/PROMPTS.md` before any reader ran. Judge-free, with 95% intervals
+by conversation:
+
+| | Messages, 1,000 | Sentences, 1,000 | Messages, 2,000 | Sentences, 2,000 |
+|---|---|---|---|---|
+| F1 | 18.1 | **31.3** | 22.7 | **35.2** |
+| Every gold number right | 20.9% | **52.2%** | 26.9% | **58.2%** |
+| Wrongly "not mentioned" | 55.0% | **28.8%** | 42.5% | **25.0%** |
+| Abstains when absent (n=20) | 70% | 75% | 74% | 63% |
+
+Paired by question, sentences minus messages:
+- 1,000 tokens: F1 +13.2 [+7.0, +19.7]. Better on 39 questions, worse on
+  21. Numbers right on 35 against 14 of 67.
+- 2,000 tokens: F1 +12.6 [+6.6, +18.9]. Better on 44, worse on 18.
+  Numbers right on 39 against 18.
+
+For scale, the earlier run gave Haiku the top 10 whole messages (about
+5,500 tokens) and reached F1 33.6 with 54% of numbers right. Sentences
+reach about that at 1,000 tokens, roughly a fifth of the tokens.
+
+Abstention on the 20 unanswerable questions does not differ beyond the
+noise. One run, one reader model; one answer is missing in each
+2,000-token condition.

@@ -1,0 +1,49 @@
+{"id": "m35_info0", "answer": "Not mentioned"}
+{"id": "m35_info1", "answer": "The memory shows only an assistant-suggested example: one set of lights overhead in the dining room, one around the table edges, one on the living room mantel, and the rest on bookshelves and the entryway."}
+{"id": "m35_know0", "answer": "December 10th."}
+{"id": "m35_know1", "answer": "Around $350."}
+{"id": "m35_temp0", "answer": "Not mentioned"}
+{"id": "m35_temp1", "answer": "Not mentioned"}
+{"id": "m35_mult0", "answer": "The memory lists 15 gifts, one for each family member, with a $30 per person budget, though a later message mentions $40."}
+{"id": "m35_mult1", "answer": "Not mentioned"}
+{"id": "m35_abst0", "answer": "Not mentioned"}
+{"id": "m35_abst1", "answer": "Not mentioned"}
+{"id": "m25_info0", "answer": "You chose Jason's angel investment over the microloan, aiming to finalize terms by April 25th, but the memory gives no date for the decision."}
+{"id": "m25_info1", "answer": "I recommended surveying potential EU users about language demand, gathering feedback and running usability testing with native speakers, and using a phased rollout with a feedback loop to refine the localized versions."}
+{"id": "m25_know0", "answer": "Not mentioned"}
+{"id": "m25_know1", "answer": "Not mentioned"}
+{"id": "m25_temp0", "answer": "Not mentioned"}
+{"id": "m25_temp1", "answer": "Not mentioned"}
+{"id": "m25_mult0", "answer": "15,000 followers combined."}
+{"id": "m25_mult1", "answer": "You rejected the $1,200 acquisition offer, chose Jason's angel investment for its mentorship and lack of repayment pressure, and plan to focus on growing the user base and upselling coaching services."}
+{"id": "m25_abst0", "answer": "The memory only shows that Denise suggested weekly Zoom meetings every Friday at 7 PM starting March 22, 2024, plus an example agenda I suggested, with no recorded outcomes."}
+{"id": "m25_abst1", "answer": "It is a 12-page plan due April 20, 2024, structured as a cover page, table of contents, executive summary, company description, market analysis, organization and management, products and services, marketing and sales strategy, funding request, financial projections, and appendices."}
+{"id": "m1_info0", "answer": "The memory mentions React 18.2 with Vite 4.3 for the frontend, Node.js for the backend, and PostgreSQL for the database, with no versions given for Node.js or PostgreSQL."}
+{"id": "m1_info1", "answer": "Not mentioned"}
+{"id": "m1_know0", "answer": "March 18, 2024."}
+{"id": "m1_know1", "answer": "20 minutes (1200 seconds)."}
+{"id": "m1_temp0", "answer": "14 days, since the translation API integration is due April 15, 2024 and the sprint review is April 1, 2024."}
+{"id": "m1_temp1", "answer": "Not mentioned"}
+{"id": "m1_mult0", "answer": "Use Redis caching with TTL management and prefetching for common translations, batch and parallelize DeepL calls, route requests through a Bull queue with exponential backoff and rate limiting, and tune Redis memory and persistence."}
+{"id": "m1_mult1", "answer": "Four: caching user message lists, language detection results, recent translations, and translation results."}
+{"id": "m1_abst0", "answer": "Not mentioned"}
+{"id": "m1_abst1", "answer": "Not mentioned"}
+{"id": "m34_info0", "answer": "Not mentioned"}
+{"id": "m34_info1", "answer": "I recommended reviewing budget and actual expenses, prioritizing essential spending, and exploring grants, sponsorships, partnerships and crowdfunding, but the memory does not describe how to manage different levels of support."}
+{"id": "m34_know0", "answer": "Not mentioned"}
+{"id": "m34_know1", "answer": "Not mentioned"}
+{"id": "m34_temp0", "answer": "Not mentioned"}
+{"id": "m34_temp1", "answer": "Two hours, if the puppet show runs 3 to 5 PM and face painting runs 2 to 5 PM, though another schedule in the memory has no overlap."}
+{"id": "m34_mult0", "answer": "Not mentioned"}
+{"id": "m34_mult1", "answer": "Not mentioned"}
+{"id": "m34_abst0", "answer": "Not mentioned"}
+{"id": "m34_abst1", "answer": "Not mentioned"}
+{"id": "m13_info0", "answer": "Not mentioned"}
+{"id": "m13_info1", "answer": "I recommended breaking the course into weekly segments with specific daily goals, fixed and flexible study time slots, a calendar or to-do list, and regular progress tracking, while staying flexible enough to adjust."}
+{"id": "m13_know0", "answer": "$9,562.50, saved at about $800 a month by the end of the year."}
+{"id": "m13_know1", "answer": "The most recent completed inspection was on July 18, 2024; a later one on July 20 was only scheduled."}
+{"id": "m13_temp0", "answer": "Not mentioned"}
+{"id": "m13_temp1", "answer": "Not mentioned"}
+{"id": "m13_mult0", "answer": "Two: Halkbank (9.5% APR) and Ziraat Bank (10.2% APR)."}
+{"id": "m13_mult1", "answer": "The memory suggests cutting expenses by negotiating the price and optimizing financing, raising rent through market-based pricing and upgrades, managing efficiently with preventive maintenance, and keeping a detailed budget with a contingency fund."}
+{"id": "m13_abst0", "answer": "Not mentioned"}

@@ -91,11 +91,16 @@ def random_view(sents: list, rng, budget: int) -> str:
     return "".join(parts)
 
 
-def message_view(got: list, by_id: dict, budget: int) -> str:
+def message_view(got: list, by_id: dict, budget: int, fill: bool = True) -> str:
+    """Whole messages in rank order. With `fill` (v3), the message that does
+    not fit is cut to the tokens left, so the view uses its whole budget;
+    v1/v2 stopped there, which could leave a small budget nearly empty."""
     parts, spent = [], 0
     for g in got:
-        t = f"{by_id[g]['role']}: {by_id[g]['content']}\n"
+        t = f"[m{g}] {by_id[g]['role']}: {by_id[g]['content']}\n"
         if spent + tokens(t) > budget:
+            if fill and budget - spent > 8:
+                parts.append(t[: 4 * (budget - spent)] + "\n")
             break
         parts.append(t)
         spent += tokens(t)
@@ -170,6 +175,7 @@ def run(root: Path, size: str, budgets: list) -> dict:
                            "ceiling_num": score(numeric, ev_text, asked) if ev_text else None}
                     for b in budgets:
                         views = {"messages": message_view(got, by_id, b),
+                                 "messages_v2": message_view(got, by_id, b, fill=False),
                                  "sentences": sentence_view(q["question"], got, by_id, df, n_sent, b),
                                  "random": random_view(all_sents, rng, b)}
                         for name, v in views.items():
@@ -198,12 +204,12 @@ def main() -> int:
             summ["ceiling" + suffix] = cluster_ci(groups("ceiling" + suffix))
             print(f"== {size}: {len(rows)} questions, {summ['facts']} facts; {label}; present in the "
                   f"evidence messages themselves: {summ['ceiling' + suffix][0]}")
-            print(f"{'tokens':>8} {'whole messages':>20} {'sentences':>20} {'random sentences':>20}")
+            print(f"{'tokens':>8} {'messages (v2)':>20} {'messages, filled':>20} {'sentences':>20} {'random':>20}")
             for b in budgets:
-                for name in ("messages", "sentences", "random"):
+                for name in ("messages_v2", "messages", "sentences", "random"):
                     summ[f"{name}{suffix}@{b}"] = cluster_ci(groups(f"{name}{suffix}@{b}"))
                 print(f"{b:>8} " + " ".join(f"{fmt(summ[f'{n}{suffix}@{b}']):>20}"
-                                             for n in ("messages", "sentences", "random")))
+                                             for n in ("messages_v2", "messages", "sentences", "random")))
         out[size] = {"summary": summ, "rows": rows}
     if a.json:
         Path(a.json).write_text(json.dumps({s: v["summary"] for s, v in out.items()}, indent=1), encoding="utf-8")

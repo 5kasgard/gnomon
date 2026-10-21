@@ -346,15 +346,24 @@ taking the best turn from each part of the record was tried and did
 nothing (the evidence is not among the top 200 by words to begin with);
 those need dated summaries written once, or meaning, not reordering.
 
-**Sentences instead of messages.** At the same budget, giving the reader
-the sentences that match the question, each tagged with its message id so
-the full message can be fetched back exactly, carries far more of the
-facts BEAM's rubrics require. At 1M tokens, 1,000 tokens of sentences hold
-41.1% of facts, against 21.0% for whole messages and 14.8% for random
-sentences. 2,000 tokens of sentences beat 4,000 tokens of messages. With
-directives in a prompt-cached prefix, that is about 2,100 input tokens per
-question, roughly 50 times less than a cached copy of the whole history
-(`bench/beam_compress.md`; judge-free; a reader run is still to do).
+**Sentences instead of messages.** Gnomon's `context` gives the reader
+the sentences that match the question, each tagged with a pointer to its
+turn (`expand` returns the whole turn exactly). The standing directives
+go first, in a prefix a prompt cache can hold. Haiku answered 100
+questions from 1M-token conversations with 1,000 tokens of memory each:
+
+| 1,000 tokens of | F1 | Every number right | Wrongly "not mentioned" |
+|---|---|---|---|
+| whole messages | 18.1 | 20.9% | 55.0% |
+| matching sentences | **31.3** | **52.2%** | **28.8%** |
+
+Paired by question, that is +13.2 F1 [+7.0, +19.7]. It matches what the
+top 10 whole messages gave at about 5,500 tokens. With directives cached,
+a question costs about 1,100-2,100 input tokens, against roughly 109,000
+for a prompt-cached copy of the whole history. Sources:
+`bench/beam_compress.md`, which also records two corrections: a rubric
+parser that missed most 1M facts, and a message view that left part of
+its budget unused.
 
 In a spot check, the cited message held the answer's numbers in 44 of 49
 questions, so BEAM's evidence ids are close to, not exactly, right.
