@@ -20,7 +20,10 @@ fn sup(old: &str, new: &str, kind: &str, evidence: Vec<&str>) -> Value {
         ("old", Value::str(old)),
         ("new", Value::str(new)),
         ("kind", Value::str(kind)),
-        ("evidence", Value::Array(evidence.into_iter().map(Value::str).collect())),
+        (
+            "evidence",
+            Value::Array(evidence.into_iter().map(Value::str).collect()),
+        ),
         ("reason", Value::str("because")),
     ])
 }
@@ -36,7 +39,10 @@ fn decide(dispute: &str, outcome: &str) -> Value {
 fn appeal(claim: &str, evidence: Vec<&str>) -> Value {
     Value::obj(vec![
         ("claim", Value::str(claim)),
-        ("evidence", Value::Array(evidence.into_iter().map(Value::str).collect())),
+        (
+            "evidence",
+            Value::Array(evidence.into_iter().map(Value::str).collect()),
+        ),
         ("reason", Value::str("appeal")),
     ])
 }
@@ -58,8 +64,13 @@ fn world() -> Ledger {
     .iter()
     .enumerate()
     {
-        l.append(draft("john", 6 + i as u32, "register", register_body(w, p, "model", &["write", "verify"], &["lab"])))
-            .unwrap();
+        l.append(draft(
+            "john",
+            6 + i as u32,
+            "register",
+            register_body(w, p, "model", &["write", "verify"], &["lab"]),
+        ))
+        .unwrap();
     }
     l
 }
@@ -70,13 +81,38 @@ fn b1_refuter_closing_a_contest_is_not_a_judge() {
     let mut l = world();
     let a = add_claim(&mut l, "claude-c1", 10, claim_body("A", "asserted", "true"));
     let b = add_claim(&mut l, "gpt-g1", 11, claim_body("B", "asserted", "true"));
-    l.append(draft("gpt-g1", 12, "supersede", sup(&a, &b, "contested", vec![]))).unwrap();
-    let v = l.append(draft("mistral-m1", 13, "verdict", verdict(&b, "refutes"))).unwrap();
+    l.append(draft(
+        "gpt-g1",
+        12,
+        "supersede",
+        sup(&a, &b, "contested", vec![]),
+    ))
+    .unwrap();
+    let v = l
+        .append(draft("mistral-m1", 13, "verdict", verdict(&b, "refutes")))
+        .unwrap();
     let z = add_claim(&mut l, "kimi-k1", 14, claim_body("Z", "asserted", "true"));
-    l.append(draft("kimi-k1", 15, "supersede", sup(&b, &z, "refuted", vec![&eid(&v)]))).unwrap();
-    assert_eq!((l.state.truth(&a).unwrap(), l.state.truth(&b).unwrap()), ("true".into(), "false".into()));
+    l.append(draft(
+        "kimi-k1",
+        15,
+        "supersede",
+        sup(&b, &z, "refuted", vec![&eid(&v)]),
+    ))
+    .unwrap();
+    assert_eq!(
+        (l.state.truth(&a).unwrap(), l.state.truth(&b).unwrap()),
+        ("true".into(), "false".into())
+    );
     // kimi did not judge: it may still corroborate A, and its verdicts still count.
-    assert_eq!(code(l.append(draft("kimi-k1", 16, "claim", claim_body("A", "asserted", "true")))), "OK");
+    assert_eq!(
+        code(l.append(draft(
+            "kimi-k1",
+            16,
+            "claim",
+            claim_body("A", "asserted", "true")
+        ))),
+        "OK"
+    );
 }
 
 /// D1. A party to an open contest won it with its own verdict.
@@ -85,25 +121,69 @@ fn d1_contest_party_cannot_win_with_own_verdict() {
     let mut l = world();
     let a = add_claim(&mut l, "claude-c1", 10, claim_body("A", "asserted", "true"));
     let b = add_claim(&mut l, "gpt-g1", 11, claim_body("B", "asserted", "true"));
-    l.append(draft("gpt-g1", 12, "supersede", sup(&a, &b, "contested", vec![]))).unwrap();
-    let own = l.append(draft("gpt-g1", 13, "verdict", verdict(&a, "refutes"))).unwrap();
+    l.append(draft(
+        "gpt-g1",
+        12,
+        "supersede",
+        sup(&a, &b, "contested", vec![]),
+    ))
+    .unwrap();
+    let own = l
+        .append(draft("gpt-g1", 13, "verdict", verdict(&a, "refutes")))
+        .unwrap();
     let z = add_claim(&mut l, "gpt-g1", 14, claim_body("Z", "asserted", "true"));
-    assert_eq!(code(l.append(draft("gpt-g1", 15, "supersede", sup(&a, &z, "refuted", vec![&eid(&own)])))), "E_EVIDENCE");
+    assert_eq!(
+        code(l.append(draft(
+            "gpt-g1",
+            15,
+            "supersede",
+            sup(&a, &z, "refuted", vec![&eid(&own)])
+        ))),
+        "E_EVIDENCE"
+    );
     assert_eq!(l.state.truth(&a).unwrap(), "true");
     // A neutral party's verdict still ends it.
-    let neutral = l.append(draft("mistral-m1", 16, "verdict", verdict(&a, "refutes"))).unwrap();
-    assert_eq!(code(l.append(draft("gpt-g1", 17, "supersede", sup(&a, &z, "refuted", vec![&eid(&neutral)])))), "OK");
+    let neutral = l
+        .append(draft("mistral-m1", 16, "verdict", verdict(&a, "refutes")))
+        .unwrap();
+    assert_eq!(
+        code(l.append(draft(
+            "gpt-g1",
+            17,
+            "supersede",
+            sup(&a, &z, "refuted", vec![&eid(&neutral)])
+        ))),
+        "OK"
+    );
 }
 
 /// Reinstate A on appeal (gpt refuted it via kimi; mistral supported; judge decided).
 fn reinstated_a(l: &mut Ledger) -> String {
     let a = add_claim(l, "claude-c1", 10, claim_body("A", "asserted", "true"));
     let k = add_claim(l, "gpt-g1", 11, claim_body("K", "asserted", "true"));
-    let v = l.append(draft("kimi-k1", 12, "verdict", verdict(&a, "refutes"))).unwrap();
-    l.append(draft("gpt-g1", 13, "supersede", sup(&a, &k, "refuted", vec![&eid(&v)]))).unwrap();
-    let s = l.append(draft("mistral-m1", 14, "verdict", verdict(&a, "supports"))).unwrap();
-    let ap = l.append(draft("claude-c1", 15, "appeal", appeal(&a, vec![&eid(&s)]))).unwrap();
-    l.append(draft("judge", 16, "resolve", decide(&eid(&ap), "reinstated"))).unwrap();
+    let v = l
+        .append(draft("kimi-k1", 12, "verdict", verdict(&a, "refutes")))
+        .unwrap();
+    l.append(draft(
+        "gpt-g1",
+        13,
+        "supersede",
+        sup(&a, &k, "refuted", vec![&eid(&v)]),
+    ))
+    .unwrap();
+    let s = l
+        .append(draft("mistral-m1", 14, "verdict", verdict(&a, "supports")))
+        .unwrap();
+    let ap = l
+        .append(draft("claude-c1", 15, "appeal", appeal(&a, vec![&eid(&s)])))
+        .unwrap();
+    l.append(draft(
+        "judge",
+        16,
+        "resolve",
+        decide(&eid(&ap), "reinstated"),
+    ))
+    .unwrap();
     assert_eq!(l.state.truth(&a).unwrap(), "true");
     a
 }
@@ -115,10 +195,26 @@ fn d2_reinstated_claim_cannot_be_re_killed_by_argument_from_its_opponents() {
     let a = reinstated_a(&mut l);
     // The original refuter cannot argue its way back in.
     let c2 = add_claim(&mut l, "gpt-g1", 20, claim_body("C2", "asserted", "true"));
-    assert_eq!(code(l.append(draft("gpt-g1", 21, "supersede", sup(&a, &c2, "contested", vec![])))), "E_FINAL");
+    assert_eq!(
+        code(l.append(draft(
+            "gpt-g1",
+            21,
+            "supersede",
+            sup(&a, &c2, "contested", vec![])
+        ))),
+        "E_FINAL"
+    );
     // Nor can the refuting verdict's giver.
     let c3 = add_claim(&mut l, "kimi-k1", 22, claim_body("C3", "asserted", "true"));
-    assert_eq!(code(l.append(draft("kimi-k1", 23, "supersede", sup(&a, &c3, "contested", vec![])))), "E_FINAL");
+    assert_eq!(
+        code(l.append(draft(
+            "kimi-k1",
+            23,
+            "supersede",
+            sup(&a, &c3, "contested", vec![])
+        ))),
+        "E_FINAL"
+    );
     assert_eq!(l.state.truth(&a).unwrap(), "true");
 }
 
@@ -128,13 +224,44 @@ fn one_argument_per_party_per_claim() {
     let mut l = world();
     let a = add_claim(&mut l, "claude-c1", 10, claim_body("A", "asserted", "true"));
     let b = add_claim(&mut l, "gpt-g1", 11, claim_body("B", "asserted", "true"));
-    let s = l.append(draft("gpt-g1", 12, "supersede", sup(&a, &b, "contested", vec![]))).unwrap();
-    l.append(draft("judge", 13, "resolve", decide(&eid(&s), "old"))).unwrap();
-    let b2 = add_claim(&mut l, "gpt-g1", 14, claim_body("B, reworded", "asserted", "true"));
-    assert_eq!(code(l.append(draft("gpt-g1", 15, "supersede", sup(&a, &b2, "contested", vec![])))), "E_FINAL");
+    let s = l
+        .append(draft(
+            "gpt-g1",
+            12,
+            "supersede",
+            sup(&a, &b, "contested", vec![]),
+        ))
+        .unwrap();
+    l.append(draft("judge", 13, "resolve", decide(&eid(&s), "old")))
+        .unwrap();
+    let b2 = add_claim(
+        &mut l,
+        "gpt-g1",
+        14,
+        claim_body("B, reworded", "asserted", "true"),
+    );
+    assert_eq!(
+        code(l.append(draft(
+            "gpt-g1",
+            15,
+            "supersede",
+            sup(&a, &b2, "contested", vec![])
+        ))),
+        "E_FINAL"
+    );
     // Evidence still works.
-    let v = l.append(draft("qwen-q1", 16, "verdict", verdict(&a, "refutes"))).unwrap();
-    assert_eq!(code(l.append(draft("gpt-g1", 17, "supersede", sup(&a, &b2, "refuted", vec![&eid(&v)])))), "OK");
+    let v = l
+        .append(draft("qwen-q1", 16, "verdict", verdict(&a, "refutes")))
+        .unwrap();
+    assert_eq!(
+        code(l.append(draft(
+            "gpt-g1",
+            17,
+            "supersede",
+            sup(&a, &b2, "refuted", vec![&eid(&v)])
+        ))),
+        "OK"
+    );
 }
 
 /// D4. A refuter filed a sham appeal on its victim.
@@ -143,13 +270,30 @@ fn d4_opponents_cannot_appeal() {
     let mut l = world();
     let a = add_claim(&mut l, "claude-c1", 10, claim_body("A", "asserted", "true"));
     let k = add_claim(&mut l, "gpt-g1", 11, claim_body("K", "asserted", "true"));
-    let v = l.append(draft("kimi-k1", 12, "verdict", verdict(&a, "refutes"))).unwrap();
-    l.append(draft("gpt-g1", 13, "supersede", sup(&a, &k, "refuted", vec![&eid(&v)]))).unwrap();
-    let s = l.append(draft("mistral-m1", 14, "verdict", verdict(&a, "supports"))).unwrap();
+    let v = l
+        .append(draft("kimi-k1", 12, "verdict", verdict(&a, "refutes")))
+        .unwrap();
+    l.append(draft(
+        "gpt-g1",
+        13,
+        "supersede",
+        sup(&a, &k, "refuted", vec![&eid(&v)]),
+    ))
+    .unwrap();
+    let s = l
+        .append(draft("mistral-m1", 14, "verdict", verdict(&a, "supports")))
+        .unwrap();
     for w in ["gpt-g1", "kimi-k1"] {
-        assert_eq!(code(l.append(draft(w, 15, "appeal", appeal(&a, vec![&eid(&s)])))), "E_STAKE", "{w}");
+        assert_eq!(
+            code(l.append(draft(w, 15, "appeal", appeal(&a, vec![&eid(&s)])))),
+            "E_STAKE",
+            "{w}"
+        );
     }
-    assert_eq!(code(l.append(draft("claude-c1", 16, "appeal", appeal(&a, vec![&eid(&s)])))), "OK");
+    assert_eq!(
+        code(l.append(draft("claude-c1", 16, "appeal", appeal(&a, vec![&eid(&s)])))),
+        "OK"
+    );
 }
 
 /// D5a. A party that refuted the claim (uncited) decided its appeal.
@@ -158,13 +302,37 @@ fn d5a_any_verdict_giver_cannot_decide_the_appeal() {
     let mut l = world();
     let a = add_claim(&mut l, "claude-c1", 10, claim_body("A", "asserted", "true"));
     let k = add_claim(&mut l, "gpt-g1", 11, claim_body("K", "asserted", "true"));
-    l.append(draft("deepseek-d1", 12, "verdict", verdict(&a, "refutes"))).unwrap(); // uncited
-    let v = l.append(draft("kimi-k1", 13, "verdict", verdict(&a, "refutes"))).unwrap();
-    l.append(draft("gpt-g1", 14, "supersede", sup(&a, &k, "refuted", vec![&eid(&v)]))).unwrap();
-    let s = l.append(draft("mistral-m1", 15, "verdict", verdict(&a, "supports"))).unwrap();
-    let ap = l.append(draft("claude-c1", 16, "appeal", appeal(&a, vec![&eid(&s)]))).unwrap();
-    assert_eq!(code(l.append(draft("deepseek-d1", 17, "resolve", decide(&eid(&ap), "upheld")))), "E_RESOLVE_PARTY");
-    assert_eq!(code(l.append(draft("judge", 18, "resolve", decide(&eid(&ap), "upheld")))), "OK");
+    l.append(draft("deepseek-d1", 12, "verdict", verdict(&a, "refutes")))
+        .unwrap(); // uncited
+    let v = l
+        .append(draft("kimi-k1", 13, "verdict", verdict(&a, "refutes")))
+        .unwrap();
+    l.append(draft(
+        "gpt-g1",
+        14,
+        "supersede",
+        sup(&a, &k, "refuted", vec![&eid(&v)]),
+    ))
+    .unwrap();
+    let s = l
+        .append(draft("mistral-m1", 15, "verdict", verdict(&a, "supports")))
+        .unwrap();
+    let ap = l
+        .append(draft("claude-c1", 16, "appeal", appeal(&a, vec![&eid(&s)])))
+        .unwrap();
+    assert_eq!(
+        code(l.append(draft(
+            "deepseek-d1",
+            17,
+            "resolve",
+            decide(&eid(&ap), "upheld")
+        ))),
+        "E_RESOLVE_PARTY"
+    );
+    assert_eq!(
+        code(l.append(draft("judge", 18, "resolve", decide(&eid(&ap), "upheld")))),
+        "OK"
+    );
 }
 
 /// D5b. An ally who joined the winning side after the ruling decided the appeal.
@@ -174,15 +342,46 @@ fn d5b_late_allies_of_the_winner_cannot_decide() {
     let a = add_claim(&mut l, "claude-c1", 10, claim_body("A", "asserted", "true"));
     let b_body = claim_body("B", "asserted", "true");
     let b = add_claim(&mut l, "gpt-g1", 11, b_body.clone());
-    let s = l.append(draft("gpt-g1", 12, "supersede", sup(&a, &b, "contested", vec![]))).unwrap();
-    l.append(draft("judge", 13, "resolve", decide(&eid(&s), "new"))).unwrap();
+    let s = l
+        .append(draft(
+            "gpt-g1",
+            12,
+            "supersede",
+            sup(&a, &b, "contested", vec![]),
+        ))
+        .unwrap();
+    l.append(draft("judge", 13, "resolve", decide(&eid(&s), "new")))
+        .unwrap();
     l.append(draft("meta-l1", 14, "claim", b_body)).unwrap(); // joins B after the ruling
-    let sv = l.append(draft("mistral-m1", 15, "verdict", verdict(&a, "supports"))).unwrap();
-    let ap = l.append(draft("claude-c1", 16, "appeal", appeal(&a, vec![&eid(&sv)]))).unwrap();
-    assert_eq!(code(l.append(draft("meta-l1", 17, "resolve", decide(&eid(&ap), "upheld")))), "E_RESOLVE_PARTY");
-    assert_eq!(code(l.append(draft("qwen-q1", 18, "resolve", decide(&eid(&ap), "reinstated")))), "OK");
+    let sv = l
+        .append(draft("mistral-m1", 15, "verdict", verdict(&a, "supports")))
+        .unwrap();
+    let ap = l
+        .append(draft(
+            "claude-c1",
+            16,
+            "appeal",
+            appeal(&a, vec![&eid(&sv)]),
+        ))
+        .unwrap();
+    assert_eq!(
+        code(l.append(draft("meta-l1", 17, "resolve", decide(&eid(&ap), "upheld")))),
+        "E_RESOLVE_PARTY"
+    );
+    assert_eq!(
+        code(l.append(draft(
+            "qwen-q1",
+            18,
+            "resolve",
+            decide(&eid(&ap), "reinstated")
+        ))),
+        "OK"
+    );
     // D6: the reinstated loser and the original winner are both true.
-    assert_eq!((l.state.truth(&a).unwrap(), l.state.truth(&b).unwrap()), ("true".into(), "true".into()));
+    assert_eq!(
+        (l.state.truth(&a).unwrap(), l.state.truth(&b).unwrap()),
+        ("true".into(), "true".into())
+    );
 }
 
 /// Contest rulings: a party that already judged either claim cannot rule.
@@ -191,8 +390,22 @@ fn contest_judges_must_not_have_judged_either_claim() {
     let mut l = world();
     let a = add_claim(&mut l, "claude-c1", 10, claim_body("A", "asserted", "true"));
     let b = add_claim(&mut l, "gpt-g1", 11, claim_body("B", "asserted", "true"));
-    l.append(draft("qwen-q1", 12, "verdict", verdict(&b, "supports"))).unwrap();
-    let s = l.append(draft("gpt-g1", 13, "supersede", sup(&a, &b, "contested", vec![]))).unwrap();
-    assert_eq!(code(l.append(draft("qwen-q1", 14, "resolve", decide(&eid(&s), "new")))), "E_RESOLVE_PARTY");
-    assert_eq!(code(l.append(draft("judge", 15, "resolve", decide(&eid(&s), "new")))), "OK");
+    l.append(draft("qwen-q1", 12, "verdict", verdict(&b, "supports")))
+        .unwrap();
+    let s = l
+        .append(draft(
+            "gpt-g1",
+            13,
+            "supersede",
+            sup(&a, &b, "contested", vec![]),
+        ))
+        .unwrap();
+    assert_eq!(
+        code(l.append(draft("qwen-q1", 14, "resolve", decide(&eid(&s), "new")))),
+        "E_RESOLVE_PARTY"
+    );
+    assert_eq!(
+        code(l.append(draft("judge", 15, "resolve", decide(&eid(&s), "new")))),
+        "OK"
+    );
 }

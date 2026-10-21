@@ -7,16 +7,48 @@ use gnomon_core::recall::{civil_from_days, days_from_civil, resolve, stem, terms
 fn porter_stemmer_matches_the_published_examples() {
     // Examples from Porter (1980), "An algorithm for suffix stripping".
     let cases = [
-        ("caresses", "caress"), ("ponies", "poni"), ("ties", "ti"), ("caress", "caress"), ("cats", "cat"),
-        ("feed", "feed"), ("agreed", "agre"), ("plastered", "plaster"), ("motoring", "motor"), ("sing", "sing"),
-        ("conflated", "conflat"), ("troubled", "troubl"), ("sized", "size"), ("hopping", "hop"), ("tanned", "tan"),
-        ("falling", "fall"), ("hissing", "hiss"), ("fizzed", "fizz"), ("failing", "fail"), ("filing", "file"),
-        ("happy", "happi"), ("sky", "sky"), ("relational", "relat"), ("conditional", "condit"),
-        ("rational", "ration"), ("valenci", "valenc"), ("digitizer", "digit"), ("operator", "oper"),
-        ("triplicate", "triplic"), ("formative", "form"), ("electrical", "electr"), ("hopeful", "hope"),
-        ("goodness", "good"), ("revival", "reviv"), ("allowance", "allow"), ("inference", "infer"),
-        ("adjustable", "adjust"), ("effective", "effect"), ("probate", "probat"), ("rate", "rate"),
-        ("controll", "control"), ("roll", "roll"),
+        ("caresses", "caress"),
+        ("ponies", "poni"),
+        ("ties", "ti"),
+        ("caress", "caress"),
+        ("cats", "cat"),
+        ("feed", "feed"),
+        ("agreed", "agre"),
+        ("plastered", "plaster"),
+        ("motoring", "motor"),
+        ("sing", "sing"),
+        ("conflated", "conflat"),
+        ("troubled", "troubl"),
+        ("sized", "size"),
+        ("hopping", "hop"),
+        ("tanned", "tan"),
+        ("falling", "fall"),
+        ("hissing", "hiss"),
+        ("fizzed", "fizz"),
+        ("failing", "fail"),
+        ("filing", "file"),
+        ("happy", "happi"),
+        ("sky", "sky"),
+        ("relational", "relat"),
+        ("conditional", "condit"),
+        ("rational", "ration"),
+        ("valenci", "valenc"),
+        ("digitizer", "digit"),
+        ("operator", "oper"),
+        ("triplicate", "triplic"),
+        ("formative", "form"),
+        ("electrical", "electr"),
+        ("hopeful", "hope"),
+        ("goodness", "good"),
+        ("revival", "reviv"),
+        ("allowance", "allow"),
+        ("inference", "infer"),
+        ("adjustable", "adjust"),
+        ("effective", "effect"),
+        ("probate", "probat"),
+        ("rate", "rate"),
+        ("controll", "control"),
+        ("roll", "roll"),
     ];
     for (w, want) in cases {
         assert_eq!(stem(w), want, "stem({w})");
@@ -36,8 +68,14 @@ fn the_calendar_round_trips() {
         assert_eq!(days_from_civil(y, m, d), z);
     }
     assert_eq!(days_from_civil(1970, 1, 1), 0);
-    assert_eq!(civil_from_days(days_from_civil(2024, 2, 29) + 1), (2024, 3, 1));
-    assert_eq!(civil_from_days(days_from_civil(2100, 2, 28) + 1), (2100, 3, 1));
+    assert_eq!(
+        civil_from_days(days_from_civil(2024, 2, 29) + 1),
+        (2024, 3, 1)
+    );
+    assert_eq!(
+        civil_from_days(days_from_civil(2100, 2, 28) + 1),
+        (2100, 3, 1)
+    );
 }
 
 fn dates(text: &str, y: i64, m: i64, d: i64) -> Vec<(String, String)> {
@@ -47,7 +85,13 @@ fn dates(text: &str, y: i64, m: i64, d: i64) -> Vec<(String, String)> {
         .map(|(p, s)| {
             let f = civil_from_days(s.first);
             let l = civil_from_days(s.last);
-            (p, format!("{:04}-{:02}-{:02}..{:04}-{:02}-{:02}", f.0, f.1, f.2, l.0, l.1, l.2))
+            (
+                p,
+                format!(
+                    "{:04}-{:02}-{:02}..{:04}-{:02}-{:02}",
+                    f.0, f.1, f.2, l.0, l.1, l.2
+                ),
+            )
         })
         .collect()
 }
@@ -55,7 +99,12 @@ fn dates(text: &str, y: i64, m: i64, d: i64) -> Vec<(String, String)> {
 #[test]
 fn relative_dates_resolve_by_the_calendar() {
     // 8 May 2023 was a Monday.
-    let one = |t: &str| dates(t, 2023, 5, 8).into_iter().map(|x| x.1).collect::<Vec<_>>();
+    let one = |t: &str| {
+        dates(t, 2023, 5, 8)
+            .into_iter()
+            .map(|x| x.1)
+            .collect::<Vec<_>>()
+    };
     assert_eq!(one("I went yesterday"), ["2023-05-07..2023-05-07"]);
     assert_eq!(one("see you tomorrow"), ["2023-05-09..2023-05-09"]);
     assert_eq!(one("the day before yesterday"), ["2023-05-06..2023-05-06"]);
@@ -65,8 +114,14 @@ fn relative_dates_resolve_by_the_calendar() {
     assert_eq!(one("last year"), ["2022-01-01..2022-12-31"]);
     assert_eq!(one("three days ago"), ["2023-05-05..2023-05-05"]);
     // Month arithmetic across a year boundary, and leap days.
-    assert_eq!(dates("last month", 2024, 1, 15)[0].1, "2023-12-01..2023-12-31");
-    assert_eq!(dates("next month", 2024, 1, 31)[0].1, "2024-02-01..2024-02-29");
+    assert_eq!(
+        dates("last month", 2024, 1, 15)[0].1,
+        "2023-12-01..2023-12-31"
+    );
+    assert_eq!(
+        dates("next month", 2024, 1, 31)[0].1,
+        "2024-02-01..2024-02-29"
+    );
     assert!(one("nothing temporal here").is_empty());
 }
 
@@ -84,7 +139,9 @@ fn requests_are_checked() {
         r#"{"query":"x","colour":"red"}"#,
     ];
     for b in bad {
-        let e = Request::from_json(&parse(b).unwrap()).err().unwrap_or_else(|| panic!("accepted {b}"));
+        let e = Request::from_json(&parse(b).unwrap())
+            .err()
+            .unwrap_or_else(|| panic!("accepted {b}"));
         assert_eq!(e.code, "E_RECALL", "{b}");
     }
     let r = Request::from_json(&parse(r#"{"query":"x"}"#).unwrap()).unwrap();
@@ -106,7 +163,12 @@ fn stemming_long_words_is_cheap() {
 
 #[test]
 fn in_n_units_and_the_calendar_edges() {
-    let one = |t: &str| dates(t, 2023, 5, 8).into_iter().map(|x| x.1).collect::<Vec<_>>();
+    let one = |t: &str| {
+        dates(t, 2023, 5, 8)
+            .into_iter()
+            .map(|x| x.1)
+            .collect::<Vec<_>>()
+    };
     assert_eq!(one("in two months"), ["2023-07-01..2023-07-31"]);
     assert_eq!(one("in 3 days"), ["2023-05-11..2023-05-11"]);
     assert_eq!(one("two days from now"), ["2023-05-10..2023-05-10"]);
@@ -118,7 +180,10 @@ fn in_n_units_and_the_calendar_edges() {
 
 #[test]
 fn speaker_must_be_text() {
-    for b in [r#"{"query":"x","speaker":5}"#, r#"{"query":"x","speaker":["Ann"]}"#] {
+    for b in [
+        r#"{"query":"x","speaker":5}"#,
+        r#"{"query":"x","speaker":["Ann"]}"#,
+    ] {
         assert!(Request::from_json(&parse(b).unwrap()).is_err(), "{b}");
     }
 }

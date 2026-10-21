@@ -44,10 +44,28 @@ fn strs(xs: &[&str]) -> Value {
 fn world() -> Ledger {
     let mut l = lab();
     let reg = |w: &str, p: &str, caps: &[&str]| register_body(w, p, "model", caps, &["lab"]);
-    l.append(draft("john", 6, "register", reg("mistral-m1", "mistral", &["write", "verify"]))).unwrap();
-    l.append(draft("john", 7, "register", reg("judge", "judge-co", &["verify"]))).unwrap();
-    l.append(draft("john", 8, "register", reg("claude", "anthropic", &["write", "verify", "spawn"]).with("name", Value::str("Claude"))))
-        .unwrap();
+    l.append(draft(
+        "john",
+        6,
+        "register",
+        reg("mistral-m1", "mistral", &["write", "verify"]),
+    ))
+    .unwrap();
+    l.append(draft(
+        "john",
+        7,
+        "register",
+        reg("judge", "judge-co", &["verify"]),
+    ))
+    .unwrap();
+    l.append(draft(
+        "john",
+        8,
+        "register",
+        reg("claude", "anthropic", &["write", "verify", "spawn"])
+            .with("name", Value::str("Claude")),
+    ))
+    .unwrap();
     let inst = register_plain("claude-1", "anthropic", "model", &["write"], &["lab"])
         .with("operator", Value::str("john"))
         .with("model", Value::str("claude"))
@@ -56,8 +74,17 @@ fn world() -> Ledger {
     l.append(draft("claude", 9, "register", inst)).unwrap();
 
     let text = "John: Café first. Use Rust.\nClaude: Agreed.";
-    let cut = text.find("\nClaude").map(|b| text[..b].chars().count()).unwrap() as i64;
-    let turn = |sp: &str, a: i64, b: i64| obj(vec![("speaker", Value::str(sp)), ("start", Value::Int(a)), ("end", Value::Int(b))]);
+    let cut = text
+        .find("\nClaude")
+        .map(|b| text[..b].chars().count())
+        .unwrap() as i64;
+    let turn = |sp: &str, a: i64, b: i64| {
+        obj(vec![
+            ("speaker", Value::str(sp)),
+            ("start", Value::Int(a)),
+            ("end", Value::Int(b)),
+        ])
+    };
     let ep = l
         .append(draft(
             "claude-1",
@@ -68,12 +95,27 @@ fn world() -> Ledger {
                 ("content", Value::str(text)),
                 ("medium", Value::str("chat")),
                 ("participants", strs(&["John", "Claude"])),
-                ("turns", Value::Array(vec![turn("John", 0, cut), turn("Claude", cut + 1, text.chars().count() as i64)])),
-                ("bindings", obj(vec![("John", Value::str("john")), ("Claude", Value::str("claude-1"))])),
+                (
+                    "turns",
+                    Value::Array(vec![
+                        turn("John", 0, cut),
+                        turn("Claude", cut + 1, text.chars().count() as i64),
+                    ]),
+                ),
+                (
+                    "bindings",
+                    obj(vec![
+                        ("John", Value::str("john")),
+                        ("Claude", Value::str("claude-1")),
+                    ]),
+                ),
             ]),
         ))
         .unwrap();
-    let start = text.find("Use Rust.").map(|b| text[..b].chars().count()).unwrap() as i64;
+    let start = text
+        .find("Use Rust.")
+        .map(|b| text[..b].chars().count())
+        .unwrap() as i64;
     let quoted = obj(vec![
         ("statement", Value::str("Use Rust.")),
         ("statement_kind", Value::str("describe")),
@@ -90,41 +132,98 @@ fn world() -> Ledger {
     ]);
     add_claim(&mut l, "claude-1", 11, quoted);
 
-    let verdict = |c: &str, r: &str| obj(vec![("claim", Value::str(c)), ("result", Value::str(r)), ("method", Value::str("test"))]);
+    let verdict = |c: &str, r: &str| {
+        obj(vec![
+            ("claim", Value::str(c)),
+            ("result", Value::str(r)),
+            ("method", Value::str("test")),
+        ])
+    };
     let sup = |old: &str, new: &str, kind: &str, ev: Vec<String>| {
         obj(vec![
             ("old", Value::str(old)),
             ("new", Value::str(new)),
             ("kind", Value::str(kind)),
-            ("evidence", Value::Array(ev.into_iter().map(Value::str).collect())),
+            (
+                "evidence",
+                Value::Array(ev.into_iter().map(Value::str).collect()),
+            ),
             ("reason", Value::str("because")),
         ])
     };
-    let decide = |d: &str, o: &str| obj(vec![("dispute", Value::str(d)), ("outcome", Value::str(o)), ("reason", Value::str("decision"))]);
+    let decide = |d: &str, o: &str| {
+        obj(vec![
+            ("dispute", Value::str(d)),
+            ("outcome", Value::str(o)),
+            ("reason", Value::str("decision")),
+        ])
+    };
 
     // Refuted, then appealed on new evidence and reinstated by a neutral party.
     let t = add_claim(&mut l, "claude-c1", 12, claim_body("T", "asserted", "true"));
     let k = add_claim(&mut l, "gpt-g1", 12, claim_body("K", "asserted", "true"));
-    let v = l.append(draft("kimi-k1", 13, "verdict", verdict(&t, "refutes"))).unwrap();
-    l.append(draft("gpt-g1", 13, "supersede", sup(&t, &k, "refuted", vec![eid(&v)]))).unwrap();
-    let s = l.append(draft("mistral-m1", 14, "verdict", verdict(&t, "supports"))).unwrap();
-    let appeal = obj(vec![("claim", Value::str(&t)), ("evidence", strs(&[&eid(&s)])), ("reason", Value::str("new evidence"))]);
+    let v = l
+        .append(draft("kimi-k1", 13, "verdict", verdict(&t, "refutes")))
+        .unwrap();
+    l.append(draft(
+        "gpt-g1",
+        13,
+        "supersede",
+        sup(&t, &k, "refuted", vec![eid(&v)]),
+    ))
+    .unwrap();
+    let s = l
+        .append(draft("mistral-m1", 14, "verdict", verdict(&t, "supports")))
+        .unwrap();
+    let appeal = obj(vec![
+        ("claim", Value::str(&t)),
+        ("evidence", strs(&[&eid(&s)])),
+        ("reason", Value::str("new evidence")),
+    ]);
     let a = l.append(draft("claude-c1", 14, "appeal", appeal)).unwrap();
-    l.append(draft("judge", 15, "resolve", decide(&eid(&a), "reinstated"))).unwrap();
+    l.append(draft(
+        "judge",
+        15,
+        "resolve",
+        decide(&eid(&a), "reinstated"),
+    ))
+    .unwrap();
 
     // A contest, ruled.
     let x = add_claim(&mut l, "claude-c1", 16, claim_body("X", "asserted", "true"));
     let y = add_claim(&mut l, "gpt-g1", 16, claim_body("Y", "asserted", "true"));
-    let c = l.append(draft("gpt-g1", 17, "supersede", sup(&x, &y, "contested", vec![]))).unwrap();
-    l.append(draft("judge", 18, "resolve", decide(&eid(&c), "new"))).unwrap();
+    let c = l
+        .append(draft(
+            "gpt-g1",
+            17,
+            "supersede",
+            sup(&x, &y, "contested", vec![]),
+        ))
+        .unwrap();
+    l.append(draft("judge", 18, "resolve", decide(&eid(&c), "new")))
+        .unwrap();
 
     // Corroboration, a forum question and answer, a handoff.
-    l.append(draft("kimi-k1", 19, "claim", claim_body("K", "asserted", "true"))).unwrap();
-    let q = add_claim(&mut l, "claude-c1", 20, claim_body("Which database?", "asked", "unknown"));
-    let ans = claim_body("SQLite.", "suggested", "unknown").with("about", Value::Array(vec![obj(vec![
-        ("relation", Value::str("answers")),
-        ("claim", Value::str(&q)),
-    ])]));
+    l.append(draft(
+        "kimi-k1",
+        19,
+        "claim",
+        claim_body("K", "asserted", "true"),
+    ))
+    .unwrap();
+    let q = add_claim(
+        &mut l,
+        "claude-c1",
+        20,
+        claim_body("Which database?", "asked", "unknown"),
+    );
+    let ans = claim_body("SQLite.", "suggested", "unknown").with(
+        "about",
+        Value::Array(vec![obj(vec![
+            ("relation", Value::str("answers")),
+            ("claim", Value::str(&q)),
+        ])]),
+    );
     add_claim(&mut l, "gpt-g1", 21, ans);
     let h = obj(vec![
         ("compartment", Value::str("lab")),
@@ -137,7 +236,16 @@ fn world() -> Ledger {
     // Enough to be worth a snapshot.
     for i in 0..1100 {
         let w = ["claude-c1", "gpt-g1", "kimi-k1"][i % 3];
-        add_claim(&mut l, w, 30, claim_body(&format!("Fact {i} with an unusual ünïcödé key \u{1F600}"), "asserted", "true"));
+        add_claim(
+            &mut l,
+            w,
+            30,
+            claim_body(
+                &format!("Fact {i} with an unusual ünïcödé key \u{1F600}"),
+                "asserted",
+                "true",
+            ),
+        );
     }
     l
 }
@@ -164,11 +272,17 @@ fn a_snapshot_decodes_to_exactly_what_a_replay_gives() {
     // one replayed from the file: the same snapshot, the same ledger.
     let a = snapshot::encode(&l, &bytes).unwrap();
     let b = snapshot::encode(&full, &bytes).unwrap();
-    assert!(a == b, "a ledger built by appends and its replay must snapshot identically");
+    assert!(
+        a == b,
+        "a ledger built by appends and its replay must snapshot identically"
+    );
     let (decoded, covered) = snapshot::decode(&a, &bytes).expect("usable");
     assert_eq!(covered, bytes.len());
     assert!(decoded == full, "decoded snapshot differs from replay");
-    assert_eq!(canonical(&decoded.state.to_value(None)), canonical(&full.state.to_value(None)));
+    assert_eq!(
+        canonical(&decoded.state.to_value(None)),
+        canonical(&full.state.to_value(None))
+    );
 }
 
 #[test]
@@ -177,14 +291,18 @@ fn opening_writes_a_snapshot_and_the_next_process_would_use_it() {
     write_log(&path, &world());
     assert!(!snapshot::path_for(&path).exists());
     store::with_ledger(&path, |_| ()).unwrap();
-    let snap = fs::read(snapshot::path_for(&path)).expect("a snapshot is saved after a full verification");
+    let snap =
+        fs::read(snapshot::path_for(&path)).expect("a snapshot is saved after a full verification");
     let bytes = fs::read(&path).unwrap();
     let (l, _) = snapshot::decode(&snap, &bytes).expect("usable");
     assert!(l == replay(&path));
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        let mode = fs::metadata(snapshot::path_for(&path)).unwrap().permissions().mode();
+        let mode = fs::metadata(snapshot::path_for(&path))
+            .unwrap()
+            .permissions()
+            .mode();
         assert_eq!(mode & 0o077, 0, "only its owner can read it");
     }
 }
@@ -197,7 +315,16 @@ fn events_after_the_snapshot_go_through_the_gate() {
     let bytes = fs::read(&path).unwrap();
     let snap = snapshot::encode(&replay(&path), &bytes).unwrap();
     // The log grows by a valid event and by an invalid one.
-    store::append(&path, draft("claude-c1", 40, "claim", claim_body("After.", "asserted", "true"))).unwrap();
+    store::append(
+        &path,
+        draft(
+            "claude-c1",
+            40,
+            "claim",
+            claim_body("After.", "asserted", "true"),
+        ),
+    )
+    .unwrap();
     let grown = fs::read(&path).unwrap();
     let (from_snap, covered) = snapshot::decode(&snap, &grown).expect("still a prefix");
     assert_eq!(covered, bytes.len());
@@ -210,7 +337,10 @@ fn events_after_the_snapshot_go_through_the_gate() {
     fs::write(&p2, &bad).unwrap();
     fs::create_dir_all(snapshot::path_for(&p2).parent().unwrap()).unwrap();
     fs::write(snapshot::path_for(&p2), &snap).unwrap();
-    assert!(store::with_ledger(&p2, |_| ()).is_err(), "a bad event after the snapshot is still refused");
+    assert!(
+        store::with_ledger(&p2, |_| ()).is_err(),
+        "a bad event after the snapshot is still refused"
+    );
 }
 
 fn grown_last(bytes: &[u8]) -> Value {
@@ -231,7 +361,11 @@ fn a_snapshot_is_never_used_for_a_log_that_changed() {
     edited[at] = if edited[at] == b'a' { b'b' } else { b'a' };
     assert!(snapshot::decode(&snap, &edited).is_none());
     assert!(snapshot::decode(&snap, &bytes[..bytes.len() - 1]).is_none());
-    let cut = bytes[..bytes.len() - 1].iter().rposition(|b| *b == b'\n').unwrap() + 1;
+    let cut = bytes[..bytes.len() - 1]
+        .iter()
+        .rposition(|b| *b == b'\n')
+        .unwrap()
+        + 1;
     assert!(snapshot::decode(&snap, &bytes[..cut]).is_none());
     // And through the store: the edit is found by the full verification
     // the snapshot no longer spares it.
@@ -274,8 +408,13 @@ fn a_forged_snapshot_cannot_survive_a_change_to_its_log_hash() {
     let p2 = tmp("forge-b");
     let mut w = world();
     write_log(&p1, &w);
-    w.append(Draft { writer: "gpt-g1".into(), record_time: t(50), kind: "claim".into(), body: claim_body("Z", "asserted", "true") })
-        .unwrap();
+    w.append(Draft {
+        writer: "gpt-g1".into(),
+        record_time: t(50),
+        kind: "claim".into(),
+        body: claim_body("Z", "asserted", "true"),
+    })
+    .unwrap();
     write_log(&p2, &w);
     let s1 = snapshot::encode(&replay(&p1), &fs::read(&p1).unwrap()).unwrap();
     let b2 = fs::read(&p2).unwrap();
@@ -315,12 +454,18 @@ fn a_sealed_snapshot_must_still_agree_with_the_log() {
     assert!(snapshot::decode(&full, &bytes).is_some());
     l.events.pop();
     let fewer = snapshot::encode(&l, &bytes).unwrap();
-    assert!(snapshot::decode(&fewer, &bytes).is_none(), "one event short");
+    assert!(
+        snapshot::decode(&fewer, &bytes).is_none(),
+        "one event short"
+    );
     let mut l = replay(&path);
     let last = l.events.pop().unwrap();
     l.events.push(last.with("hash", Value::str("0".repeat(64))));
     let wrong = snapshot::encode(&l, &bytes).unwrap();
-    assert!(snapshot::decode(&wrong, &bytes).is_none(), "another last hash");
+    assert!(
+        snapshot::decode(&wrong, &bytes).is_none(),
+        "another last hash"
+    );
 }
 
 #[test]
@@ -365,7 +510,10 @@ fn snapshots_are_written_only_into_our_own_directory_and_never_through_a_link() 
     let victim = path.parent().unwrap().join("victim.txt");
     fs::write(&victim, "untouched").unwrap();
     for n in 0..64 {
-        let _ = symlink(&victim, dir.join(format!("snapshot.{}.{n}.tmp", std::process::id())));
+        let _ = symlink(
+            &victim,
+            dir.join(format!("snapshot.{}.{n}.tmp", std::process::id())),
+        );
     }
     store::with_ledger(&path, |_| ()).unwrap();
     assert_eq!(fs::read_to_string(&victim).unwrap(), "untouched");

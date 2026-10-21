@@ -69,6 +69,24 @@ class CompanyTest(unittest.TestCase):
         again = Company.found(self.m, "john", "acme", "acme", self.c.templates)
         self.assertEqual(sorted(again.positions()), sorted(self.c.positions()))
 
+    def test_refused_personnel_actions_leave_no_trace(self):
+        ceo, cos, lead, engs = self.staff()
+        c = self.c
+        before = len(self.m.writers())
+        with self.assertRaises(GateError):
+            c.hire(engs[0], "Engineer", "haiku", "a friend")
+        self.assertEqual(len(self.m.writers()), before)  # no orphan instance
+        a = [k for k, v in c.appointments().items() if v["holder"] == engs[1]][0]
+        handoffs = len(self.m.state(compartments=["acme"])["state"]["handoffs"])
+        with self.assertRaises(GateError):
+            c.offboard(engs[0], a, "a peer's grudge", "their work")
+        self.assertEqual(len(self.m.state(compartments=["acme"])["state"]["handoffs"]), handoffs)
+        self.assertIn(a, c.appointments())
+        # Work is spread without a load map: each delivery moves the next order on.
+        first = c.assignee("Engineer")
+        c.deliver(first, c.order("client", "One thing.", "code"), "code", "Done.")
+        self.assertNotEqual(c.assignee("Engineer"), first)
+
     def test_a_goal_split_across_levels_and_judged_independently(self):
         ceo, cos, lead, engs = self.staff()
         c = self.c

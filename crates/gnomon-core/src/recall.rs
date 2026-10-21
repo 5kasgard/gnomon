@@ -99,13 +99,22 @@ impl Default for Tuning {
 
 impl Request {
     pub fn from_json(v: &Value) -> GateResult<Request> {
-        let obj = v.as_object().ok_or_else(|| rerr("request must be an object"))?;
+        let obj = v
+            .as_object()
+            .ok_or_else(|| rerr("request must be an object"))?;
         for (k, _) in obj {
-            if !["query", "k", "kinds", "speaker", "after", "before", "now", "context", "tuning"].contains(&k.as_str()) {
+            if ![
+                "query", "k", "kinds", "speaker", "after", "before", "now", "context", "tuning",
+            ]
+            .contains(&k.as_str())
+            {
                 return Err(rerr(format!("unknown field '{k}'")));
             }
         }
-        let query = v.get("query").and_then(|q| q.as_str()).ok_or_else(|| rerr("'query' is required"))?;
+        let query = v
+            .get("query")
+            .and_then(|q| q.as_str())
+            .ok_or_else(|| rerr("'query' is required"))?;
         if query.len() > MAX_QUERY {
             return Err(rerr(format!("query longer than {MAX_QUERY} bytes")));
         }
@@ -118,7 +127,9 @@ impl Request {
         };
         let (mut turns, mut claims) = (true, true);
         if let Some(kinds) = v.get("kinds") {
-            let list = kinds.as_array().ok_or_else(|| rerr("'kinds' must be a list"))?;
+            let list = kinds
+                .as_array()
+                .ok_or_else(|| rerr("'kinds' must be a list"))?;
             turns = false;
             claims = false;
             for x in list {
@@ -147,7 +158,9 @@ impl Request {
         };
         let mut tuning = Tuning::default();
         if let Some(t) = v.get("tuning") {
-            let obj = t.as_object().ok_or_else(|| rerr("'tuning' must be an object"))?;
+            let obj = t
+                .as_object()
+                .ok_or_else(|| rerr("'tuning' must be an object"))?;
             for (k, x) in obj {
                 let flag = |x: &Value| match x {
                     Value::Bool(b) => Ok(*b),
@@ -155,7 +168,9 @@ impl Request {
                 };
                 let num = |x: &Value| match x.as_int() {
                     Some(n) if (0..=100_000).contains(&n) => Ok(n),
-                    _ => Err(rerr(format!("tuning '{k}' must be an integer 0..100000 (thousandths)"))),
+                    _ => Err(rerr(format!(
+                        "tuning '{k}' must be an integer 0..100000 (thousandths)"
+                    ))),
                 };
                 match k.as_str() {
                     "joins" => tuning.joins = flag(x)?,
@@ -166,7 +181,9 @@ impl Request {
                     "b" => {
                         tuning.b = num(x)?;
                         if tuning.b > 1000 {
-                            return Err(rerr("tuning 'b' is at most 1000 (BM25's b is between 0 and 1)"));
+                            return Err(rerr(
+                                "tuning 'b' is at most 1000 (BM25's b is between 0 and 1)",
+                            ));
                         }
                     }
                     "prop_q" => tuning.prop_q = num(x)?,
@@ -187,7 +204,11 @@ impl Request {
             claims,
             speaker: match v.get("speaker") {
                 None => None,
-                Some(x) => Some(x.as_str().ok_or_else(|| rerr("'speaker' must be a string"))?.to_string()),
+                Some(x) => Some(
+                    x.as_str()
+                        .ok_or_else(|| rerr("'speaker' must be a string"))?
+                        .to_string(),
+                ),
             },
             after: time("after")?,
             before: time("before")?,
@@ -200,13 +221,14 @@ impl Request {
 // ------------------------------------------------------------------ words
 
 const STOP: &[&str] = &[
-    "a", "about", "after", "again", "all", "also", "am", "an", "and", "any", "are", "as", "at", "be", "been",
-    "being", "but", "by", "can", "could", "did", "do", "does", "doing", "for", "from", "had", "has", "have",
-    "having", "he", "her", "here", "hers", "him", "his", "how", "i", "if", "in", "into", "is", "it", "its",
-    "just", "me", "my", "of", "on", "or", "our", "ours", "she", "so", "some", "than", "that", "the", "their",
-    "them", "then", "there", "these", "they", "this", "those", "to", "too", "us", "was", "we", "were", "what",
-    "when", "where", "which", "while", "who", "whom", "why", "will", "with", "would", "you", "your", "yours",
-    "s", "t", "ll", "re", "ve", "d", "m",
+    "a", "about", "after", "again", "all", "also", "am", "an", "and", "any", "are", "as", "at",
+    "be", "been", "being", "but", "by", "can", "could", "did", "do", "does", "doing", "for",
+    "from", "had", "has", "have", "having", "he", "her", "here", "hers", "him", "his", "how", "i",
+    "if", "in", "into", "is", "it", "its", "just", "me", "my", "of", "on", "or", "our", "ours",
+    "she", "so", "some", "than", "that", "the", "their", "them", "then", "there", "these", "they",
+    "this", "those", "to", "too", "us", "was", "we", "were", "what", "when", "where", "which",
+    "while", "who", "whom", "why", "will", "with", "would", "you", "your", "yours", "s", "t", "ll",
+    "re", "ve", "d", "m",
 ];
 
 /// Lower-cased words: runs of letters and digits.
@@ -239,17 +261,28 @@ fn words_cased(text: &str) -> Vec<(String, bool)> {
 
 /// Index terms: words without stopwords, stemmed.
 pub fn terms(text: &str) -> Vec<String> {
-    words(text).into_iter().filter(|w| !STOP.contains(&w.as_str())).map(|w| stem(&w)).collect()
+    words(text)
+        .into_iter()
+        .filter(|w| !STOP.contains(&w.as_str()))
+        .map(|w| stem(&w))
+        .collect()
 }
 
 /// Terms plus each pair of adjacent words joined into one ("road trip" ->
 /// "roadtrip", "de-stress" -> "destress"), so either spelling finds the other.
 pub fn terms_joined(text: &str) -> Vec<String> {
     let w = words(text);
-    let mut out: Vec<String> = w.iter().filter(|x| !STOP.contains(&x.as_str())).map(|x| stem(x)).collect();
+    let mut out: Vec<String> = w
+        .iter()
+        .filter(|x| !STOP.contains(&x.as_str()))
+        .map(|x| stem(x))
+        .collect();
     for pair in w.windows(2) {
         let alpha = |s: &str| s.chars().all(|c| c.is_alphabetic());
-        if alpha(&pair[0]) && alpha(&pair[1]) && !(STOP.contains(&pair[0].as_str()) && STOP.contains(&pair[1].as_str())) {
+        if alpha(&pair[0])
+            && alpha(&pair[1])
+            && !(STOP.contains(&pair[0].as_str()) && STOP.contains(&pair[1].as_str()))
+        {
             out.push(stem(&format!("{}{}", pair[0], pair[1])));
         }
     }
@@ -429,8 +462,8 @@ fn step3(w: &mut Vec<u8>) {
 
 fn step4(w: &mut Vec<u8>) {
     for s in [
-        "al", "ance", "ence", "er", "ic", "able", "ible", "ant", "ement", "ment", "ent", "ion", "ou", "ism", "ate",
-        "iti", "ous", "ive", "ize",
+        "al", "ance", "ence", "er", "ic", "able", "ible", "ant", "ement", "ment", "ent", "ion",
+        "ou", "ism", "ate", "iti", "ous", "ive", "ize",
     ] {
         if ends(w, s) {
             let stem_len = w.len() - s.len();
@@ -535,7 +568,10 @@ impl Span {
 
 fn week_of(z: i64) -> Span {
     let monday = z - weekday(z);
-    Span { first: monday, last: monday + 6 }
+    Span {
+        first: monday,
+        last: monday + 6,
+    }
 }
 
 fn month_of(z: i64, shift: i64) -> Span {
@@ -543,13 +579,23 @@ fn month_of(z: i64, shift: i64) -> Span {
     let idx = y * 12 + (m - 1) + shift;
     let (ny, nm) = (idx.div_euclid(12), idx.rem_euclid(12) + 1);
     let first = days_from_civil(ny, nm, 1);
-    let next = if nm == 12 { days_from_civil(ny + 1, 1, 1) } else { days_from_civil(ny, nm + 1, 1) };
-    Span { first, last: next - 1 }
+    let next = if nm == 12 {
+        days_from_civil(ny + 1, 1, 1)
+    } else {
+        days_from_civil(ny, nm + 1, 1)
+    };
+    Span {
+        first,
+        last: next - 1,
+    }
 }
 
 fn year_of(z: i64, shift: i64) -> Span {
     let y = civil_from_days(z).0 + shift;
-    Span { first: days_from_civil(y, 1, 1), last: days_from_civil(y, 12, 31) }
+    Span {
+        first: days_from_civil(y, 1, 1),
+        last: days_from_civil(y, 12, 31),
+    }
 }
 
 fn number(w: &str) -> Option<i64> {
@@ -571,7 +617,15 @@ fn number(w: &str) -> Option<i64> {
     Some(n)
 }
 
-const WEEKDAYS: [&str; 7] = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+const WEEKDAYS: [&str; 7] = [
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
+];
 
 /// Relative time expressions in `text`, resolved against day `z`: each with
 /// the words matched and the span of days it means. The conventions (weeks
@@ -612,10 +666,16 @@ pub fn resolve(text: &str, z: i64) -> Vec<(String, Span)> {
                 found = Some((2, Span::day(day)));
             } else {
                 let span = match unit {
-                    "week" => Some(Span { first: week_of(z).first + 7 * dir, last: week_of(z).last + 7 * dir }),
+                    "week" => Some(Span {
+                        first: week_of(z).first + 7 * dir,
+                        last: week_of(z).last + 7 * dir,
+                    }),
                     "weekend" => {
                         let sat = week_of(z).first + 5 + 7 * dir;
-                        Some(Span { first: sat, last: sat + 1 })
+                        Some(Span {
+                            first: sat,
+                            last: sat + 1,
+                        })
                     }
                     "month" => Some(month_of(z, dir)),
                     "year" => Some(year_of(z, dir)),
@@ -633,7 +693,13 @@ pub fn resolve(text: &str, z: i64) -> Vec<(String, Span)> {
             let later = o == 1 || (at(2) == "from" && at(3) == "now");
             if ago || later {
                 let sign = if ago { -1 } else { 1 };
-                let used = if o == 1 { 3 } else if ago { 3 } else { 4 };
+                let used = if o == 1 {
+                    3
+                } else if ago {
+                    3
+                } else {
+                    4
+                };
                 let span = match unit {
                     "day" => Some(Span::day(z + sign * n)),
                     "week" => Some(week_of(z + sign * 7 * n)),
@@ -647,7 +713,9 @@ pub fn resolve(text: &str, z: i64) -> Vec<(String, Span)> {
             }
         }
         // Only dates the calendar can write as YYYY-MM-DD.
-        let in_range = |s: &Span| s.first >= days_from_civil(0, 1, 1) && s.last <= days_from_civil(9999, 12, 31);
+        let in_range = |s: &Span| {
+            s.first >= days_from_civil(0, 1, 1) && s.last <= days_from_civil(9999, 12, 31)
+        };
         match found.filter(|(_, s)| in_range(s)) {
             Some((len, span)) => {
                 out.push((w[i..i + len].join(" "), span));
@@ -701,8 +769,18 @@ struct Analysis {
     hidden: bool,
 }
 
-fn analyse(text: String, speaker: &str, day: Option<i64>, joins: bool, ids: &mut Interner) -> Analysis {
-    let terms = if joins { terms_joined(&text) } else { terms(&text) };
+fn analyse(
+    text: String,
+    speaker: &str,
+    day: Option<i64>,
+    joins: bool,
+    ids: &mut Interner,
+) -> Analysis {
+    let terms = if joins {
+        terms_joined(&text)
+    } else {
+        terms(&text)
+    };
     let mut counts: BTreeMap<u32, u32> = BTreeMap::new();
     for t in &terms {
         *counts.entry(ids.id(t)).or_default() += 1;
@@ -781,36 +859,73 @@ fn analysis_cache() -> &'static Mutex<AnalysisCache> {
 /// An episode's text and its pieces: the recorded turns, or paragraphs when
 /// it has none (by its one participant, if it has exactly one).
 fn pieces(e: &crate::ledger::EpisodeInfo) -> (Vec<char>, Vec<(String, usize, usize)>) {
-    let content: Vec<char> = e.body.get("content").and_then(|c| c.as_str()).unwrap_or("").chars().collect();
+    let content: Vec<char> = e
+        .body
+        .get("content")
+        .and_then(|c| c.as_str())
+        .unwrap_or("")
+        .chars()
+        .collect();
     let p = if !e.turns.is_empty() {
-        e.turns.iter().map(|(sp, a, b)| (sp.clone(), *a, *b)).collect()
+        e.turns
+            .iter()
+            .map(|(sp, a, b)| (sp.clone(), *a, *b))
+            .collect()
     } else {
-        let who = if e.participants.len() == 1 { e.participants[0].clone() } else { String::new() };
-        paragraphs(&content).into_iter().map(|(a, b)| (who.clone(), a, b)).collect()
+        let who = if e.participants.len() == 1 {
+            e.participants[0].clone()
+        } else {
+            String::new()
+        };
+        paragraphs(&content)
+            .into_iter()
+            .map(|(a, b)| (who.clone(), a, b))
+            .collect()
     };
     (content, p)
 }
 
 fn slice(content: &[char], a: usize, b: usize) -> String {
-    content[a.min(content.len())..b.min(content.len())].iter().collect()
+    content[a.min(content.len())..b.min(content.len())]
+        .iter()
+        .collect()
 }
 
-fn units(ledger: &Ledger, visible: &[String], req: &Request, cache: &mut AnalysisCache) -> Vec<Unit> {
+fn units(
+    ledger: &Ledger,
+    visible: &[String],
+    req: &Request,
+    cache: &mut AnalysisCache,
+) -> Vec<Unit> {
     let st = &ledger.state;
-    let speaker_ok = |sp: &str| req.speaker.as_deref().map(|s| s.eq_ignore_ascii_case(sp)).unwrap_or(true);
+    let speaker_ok = |sp: &str| {
+        req.speaker
+            .as_deref()
+            .map(|s| s.eq_ignore_ascii_case(sp))
+            .unwrap_or(true)
+    };
     let sees = |c: &str| visible.iter().any(|x| x == c);
     let in_time = |t: &str| {
-        req.after.as_deref().map(|a| t >= a).unwrap_or(true) && req.before.as_deref().map(|b| t <= b).unwrap_or(true)
+        req.after.as_deref().map(|a| t >= a).unwrap_or(true)
+            && req.before.as_deref().map(|b| t <= b).unwrap_or(true)
     };
     let joins = req.tuning.joins;
     let mut out = Vec::new();
     if req.turns {
         // Episodes in log order, so ties break by when things were recorded.
-        let mut eps: Vec<(&String, &crate::ledger::EpisodeInfo)> =
-            st.episodes.iter().filter(|(_, e)| sees(&e.compartment)).collect();
+        let mut eps: Vec<(&String, &crate::ledger::EpisodeInfo)> = st
+            .episodes
+            .iter()
+            .filter(|(_, e)| sees(&e.compartment))
+            .collect();
         eps.sort_by_key(|(_, e)| e.seq);
         for (id, e) in eps {
-            let hash = ledger.events.get(e.seq).and_then(|ev| ev.get("hash")).and_then(|h| h.as_str()).unwrap_or(id);
+            let hash = ledger
+                .events
+                .get(e.seq)
+                .and_then(|ev| ev.get("hash"))
+                .and_then(|h| h.as_str())
+                .unwrap_or(id);
             let key = (hash.to_string(), joins);
             let turns = match cache.episodes.get(&key) {
                 Some(t) => t.clone(),
@@ -821,7 +936,13 @@ fn units(ledger: &Ledger, visible: &[String], req: &Request, cache: &mut Analysi
                         pieces
                             .into_iter()
                             .map(|(sp, a, b)| {
-                                let an = analyse(slice(&content, a, b), &sp, day, joins, &mut cache.terms);
+                                let an = analyse(
+                                    slice(&content, a, b),
+                                    &sp,
+                                    day,
+                                    joins,
+                                    &mut cache.terms,
+                                );
                                 (sp, a, b, cache.add(an))
                             })
                             .collect(),
@@ -848,16 +969,36 @@ fn units(ledger: &Ledger, visible: &[String], req: &Request, cache: &mut Analysi
         }
     }
     if req.claims {
-        let mut claims: Vec<_> = st.claims.iter().filter(|(_, c)| sees(&c.compartment)).collect();
+        let mut claims: Vec<_> = st
+            .claims
+            .iter()
+            .filter(|(_, c)| sees(&c.compartment))
+            .collect();
         claims.sort_by_key(|(_, c)| c.seq);
         for (id, c) in claims {
-            let speaker = c.body.get("speaker").and_then(|s| s.as_str()).unwrap_or("").to_string();
+            let speaker = c
+                .body
+                .get("speaker")
+                .and_then(|s| s.as_str())
+                .unwrap_or("")
+                .to_string();
             let key = (id.clone(), c.record_time.clone(), joins);
             let slot = match cache.claims.get(&key) {
                 Some(&s) => s,
                 None => {
-                    let text = c.body.get("statement").and_then(|s| s.as_str()).unwrap_or("").to_string();
-                    let an = analyse(text, &speaker, day_of(&c.record_time), joins, &mut cache.terms);
+                    let text = c
+                        .body
+                        .get("statement")
+                        .and_then(|s| s.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    let an = analyse(
+                        text,
+                        &speaker,
+                        day_of(&c.record_time),
+                        joins,
+                        &mut cache.terms,
+                    );
                     let s = cache.add(an);
                     cache.claims.insert(key, s);
                     s
@@ -933,9 +1074,21 @@ struct Index<'a> {
 impl<'a> Index<'a> {
     fn new(units: &'a [Unit], cache: &'a AnalysisCache, k1: f64, b: f64) -> Self {
         let total: usize = units.iter().map(|u| u.a.len).sum();
-        let avgdl = if units.is_empty() { 1.0 } else { (total as f64 / units.len() as f64).max(1.0) };
+        let avgdl = if units.is_empty() {
+            1.0
+        } else {
+            (total as f64 / units.len() as f64).max(1.0)
+        };
         let unit_of = units.iter().enumerate().map(|(i, u)| (u.slot, i)).collect();
-        Index { units, cache, avgdl, k1, b, unit_of, postings: Default::default() }
+        Index {
+            units,
+            cache,
+            avgdl,
+            k1,
+            b,
+            unit_of,
+            postings: Default::default(),
+        }
     }
 
     fn postings(&self, t: &str) -> std::rc::Rc<Vec<(usize, u32)>> {
@@ -949,7 +1102,11 @@ impl<'a> Index<'a> {
                     let mut v: Vec<(usize, u32)> = cache
                         .postings
                         .get(id as usize)
-                        .map(|ps| ps.iter().filter_map(|&(slot, f)| self.unit_of.get(&slot).map(|&u| (u, f))).collect())
+                        .map(|ps| {
+                            ps.iter()
+                                .filter_map(|&(slot, f)| self.unit_of.get(&slot).map(|&u| (u, f)))
+                                .collect()
+                        })
                         .unwrap_or_default();
                     v.sort_unstable();
                     v.dedup_by_key(|x| x.0);
@@ -971,7 +1128,8 @@ impl<'a> Index<'a> {
 
     /// BM25 of every unit for weighted query terms, with each term's share.
     fn score(&self, q: &[(String, f64)]) -> Vec<(f64, Vec<(String, f64)>)> {
-        let mut out: Vec<(f64, Vec<(String, f64)>)> = (0..self.units.len()).map(|_| (0.0, Vec::new())).collect();
+        let mut out: Vec<(f64, Vec<(String, f64)>)> =
+            (0..self.units.len()).map(|_| (0.0, Vec::new())).collect();
         for (t, w) in q {
             let idf = self.idf(t);
             for &(i, f) in self.postings(t).iter() {
@@ -1003,7 +1161,12 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
     }
     let units = units(ledger, visible, req, &mut guard);
     let cache: &AnalysisCache = &guard;
-    let index = Index::new(&units, cache, req.tuning.k1 as f64 / 1000.0, req.tuning.b as f64 / 1000.0);
+    let index = Index::new(
+        &units,
+        cache,
+        req.tuning.k1 as f64 / 1000.0,
+        req.tuning.b as f64 / 1000.0,
+    );
     let tune = req.tuning;
 
     // A speaker named in the question ("What did Caroline paint?") is who
@@ -1023,7 +1186,9 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
             .filter(|s| !s.is_empty())
             .collect();
         for sp in speakers {
-            let whole = lower.windows(sp.len()).any(|w| w.iter().zip(sp.iter()).all(|(a, b)| *a == b));
+            let whole = lower
+                .windows(sp.len())
+                .any(|w| w.iter().zip(sp.iter()).all(|(a, b)| *a == b));
             let first = sp[0].chars().count() >= 2
                 && !STOP.contains(&sp[0].as_str())
                 && qwords.iter().any(|(w, cap)| *cap && *w == sp[0]);
@@ -1032,10 +1197,18 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
             }
         }
     }
-    let mut q_terms: Vec<String> = if tune.joins { terms_joined(&req.query) } else { terms(&req.query) };
+    let mut q_terms: Vec<String> = if tune.joins {
+        terms_joined(&req.query)
+    } else {
+        terms(&req.query)
+    };
     if !named.is_empty() {
         let named_stems: HashSet<String> = named.iter().flatten().map(|w| stem(w)).collect();
-        let rest: Vec<String> = q_terms.iter().filter(|t| !named_stems.contains(*t)).cloned().collect();
+        let rest: Vec<String> = q_terms
+            .iter()
+            .filter(|t| !named_stems.contains(*t))
+            .cloned()
+            .collect();
         if !rest.is_empty() {
             q_terms = rest;
         }
@@ -1045,17 +1218,30 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
     let mut q: Vec<(String, f64)> = q_terms.iter().map(|t| (t.clone(), 1.0)).collect();
 
     // The question's own moment: "last weekend" asked on a given day.
-    let window: Vec<(String, Span)> =
-        req.now.as_deref().and_then(day_of).map(|z| resolve(&req.query, z)).unwrap_or_default();
+    let window: Vec<(String, Span)> = req
+        .now
+        .as_deref()
+        .and_then(day_of)
+        .map(|z| resolve(&req.query, z))
+        .unwrap_or_default();
 
     let (prop_q, prop_n) = (tune.prop_q as f64 / 1000.0, tune.prop_n as f64 / 1000.0);
     let (speaker_boost, window_boost) = (tune.speaker as f64 / 1000.0, tune.window as f64 / 1000.0);
-    let (session_w, when_boost) = (tune.session as f64 / 1000.0, 1.0 + tune.when as f64 / 1000.0);
+    let (session_w, when_boost) = (
+        tune.session as f64 / 1000.0,
+        1.0 + tune.when as f64 / 1000.0,
+    );
     let asks_when = qwords.first().map(|(w, _)| w == "when").unwrap_or(false)
-        || lower.windows(2).any(|w| w == ["what", "date"] || w == ["what", "time"] || w == ["how", "long"]);
+        || lower
+            .windows(2)
+            .any(|w| w == ["what", "date"] || w == ["what", "time"] || w == ["how", "long"]);
     type Ranked = Vec<(f64, Vec<(String, f64)>, Vec<(&'static str, f64)>)>;
     let rank = |q: &[(String, f64)]| -> Ranked {
-        let mut s: Ranked = index.score(q).into_iter().map(|(x, p)| (x, p, Vec::new())).collect();
+        let mut s: Ranked = index
+            .score(q)
+            .into_iter()
+            .map(|(x, p)| (x, p, Vec::new()))
+            .collect();
         if tune.propagate {
             // Answers follow questions: a turn takes half the score of a
             // question just before it, and a quarter of any other neighbour.
@@ -1069,11 +1255,20 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
                 let next_to = |j: usize, before: bool| {
                     units[j].kind == "turn"
                         && units[j].item == units[i].item
-                        && if before { units[j].turn + 1 == units[i].turn } else { units[i].turn + 1 == units[j].turn }
+                        && if before {
+                            units[j].turn + 1 == units[i].turn
+                        } else {
+                            units[i].turn + 1 == units[j].turn
+                        }
                 };
                 let mut extra = 0.0;
                 if i > 0 && next_to(i - 1, true) {
-                    extra += base[i - 1] * if units[i - 1].a.question { prop_q } else { prop_n };
+                    extra += base[i - 1]
+                        * if units[i - 1].a.question {
+                            prop_q
+                        } else {
+                            prop_n
+                        };
                 }
                 if i + 1 < units.len() && next_to(i + 1, false) {
                     extra += base[i + 1] * prop_n;
@@ -1090,13 +1285,17 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
             }
             if named.contains(&u.a.speaker_terms) {
                 s[i].0 *= speaker_boost;
-                s[i].2.push(("speaker named in the question", speaker_boost));
+                s[i].2
+                    .push(("speaker named in the question", speaker_boost));
             }
             if !window.is_empty() {
                 let day = day_of(&u.time);
                 let hit = window.iter().any(|(_, w)| {
                     day.map(|d| d >= w.first && d <= w.last).unwrap_or(false)
-                        || u.a.dates.iter().any(|(_, sp)| sp.first <= w.last && sp.last >= w.first)
+                        || u.a
+                            .dates
+                            .iter()
+                            .any(|(_, sp)| sp.first <= w.last && sp.last >= w.first)
                 });
                 if hit {
                     s[i].0 *= window_boost;
@@ -1105,7 +1304,8 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
             }
             if asks_when && !u.a.dates.is_empty() {
                 s[i].0 *= when_boost;
-                s[i].2.push(("holds a date, and the question asks when", when_boost));
+                s[i].2
+                    .push(("holds a date, and the question asks when", when_boost));
             }
         }
         if session_w > 0.0 {
@@ -1119,7 +1319,10 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
                     e.1 += 1;
                 }
             }
-            let top = agg.values().map(|(x, n)| x / (*n as f64).sqrt()).fold(0.0, f64::max);
+            let top = agg
+                .values()
+                .map(|(x, n)| x / (*n as f64).sqrt())
+                .fold(0.0, f64::max);
             if top > 0.0 {
                 for (i, u) in units.iter().enumerate() {
                     if u.kind == "turn" && s[i].0 > 0.0 {
@@ -1139,12 +1342,22 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
         // RM3-style feedback: the 10 best first results vote for terms by
         // tf x idf; the 10 strongest new terms join the question at 0.3.
         let mut order: Vec<usize> = (0..units.len()).filter(|&i| scores[i].0 > 0.0).collect();
-        order.sort_by(|&a, &b| scores[b].0.partial_cmp(&scores[a].0).unwrap_or(std::cmp::Ordering::Equal).then(a.cmp(&b)));
+        order.sort_by(|&a, &b| {
+            scores[b]
+                .0
+                .partial_cmp(&scores[a].0)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then(a.cmp(&b))
+        });
         let mut votes: BTreeMap<String, f64> = BTreeMap::new();
         for &i in order.iter().take(10) {
             let len = units[i].a.len.max(1) as f64;
-            let names: Vec<(String, u32)> =
-                units[i].a.tf.iter().map(|&(t, f)| (cache.terms.names[t as usize].clone(), f)).collect();
+            let names: Vec<(String, u32)> = units[i]
+                .a
+                .tf
+                .iter()
+                .map(|&(t, f)| (cache.terms.names[t as usize].clone(), f))
+                .collect();
             for (t, f) in names {
                 if !q_terms.iter().any(|x| *x == t) {
                     let w = f as f64 / len * index.idf(&t);
@@ -1153,7 +1366,11 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
             }
         }
         let mut cand: Vec<(String, f64)> = votes.into_iter().collect();
-        cand.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal).then(a.0.cmp(&b.0)));
+        cand.sort_by(|a, b| {
+            b.1.partial_cmp(&a.1)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then(a.0.cmp(&b.0))
+        });
         for (t, _) in cand.into_iter().take(10) {
             q.push((t, 0.3));
         }
@@ -1161,9 +1378,15 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
     }
 
     // Rank first, then do the per-hit work for the top k only.
-    let mut order: Vec<(f64, usize)> =
-        (0..units.len()).filter(|&i| scores[i].0 > 0.0 && units[i].wanted).map(|i| (scores[i].0, i)).collect();
-    order.sort_by(|a, b| b.0.partial_cmp(&a.0).unwrap_or(std::cmp::Ordering::Equal).then(a.1.cmp(&b.1)));
+    let mut order: Vec<(f64, usize)> = (0..units.len())
+        .filter(|&i| scores[i].0 > 0.0 && units[i].wanted)
+        .map(|i| (scores[i].0, i))
+        .collect();
+    order.sort_by(|a, b| {
+        b.0.partial_cmp(&a.0)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then(a.1.cmp(&b.1))
+    });
     order.truncate(req.k);
     let mut scored: Vec<(f64, usize, Vec<(String, f64)>, bool)> = Vec::new();
     for (score, i) in order {
@@ -1173,7 +1396,10 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
             let day = day_of(&u.time);
             window.iter().any(|(_, w)| {
                 day.map(|d| d >= w.first && d <= w.last).unwrap_or(false)
-                    || u.a.dates.iter().any(|(_, sp)| sp.first <= w.last && sp.last >= w.first)
+                    || u.a
+                        .dates
+                        .iter()
+                        .any(|(_, sp)| sp.first <= w.last && sp.last >= w.first)
             })
         };
         scored.push((score, i, matched, in_window));
@@ -1196,7 +1422,12 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
     let dates_json = |d: &[(String, Span)]| -> Value {
         Value::Array(
             d.iter()
-                .map(|(p, s)| Value::obj(vec![("phrase", Value::str(p.clone())), ("date", Value::str(s.text()))]))
+                .map(|(p, s)| {
+                    Value::obj(vec![
+                        ("phrase", Value::str(p.clone())),
+                        ("date", Value::str(s.text())),
+                    ])
+                })
                 .collect(),
         )
     };
@@ -1205,10 +1436,20 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
         let u = &units[i];
         let mut fields = vec![
             ("kind", Value::str(u.kind)),
-            ("id", Value::str(if u.kind == "turn" { format!("{}#{}", u.item, u.turn) } else { u.item.clone() })),
+            (
+                "id",
+                Value::str(if u.kind == "turn" {
+                    format!("{}#{}", u.item, u.turn)
+                } else {
+                    u.item.clone()
+                }),
+            ),
             ("source", event_ref(&u.event)),
             ("speaker", Value::str(u.speaker.clone())),
-            ("speaker_is", u.speaker_is.clone().map(Value::str).unwrap_or(Value::Null)),
+            (
+                "speaker_is",
+                u.speaker_is.clone().map(Value::str).unwrap_or(Value::Null),
+            ),
             ("time", Value::str(u.time.clone())),
             ("text", Value::str(u.a.text.clone())),
             // Scores as integers (millionths): JSON here has no fractions.
@@ -1218,7 +1459,12 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
                 Value::Array(
                     matched
                         .iter()
-                        .map(|(t, s)| Value::Array(vec![Value::str(t.clone()), Value::Int((s * 1e6).round() as i64)]))
+                        .map(|(t, s)| {
+                            Value::Array(vec![
+                                Value::str(t.clone()),
+                                Value::Int((s * 1e6).round() as i64),
+                            ])
+                        })
                         .collect(),
                 ),
             ),
@@ -1231,7 +1477,10 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
                         .2
                         .iter()
                         .map(|(why, m)| {
-                            Value::obj(vec![("why", Value::str(*why)), ("times_thousandths", Value::Int((m * 1000.0).round() as i64))])
+                            Value::obj(vec![
+                                ("why", Value::str(*why)),
+                                ("times_thousandths", Value::Int((m * 1000.0).round() as i64)),
+                            ])
                         })
                         .collect(),
                 ),
@@ -1250,13 +1499,20 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
                         let (content, ps) = pieces(e);
                         ps.into_iter()
                             .enumerate()
-                            .filter(|(n, _)| *n != u.turn && n + req.context >= u.turn && *n <= u.turn + req.context)
+                            .filter(|(n, _)| {
+                                *n != u.turn
+                                    && n + req.context >= u.turn
+                                    && *n <= u.turn + req.context
+                            })
                             .map(|(n, (sp, a, b))| {
                                 let text = slice(&content, a, b);
                                 Value::obj(vec![
                                     ("turn", Value::Int(n as i64)),
                                     ("speaker", Value::str(sp)),
-                                    ("hidden_chars", Value::Bool(crate::schema::has_hidden_chars(&text))),
+                                    (
+                                        "hidden_chars",
+                                        Value::Bool(crate::schema::has_hidden_chars(&text)),
+                                    ),
                                     ("text", Value::str(text)),
                                 ])
                             })
@@ -1274,6 +1530,9 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
         ("hits", Value::Array(hits)),
         ("query_terms", query_terms),
         ("query_dates", dates_json(&window)),
-        ("searched", Value::Int(units.iter().filter(|u| u.wanted).count() as i64)),
+        (
+            "searched",
+            Value::Int(units.iter().filter(|u| u.wanted).count() as i64),
+        ),
     ]))
 }

@@ -10,8 +10,9 @@ organisation that does it, on Gnomon's own primitives:
   of Staff allocates work and budget; the Head of People hires and reviews;
   the Head of IT keeps the tools. The Head of Assurance decides whether
   work is accepted and reports to the owners, not to the CEO: the gate lets
-  only owners appoint or dismiss it, so production can never overrule the
-  check on itself.
+  only the founding party's owners and governors appoint or dismiss it, so
+  no one in production can remove the check on themselves. (Positions give
+  no power over verdicts: who may verify is set by registration.)
 * **Staff.** Each hire is a new writer, an instance of a template writer
   for its model tier, appointed to a position by someone above it. Titles,
   not models, are what people hold: any tier can hold any title, and the
@@ -160,6 +161,32 @@ class Company:
                 made.append(r.title)
         return made
 
+    def may_act(self, by: str, title: str) -> bool:
+        """Whether `by` may appoint to `title` or end an appointment to it,
+        by the gate's rule: an owner or governor of the party that founded
+        the company, or a holder of a position above `title`."""
+        st = self.memory.state(compartments=[self.compartment])["state"]
+        w = st["writers"].get(by)
+        if w is None:
+            return False
+        pos = {p["title"]: p for p in st["positions"].values() if p["org"] == self.org}
+        if title not in pos:
+            return False
+        if any(c in ("owner", "govern") for c in w["capabilities"]):
+            # The company's owner founded it, so its party governs it.
+            if st["writers"].get(self.owner, {}).get("party") == w["party"]:
+                return True
+        held = {a["title"] for a in st["appointments"].values()
+                if a["org"] == self.org and a["holder"] == by and a["ended"] is None}
+        up = pos[title].get("reports_to")
+        seen = set()
+        while up and up not in seen:
+            if up in held:
+                return True
+            seen.add(up)
+            up = pos.get(up, {}).get("reports_to")
+        return False
+
     def appoint(self, by: str, title: str, holder: str) -> str:
         return self.memory.appoint(by, self.org, title, holder, compartment=self.compartment)
 
@@ -170,6 +197,8 @@ class Company:
         template = self.templates.get(tier)
         if template is None:
             raise GateError("E_ORG", f"no template writer for tier '{tier}'")
+        if not self.may_act(by, title):  # before anyone is registered
+            raise GateError("E_ORG", f"'{by}' may not appoint to '{title}'")
         writer = instance_for(self.memory, template, session=f"{self.org}-{uuid.uuid4().hex[:12]}")
         self.appoint(by, title, writer)
         self.note(by, f"Hired {writer} as {title}: {reason}", channel="people")
@@ -181,6 +210,9 @@ class Company:
         a = self.appointments().get(appointment)
         if a is None:
             raise GateError("E_REF", f"appointment '{appointment}' is not active")
+        # Checked first, so a refused dismissal leaves no handoff behind.
+        if by != a["holder"] and not self.may_act(by, a["title"]):
+            raise GateError("E_ORG", f"'{by}' may not end this appointment")
         self.memory.handoff(a["holder"], frame=f"org/{self.org}/{a['title']}", compartment=self.compartment,
                             summary=handoff_summary)
         self.memory.dismiss(by, appointment, reason)
@@ -218,12 +250,19 @@ class Company:
                                               about=[{"claim": order, "relation": "cites"}]))
 
     def assignee(self, title: str, open_orders: Optional[dict] = None) -> Optional[str]:
-        """The holder of `title` with the fewest open orders (ties: by id)."""
+        """The holder of `title` with the fewest open orders (ties: by id).
+        Without `open_orders`, the one with the fewest results delivered in
+        the company so far, so work is spread."""
         hs = self.holders(title)
         if not hs:
             return None
-        load = open_orders or {}
-        return min(hs, key=lambda h: (load.get(h, 0), h))
+        if open_orders is None:
+            st = self.memory.state(compartments=[self.compartment])["state"]
+            open_orders = {}
+            for c in st["claims"].values():
+                if c["body"].get("frame", "").startswith("firm/") and c["author"] in hs:
+                    open_orders[c["author"]] = open_orders.get(c["author"], 0) + 1
+        return min(hs, key=lambda h: (open_orders.get(h, 0), h))
 
     # ----------------------------------------------------- personnel review
     def review(self, reader: str, policy: Optional[Policy] = None) -> list:
@@ -234,7 +273,7 @@ class Company:
         Only results judged from outside the worker's group count; nothing
         else (escalations, questions, abstentions) is held against anyone."""
         policy = policy or Policy()
-        results, _ = _firm.outcomes(self.memory, reader)
+        results, _ = _firm.outcomes(self.memory, reader, compartment=self.compartment)
         writers = self.memory.writers(compartments=[self.compartment])
         out = []
         staff = {}

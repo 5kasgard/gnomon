@@ -24,7 +24,10 @@ fn sup(old: &str, new: &str, kind: &str, evidence: Vec<&str>) -> Value {
         ("old", Value::str(old)),
         ("new", Value::str(new)),
         ("kind", Value::str(kind)),
-        ("evidence", Value::Array(evidence.into_iter().map(Value::str).collect())),
+        (
+            "evidence",
+            Value::Array(evidence.into_iter().map(Value::str).collect()),
+        ),
         ("reason", Value::str("because")),
     ])
 }
@@ -62,8 +65,16 @@ fn ruled() -> (gnomon_core::ledger::Ledger, String, String) {
     let mut l = lab();
     let a = add_claim(&mut l, "claude-c1", 10, claim_body("A", "asserted", "true"));
     let b = add_claim(&mut l, "gpt-g1", 11, claim_body("B", "asserted", "true"));
-    let s = l.append(draft("gpt-g1", 12, "supersede", sup(&a, &b, "contested", vec![]))).unwrap();
-    l.append(draft("kimi-k1", 13, "resolve", resolve(&eid(&s), "new"))).unwrap();
+    let s = l
+        .append(draft(
+            "gpt-g1",
+            12,
+            "supersede",
+            sup(&a, &b, "contested", vec![]),
+        ))
+        .unwrap();
+    l.append(draft("kimi-k1", 13, "resolve", resolve(&eid(&s), "new")))
+        .unwrap();
     assert_eq!(l.state.truth(&a).unwrap(), "false");
     (l, a, b)
 }
@@ -90,7 +101,10 @@ fn r1_symlinked_paths_share_one_lock() {
                 for n in 0..25 {
                     let body = Value::obj(vec![
                         ("compartment", Value::str("lab")),
-                        ("content", Value::str(format!("{w} {n} {}", "x".repeat(4000)))),
+                        (
+                            "content",
+                            Value::str(format!("{w} {n} {}", "x".repeat(4000))),
+                        ),
                         ("medium", Value::str("chat")),
                         ("participants", Value::Array(vec![])),
                     ]);
@@ -104,7 +118,10 @@ fn r1_symlinked_paths_share_one_lock() {
     }
     let l = store::open(&real, None).expect("still verifies");
     assert_eq!(l.state.episodes.len(), 100);
-    assert!(!dir.join("log.jsonl.lock").exists(), "no sidecar lock file to delete");
+    assert!(
+        !dir.join("log.jsonl.lock").exists(),
+        "no sidecar lock file to delete"
+    );
 }
 
 /// 2a. The losing party reopened a ruled dispute through a fresh claim.
@@ -112,9 +129,25 @@ fn r1_symlinked_paths_share_one_lock() {
 fn r2a_loser_cannot_reopen_a_ruling() {
     let (mut l, a, _b) = ruled();
     let d = add_claim(&mut l, "claude-c1", 14, claim_body("D", "asserted", "true"));
-    assert_eq!(code(l.append(draft("claude-c2", 15, "supersede", sup(&a, &d, "contested", vec![])))), "E_SELF_DISPUTE");
+    assert_eq!(
+        code(l.append(draft(
+            "claude-c2",
+            15,
+            "supersede",
+            sup(&a, &d, "contested", vec![])
+        ))),
+        "E_SELF_DISPUTE"
+    );
     let e = add_claim(&mut l, "kimi-k1", 15, claim_body("E", "asserted", "true"));
-    assert_eq!(code(l.append(draft("kimi-k1", 16, "supersede", sup(&a, &e, "contested", vec![])))), "E_FINAL");
+    assert_eq!(
+        code(l.append(draft(
+            "kimi-k1",
+            16,
+            "supersede",
+            sup(&a, &e, "contested", vec![])
+        ))),
+        "E_FINAL"
+    );
     assert_eq!(l.state.truth(&a).unwrap(), "false");
 }
 
@@ -122,13 +155,44 @@ fn r2a_loser_cannot_reopen_a_ruling() {
 #[test]
 fn r2b_loser_cannot_overturn_the_winner() {
     let (mut l, a, b) = ruled();
-    let v = l.append(draft("claude-c2", 14, "verdict", verdict(&b, "refutes"))).unwrap();
-    assert_eq!(code(l.append(draft("claude-c1", 15, "supersede", sup(&b, &a, "refuted", vec![&eid(&v)])))), "E_EVIDENCE");
+    let v = l
+        .append(draft("claude-c2", 14, "verdict", verdict(&b, "refutes")))
+        .unwrap();
+    assert_eq!(
+        code(l.append(draft(
+            "claude-c1",
+            15,
+            "supersede",
+            sup(&b, &a, "refuted", vec![&eid(&v)])
+        ))),
+        "E_EVIDENCE"
+    );
     // An outsider can't conscript the loser's claim as the opposing side
     // (consent), and with its own claim can't use the loser's verdict either.
-    assert_eq!(code(l.append(draft("john", 16, "supersede", sup(&b, &a, "refuted", vec![&eid(&v)])))), "E_CONSENT");
-    let own = add_claim(&mut l, "john", 17, claim_body("john's view", "asserted", "true"));
-    assert_eq!(code(l.append(draft("john", 18, "supersede", sup(&b, &own, "refuted", vec![&eid(&v)])))), "E_EVIDENCE");
+    assert_eq!(
+        code(l.append(draft(
+            "john",
+            16,
+            "supersede",
+            sup(&b, &a, "refuted", vec![&eid(&v)])
+        ))),
+        "E_CONSENT"
+    );
+    let own = add_claim(
+        &mut l,
+        "john",
+        17,
+        claim_body("john's view", "asserted", "true"),
+    );
+    assert_eq!(
+        code(l.append(draft(
+            "john",
+            18,
+            "supersede",
+            sup(&b, &own, "refuted", vec![&eid(&v)])
+        ))),
+        "E_EVIDENCE"
+    );
     assert_eq!(l.state.truth(&b).unwrap(), "true");
 }
 
@@ -138,13 +202,37 @@ fn r3a_author_cannot_undo_a_refutation() {
     let mut l = lab();
     let a = add_claim(&mut l, "claude-c1", 10, claim_body("A", "asserted", "true"));
     let b = add_claim(&mut l, "gpt-g1", 11, claim_body("B", "asserted", "true"));
-    let v = l.append(draft("gpt-g1", 12, "verdict", verdict(&a, "refutes"))).unwrap();
-    l.append(draft("gpt-g1", 13, "supersede", sup(&a, &b, "refuted", vec![&eid(&v)]))).unwrap();
+    let v = l
+        .append(draft("gpt-g1", 12, "verdict", verdict(&a, "refutes")))
+        .unwrap();
+    l.append(draft(
+        "gpt-g1",
+        13,
+        "supersede",
+        sup(&a, &b, "refuted", vec![&eid(&v)]),
+    ))
+    .unwrap();
     assert_eq!(l.state.truth(&a).unwrap(), "false");
     let c = add_claim(&mut l, "claude-c1", 14, claim_body("C", "asserted", "true"));
-    assert_eq!(code(l.append(draft("claude-c1", 15, "supersede", sup(&a, &c, "contested", vec![])))), "E_SELF_DISPUTE");
+    assert_eq!(
+        code(l.append(draft(
+            "claude-c1",
+            15,
+            "supersede",
+            sup(&a, &c, "contested", vec![])
+        ))),
+        "E_SELF_DISPUTE"
+    );
     // An outsider can't revive a refuted claim by contesting it either.
-    assert_eq!(code(l.append(draft("gpt-g1", 16, "supersede", sup(&a, &b, "contested", vec![])))), "E_FINAL");
+    assert_eq!(
+        code(l.append(draft(
+            "gpt-g1",
+            16,
+            "supersede",
+            sup(&a, &b, "contested", vec![])
+        ))),
+        "E_FINAL"
+    );
     assert_eq!(l.state.truth(&a).unwrap(), "false");
 }
 
@@ -154,13 +242,39 @@ fn r3b_no_self_dispute_to_block_refutation() {
     let mut l = lab();
     let a = add_claim(&mut l, "claude-c1", 10, claim_body("A", "asserted", "true"));
     let c = add_claim(&mut l, "claude-c1", 11, claim_body("C", "asserted", "true"));
-    assert_eq!(code(l.append(draft("claude-c1", 12, "supersede", sup(&a, &c, "contested", vec![])))), "E_SELF_DISPUTE");
+    assert_eq!(
+        code(l.append(draft(
+            "claude-c1",
+            12,
+            "supersede",
+            sup(&a, &c, "contested", vec![])
+        ))),
+        "E_SELF_DISPUTE"
+    );
     // And not via another identity of the same party either.
-    assert_eq!(code(l.append(draft("claude-c2", 12, "supersede", sup(&a, &c, "contested", vec![])))), "E_SELF_DISPUTE");
+    assert_eq!(
+        code(l.append(draft(
+            "claude-c2",
+            12,
+            "supersede",
+            sup(&a, &c, "contested", vec![])
+        ))),
+        "E_SELF_DISPUTE"
+    );
     // So refutation by another party proceeds normally.
     let b = add_claim(&mut l, "gpt-g1", 13, claim_body("B", "asserted", "true"));
-    let v = l.append(draft("kimi-k1", 14, "verdict", verdict(&a, "refutes"))).unwrap();
-    assert_eq!(code(l.append(draft("gpt-g1", 15, "supersede", sup(&a, &b, "refuted", vec![&eid(&v)])))), "OK");
+    let v = l
+        .append(draft("kimi-k1", 14, "verdict", verdict(&a, "refutes")))
+        .unwrap();
+    assert_eq!(
+        code(l.append(draft(
+            "gpt-g1",
+            15,
+            "supersede",
+            sup(&a, &b, "refuted", vec![&eid(&v)])
+        ))),
+        "OK"
+    );
 }
 
 /// 4. Filtered views leaked through last_seq (count/head/digest are covered
@@ -184,16 +298,38 @@ fn r5_cache_is_bounded() {
         write_events(&p, &events);
         store::with_ledger(&p, |_| ()).unwrap();
     }
-    assert!(store::cached_logs() <= 16, "cache holds {}", store::cached_logs());
+    assert!(
+        store::cached_logs() <= 16,
+        "cache holds {}",
+        store::cached_logs()
+    );
 }
 
 /// 6. Format characters, noncharacters and private use in claims.
 #[test]
 fn r6_format_and_private_use_refused() {
     let mut l = lab();
-    for c in ['\u{17b4}', '\u{600}', '\u{6dd}', '\u{110bd}', '\u{13430}', '\u{1bca0}', '\u{fffc}', '\u{2800}', '\u{1d159}', '\u{fffe}', '\u{e000}', '\u{10fffd}'] {
+    for c in [
+        '\u{17b4}',
+        '\u{600}',
+        '\u{6dd}',
+        '\u{110bd}',
+        '\u{13430}',
+        '\u{1bca0}',
+        '\u{fffc}',
+        '\u{2800}',
+        '\u{1d159}',
+        '\u{fffe}',
+        '\u{e000}',
+        '\u{10fffd}',
+    ] {
         let body = claim_body(&format!("a{c}b"), "asserted", "true");
-        assert_eq!(code(l.append(draft("claude-c1", 10, "claim", body))), "E_HIDDEN_CHARS", "{:x}", c as u32);
+        assert_eq!(
+            code(l.append(draft("claude-c1", 10, "claim", body))),
+            "E_HIDDEN_CHARS",
+            "{:x}",
+            c as u32
+        );
     }
 }
 
@@ -202,13 +338,25 @@ fn r6_format_and_private_use_refused() {
 fn r7_empty_log_is_not_found() {
     let dir = tmp_dir("r7");
     let p = dir.join("log.jsonl");
-    let bad_genesis = store::append(&p, draft("mallory", 0, "claim", claim_body("x", "asserted", "true")));
+    let bad_genesis = store::append(
+        &p,
+        draft("mallory", 0, "claim", claim_body("x", "asserted", "true")),
+    );
     assert!(matches!(bad_genesis, Err(StoreError::Rejected(_))));
     assert!(matches!(store::open(&p, None), Err(StoreError::NotFound)));
     fs::write(&p, "").unwrap();
     assert!(matches!(store::open(&p, None), Err(StoreError::NotFound)));
     // And an empty file can still start a new log.
-    store::append(&p, draft("john", 0, "register", register_body("john", "john", "human", &["owner"], &["lab"]))).unwrap();
+    store::append(
+        &p,
+        draft(
+            "john",
+            0,
+            "register",
+            register_body("john", "john", "human", &["owner"], &["lab"]),
+        ),
+    )
+    .unwrap();
     assert_eq!(store::open(&p, None).unwrap().events.len(), 1);
 }
 
@@ -219,7 +367,18 @@ fn r8_resolver_cannot_join_a_side() {
     let a = add_claim(&mut l, "claude-c1", 10, claim_body("A", "asserted", "true"));
     let b_body = claim_body("B", "asserted", "true");
     let b = add_claim(&mut l, "gpt-g1", 11, b_body.clone());
-    let s = l.append(draft("gpt-g1", 12, "supersede", sup(&a, &b, "contested", vec![]))).unwrap();
-    l.append(draft("kimi-k1", 13, "resolve", resolve(&eid(&s), "new"))).unwrap();
-    assert_eq!(code(l.append(draft("kimi-k1", 14, "claim", b_body))), "E_ROLE_CONFLICT");
+    let s = l
+        .append(draft(
+            "gpt-g1",
+            12,
+            "supersede",
+            sup(&a, &b, "contested", vec![]),
+        ))
+        .unwrap();
+    l.append(draft("kimi-k1", 13, "resolve", resolve(&eid(&s), "new")))
+        .unwrap();
+    assert_eq!(
+        code(l.append(draft("kimi-k1", 14, "claim", b_body))),
+        "E_ROLE_CONFLICT"
+    );
 }

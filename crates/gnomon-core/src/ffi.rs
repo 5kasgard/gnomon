@@ -16,7 +16,9 @@ use crate::store::{self, StoreError};
 
 fn out(v: Value) -> *mut c_char {
     // canonical() never emits interior NULs: \u0000 is always escaped.
-    CString::new(canonical(&v)).expect("no interior NUL").into_raw()
+    CString::new(canonical(&v))
+        .expect("no interior NUL")
+        .into_raw()
 }
 
 fn fail(code: &str, message: impl Into<String>) -> Value {
@@ -147,11 +149,15 @@ pub unsafe extern "C" fn gn_append(path: *const c_char, draft: *const c_char) ->
             Err(e) => return fail("E_JSON", e.to_string()),
         };
         let field = |k: &str| d.get(k).and_then(|v| v.as_str()).map(str::to_string);
-        let (writer, record_time, kind, body) =
-            match (field("writer"), field("record_time"), field("kind"), d.get("body")) {
-                (Some(w), Some(t), Some(k), Some(b)) => (w, t, k, b.clone()),
-                _ => return fail("E_ARG", "draft needs writer, record_time, kind and body"),
-            };
+        let (writer, record_time, kind, body) = match (
+            field("writer"),
+            field("record_time"),
+            field("kind"),
+            d.get("body"),
+        ) {
+            (Some(w), Some(t), Some(k), Some(b)) => (w, t, k, b.clone()),
+            _ => return fail("E_ARG", "draft needs writer, record_time, kind and body"),
+        };
         if d.as_object().map(|o| o.len()).unwrap_or(0) != 4 {
             return fail("E_ARG", "draft has unknown fields");
         }
@@ -181,7 +187,11 @@ pub unsafe extern "C" fn gn_verify(path: *const c_char, budget: i64) -> *mut c_c
             Ok(p) => p,
             Err(e) => return e,
         };
-        let budget = if budget < 0 { None } else { Some(budget as usize) };
+        let budget = if budget < 0 {
+            None
+        } else {
+            Some(budget as usize)
+        };
         let status = match store::audit(Path::new(path), budget) {
             Ok(st) => st,
             Err(e) => return store_fail(e),
@@ -192,7 +202,9 @@ pub unsafe extern "C" fn gn_verify(path: *const c_char, budget: i64) -> *mut c_c
                 ("count", Value::Int(count as i64)),
                 ("head", Value::str(head)),
             ]),
-            VerifyStatus::Broken { seq, error } => fail(error.code, format!("event {seq}: {}", error.message)),
+            VerifyStatus::Broken { seq, error } => {
+                fail(error.code, format!("event {seq}: {}", error.message))
+            }
             VerifyStatus::Exhausted { checked, total } => fail(
                 "E_EXHAUSTED",
                 format!("budget exhausted after {checked} of {total} events: not verified"),
@@ -265,9 +277,12 @@ unsafe fn compartments_arg(compartments: *const c_char) -> Result<Option<Vec<Str
         Err(e) => return Err(e),
     };
     match c.as_array() {
-        Some(items) if items.iter().all(|i| i.as_str().is_some()) => {
-            Ok(Some(items.iter().map(|i| i.as_str().unwrap().to_string()).collect()))
-        }
+        Some(items) if items.iter().all(|i| i.as_str().is_some()) => Ok(Some(
+            items
+                .iter()
+                .map(|i| i.as_str().unwrap().to_string())
+                .collect(),
+        )),
         _ => Err(fail("E_ARG", "compartments must be an array of strings")),
     }
 }
@@ -279,7 +294,10 @@ unsafe fn compartments_arg(compartments: *const c_char) -> Result<Option<Vec<Str
 /// # Safety
 /// Non-null arguments must be valid NUL-terminated strings.
 #[no_mangle]
-pub unsafe extern "C" fn gn_writers(path: *const c_char, compartments: *const c_char) -> *mut c_char {
+pub unsafe extern "C" fn gn_writers(
+    path: *const c_char,
+    compartments: *const c_char,
+) -> *mut c_char {
     guarded(|| {
         let path = match arg(path) {
             Ok(p) => p,
@@ -292,7 +310,10 @@ pub unsafe extern "C" fn gn_writers(path: *const c_char, compartments: *const c_
         let result = store::with_ledger(Path::new(path), |l| {
             let none = crate::ledger::Selection::default();
             let v = l.state.to_value_sel(comps.as_deref(), Some(&none));
-            ok(vec![("writers", v.get("writers").cloned().unwrap_or(Value::Null))])
+            ok(vec![(
+                "writers",
+                v.get("writers").cloned().unwrap_or(Value::Null),
+            )])
         });
         result.unwrap_or_else(store_fail)
     })
@@ -307,7 +328,11 @@ pub unsafe extern "C" fn gn_writers(path: *const c_char, compartments: *const c_
 /// # Safety
 /// Non-null arguments must be valid NUL-terminated strings.
 #[no_mangle]
-pub unsafe extern "C" fn gn_select(path: *const c_char, compartments: *const c_char, select: *const c_char) -> *mut c_char {
+pub unsafe extern "C" fn gn_select(
+    path: *const c_char,
+    compartments: *const c_char,
+    select: *const c_char,
+) -> *mut c_char {
     guarded(|| {
         let (path, select) = match (arg(path), arg(select)) {
             (Ok(p), Ok(s)) => (p, s),
@@ -337,7 +362,12 @@ pub unsafe extern "C" fn gn_select(path: *const c_char, compartments: *const c_c
                 _ => return fail("E_ARG", format!("select: '{k}' must be an array of ids")),
             }
         }
-        let result = store::with_ledger(Path::new(path), |l| ok(vec![("state", l.state.to_value_sel(comps.as_deref(), Some(&chosen)))]));
+        let result = store::with_ledger(Path::new(path), |l| {
+            ok(vec![(
+                "state",
+                l.state.to_value_sel(comps.as_deref(), Some(&chosen)),
+            )])
+        });
         result.unwrap_or_else(store_fail)
     })
 }
@@ -423,12 +453,19 @@ pub unsafe extern "C" fn gn_query_opts(
                     // The moment the result describes: the one asked for, or
                     // else the time of the last event in the reader's view.
                     let view_time = v.get("through").and_then(|t| t.get("time")).cloned();
-                    let at = as_of.clone().map(Value::str).or(view_time).unwrap_or(Value::Null);
+                    let at = as_of
+                        .clone()
+                        .map(Value::str)
+                        .or(view_time)
+                        .unwrap_or(Value::Null);
                     // Whose view this is, so a checker can tell which events
                     // the reader could see (the reader's own compartments).
                     let view = Value::obj(vec![
                         ("reader", Value::str(reader)),
-                        ("compartments", Value::Array(comps.iter().map(|c| Value::str(c.clone())).collect())),
+                        (
+                            "compartments",
+                            Value::Array(comps.iter().map(|c| Value::str(c.clone())).collect()),
+                        ),
                     ]);
                     ok(vec![("result", v.with("as_of", at).with("view", view))])
                 }
@@ -489,8 +526,15 @@ pub unsafe extern "C" fn gn_recall(
             match crate::recall::run(ledger, &comps, &req) {
                 Ok(v) => {
                     let through = crate::query::view_end(ledger, &comps);
-                    let at = as_of.clone().map(Value::str).or(through.get("time").cloned()).unwrap_or(Value::Null);
-                    ok(vec![("result", v.with("through", through).with("as_of", at))])
+                    let at = as_of
+                        .clone()
+                        .map(Value::str)
+                        .or(through.get("time").cloned())
+                        .unwrap_or(Value::Null);
+                    ok(vec![(
+                        "result",
+                        v.with("through", through).with("as_of", at),
+                    )])
                 }
                 Err(e) => fail(e.code, e.message),
             }
@@ -508,7 +552,10 @@ pub extern "C" fn gn_views() -> *mut c_char {
             .into_iter()
             .map(|(n, a)| Value::Array(vec![Value::str(n), Value::Int(a as i64)]))
             .collect();
-        ok(vec![("views", Value::str(crate::query::VIEWS)), ("schema", Value::Array(schema))])
+        ok(vec![
+            ("views", Value::str(crate::query::VIEWS)),
+            ("schema", Value::Array(schema)),
+        ])
     })
 }
 
@@ -535,7 +582,11 @@ pub unsafe extern "C" fn gn_datalog(program: *const c_char) -> *mut c_char {
 /// # Safety
 /// Both strings must be valid NUL-terminated strings.
 #[no_mangle]
-pub unsafe extern "C" fn gn_checkpoint(path: *const c_char, count: i64, head: *const c_char) -> *mut c_char {
+pub unsafe extern "C" fn gn_checkpoint(
+    path: *const c_char,
+    count: i64,
+    head: *const c_char,
+) -> *mut c_char {
     guarded(|| {
         let (path, head) = match (arg(path), arg(head)) {
             (Ok(p), Ok(h)) => (p, h),
@@ -561,7 +612,12 @@ fn reader_view<T>(
     store::with_ledger(Path::new(path), |full| {
         let comps = match full.state.writers.get(reader) {
             Some(w) => w.compartments.clone(),
-            None => return Err(fail("E_UNKNOWN_WRITER", format!("reader '{reader}' is not registered"))),
+            None => {
+                return Err(fail(
+                    "E_UNKNOWN_WRITER",
+                    format!("reader '{reader}' is not registered"),
+                ))
+            }
         };
         let view;
         let ledger = match &as_of {
@@ -591,7 +647,11 @@ unsafe fn opt_time(as_of: *const c_char) -> Result<Option<String>, Value> {
 /// # Safety
 /// Non-null arguments must be valid NUL-terminated strings.
 #[no_mangle]
-pub unsafe extern "C" fn gn_frames(path: *const c_char, as_of: *const c_char, reader: *const c_char) -> *mut c_char {
+pub unsafe extern "C" fn gn_frames(
+    path: *const c_char,
+    as_of: *const c_char,
+    reader: *const c_char,
+) -> *mut c_char {
     guarded(|| {
         let (path, reader) = match (arg(path), arg(reader)) {
             (Ok(p), Ok(r)) => (p, r),
@@ -644,7 +704,10 @@ pub unsafe extern "C" fn gn_resume_state(
             let (sel, fr) = l.state.resume_selection(comps, frame.as_deref(), turns);
             (l.state.to_value_sel(Some(comps), Some(&sel)), fr)
         }) {
-            Ok(Ok((st, fr))) => ok(vec![("state", st), ("frame", fr.map(Value::str).unwrap_or(Value::Null))]),
+            Ok(Ok((st, fr))) => ok(vec![
+                ("state", st),
+                ("frame", fr.map(Value::str).unwrap_or(Value::Null)),
+            ]),
             Ok(Err(e)) => e,
             Err(e) => store_fail(e),
         }
@@ -659,15 +722,27 @@ pub unsafe extern "C" fn gn_resume_state(
 /// # Safety
 /// Non-null arguments must be valid NUL-terminated strings.
 #[no_mangle]
-pub unsafe extern "C" fn gn_resolve(path: *const c_char, reader: *const c_char, prefix: *const c_char) -> *mut c_char {
+pub unsafe extern "C" fn gn_resolve(
+    path: *const c_char,
+    reader: *const c_char,
+    prefix: *const c_char,
+) -> *mut c_char {
     guarded(|| {
         let (path, reader, prefix) = match (arg(path), arg(reader), arg(prefix)) {
             (Ok(p), Ok(r), Ok(x)) => (p, r, x),
             (Err(e), _, _) | (_, Err(e), _) | (_, _, Err(e)) => return e,
         };
         let hex = prefix.strip_prefix("c:").unwrap_or("");
-        if hex.len() < 8 || hex.len() > 64 || !hex.bytes().all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)) {
-            return fail("E_REF", "a claim id is c: and at least 8 lower-case hex digits");
+        if hex.len() < 8
+            || hex.len() > 64
+            || !hex
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+        {
+            return fail(
+                "E_REF",
+                "a claim id is c: and at least 8 lower-case hex digits",
+            );
         }
         match reader_view(path, None, reader, |l, comps| {
             let st = &l.state;
@@ -682,7 +757,10 @@ pub unsafe extern "C" fn gn_resolve(path: *const c_char, reader: *const c_char, 
             match found.as_slice() {
                 [one] => ok(vec![("id", Value::str((*one).clone()))]),
                 [] => fail("E_REF", format!("no claim '{prefix}' that you can see")),
-                _ => fail("E_REF", format!("'{prefix}' names more than one claim: give more of its id")),
+                _ => fail(
+                    "E_REF",
+                    format!("'{prefix}' names more than one claim: give more of its id"),
+                ),
             }
         }) {
             Ok(Ok(v)) => v,

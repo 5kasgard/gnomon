@@ -7,7 +7,10 @@ use gnomon_core::sha256::hex_digest;
 
 #[test]
 fn shared_canonical_vectors() {
-    let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../../tests/vectors/canonical.json");
+    let path = concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/../../tests/vectors/canonical.json"
+    );
     let text = std::fs::read_to_string(path).expect("vectors file");
     let vectors = json::parse(&text).expect("vectors parse");
     let items = vectors.as_array().expect("array");

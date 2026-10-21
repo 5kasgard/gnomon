@@ -92,12 +92,9 @@ impl Value {
     /// Object with `key` removed (no-op for other values).
     pub fn without(&self, key: &str) -> Value {
         match self {
-            Value::Object(m) => Value::Object(
-                m.iter()
-                    .filter(|(k, _)| k != key)
-                    .cloned()
-                    .collect(),
-            ),
+            Value::Object(m) => {
+                Value::Object(m.iter().filter(|(k, _)| k != key).cloned().collect())
+            }
             other => other.clone(),
         }
     }
@@ -165,7 +162,10 @@ impl<'a> Parser<'a> {
 
     fn unexpected(&self) -> JsonError {
         match self.src[self.i..].chars().next() {
-            Some(c) => JsonError::UnexpectedChar { at: self.i, found: c },
+            Some(c) => JsonError::UnexpectedChar {
+                at: self.i,
+                found: c,
+            },
             None => JsonError::UnexpectedEnd,
         }
     }
@@ -363,7 +363,9 @@ impl<'a> Parser<'a> {
                             } else {
                                 hi
                             };
-                            out.push(char::from_u32(cp).ok_or(JsonError::BadEscape { at: esc_at })?);
+                            out.push(
+                                char::from_u32(cp).ok_or(JsonError::BadEscape { at: esc_at })?,
+                            );
                         }
                         _ => return Err(JsonError::BadEscape { at: esc_at }),
                     }
@@ -417,7 +419,10 @@ fn write_canonical(v: &Value, out: &mut String) {
         Value::Object(members) => {
             let mut sorted: Vec<&(String, Value)> = members.iter().collect();
             // Parsed canonical input is already in order: check before sorting.
-            if !sorted.windows(2).all(|w| key_order(&w[0].0, &w[1].0).is_le()) {
+            if !sorted
+                .windows(2)
+                .all(|w| key_order(&w[0].0, &w[1].0).is_le())
+            {
                 sorted.sort_by(|a, b| key_order(&a.0, &b.0));
             }
             out.push('{');
@@ -487,10 +492,18 @@ mod tests {
             }
             _ => unreachable!(),
         };
-        let expected: Vec<String> = ["\r", "1", "\u{80}", "\u{f6}", "\u{20ac}", "\u{1f600}", "\u{fb33}"]
-            .iter()
-            .map(|s| s.to_string())
-            .collect();
+        let expected: Vec<String> = [
+            "\r",
+            "1",
+            "\u{80}",
+            "\u{f6}",
+            "\u{20ac}",
+            "\u{1f600}",
+            "\u{fb33}",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
         assert_eq!(keys, expected);
     }
 
@@ -510,8 +523,14 @@ mod tests {
 
     #[test]
     fn rejects_floats_and_non_finite() {
-        assert!(matches!(parse("1.5"), Err(JsonError::FloatNotAllowed { .. })));
-        assert!(matches!(parse("1e3"), Err(JsonError::FloatNotAllowed { .. })));
+        assert!(matches!(
+            parse("1.5"),
+            Err(JsonError::FloatNotAllowed { .. })
+        ));
+        assert!(matches!(
+            parse("1e3"),
+            Err(JsonError::FloatNotAllowed { .. })
+        ));
         assert!(parse("NaN").is_err());
         assert!(parse("Infinity").is_err());
         assert!(parse("-Infinity").is_err());
@@ -522,7 +541,10 @@ mod tests {
     #[test]
     fn integers_outside_safe_range_are_rejected_not_rounded() {
         assert_eq!(parse("9007199254740991").unwrap(), Value::Int(MAX_SAFE_INT));
-        assert_eq!(parse("-9007199254740991").unwrap(), Value::Int(-MAX_SAFE_INT));
+        assert_eq!(
+            parse("-9007199254740991").unwrap(),
+            Value::Int(-MAX_SAFE_INT)
+        );
         assert!(matches!(
             parse("9007199254740992"),
             Err(JsonError::IntegerOutOfSafeRange { .. })
@@ -535,19 +557,43 @@ mod tests {
 
     #[test]
     fn rejects_duplicates_surrogates_controls_depth() {
-        assert!(matches!(parse(r#"{"a":1,"a":2}"#), Err(JsonError::DuplicateKey { .. })));
-        assert!(matches!(parse(r#""\ud800""#), Err(JsonError::LoneSurrogate { .. })));
-        assert!(matches!(parse(r#""\udc00""#), Err(JsonError::LoneSurrogate { .. })));
-        assert!(matches!(parse("\"a\u{1}b\""), Err(JsonError::ControlCharInString { .. })));
+        assert!(matches!(
+            parse(r#"{"a":1,"a":2}"#),
+            Err(JsonError::DuplicateKey { .. })
+        ));
+        assert!(matches!(
+            parse(r#""\ud800""#),
+            Err(JsonError::LoneSurrogate { .. })
+        ));
+        assert!(matches!(
+            parse(r#""\udc00""#),
+            Err(JsonError::LoneSurrogate { .. })
+        ));
+        assert!(matches!(
+            parse("\"a\u{1}b\""),
+            Err(JsonError::ControlCharInString { .. })
+        ));
         let deep = "[".repeat(MAX_DEPTH + 2) + &"]".repeat(MAX_DEPTH + 2);
         assert_eq!(parse(&deep), Err(JsonError::TooDeep));
-        assert!(matches!(parse("{} x"), Err(JsonError::TrailingContent { .. })));
+        assert!(matches!(
+            parse("{} x"),
+            Err(JsonError::TrailingContent { .. })
+        ));
     }
 
     #[test]
     fn multibyte_inside_unicode_escape_is_an_error_not_a_panic() {
-        assert!(matches!(parse("\"\\u123\u{e9}\""), Err(JsonError::BadEscape { .. })));
-        assert!(matches!(parse("\"\\u\u{1f600}\""), Err(JsonError::BadEscape { .. })));
-        assert!(matches!(parse("\"\\ud83d\\u12\u{e9}\""), Err(JsonError::BadEscape { .. })));
+        assert!(matches!(
+            parse("\"\\u123\u{e9}\""),
+            Err(JsonError::BadEscape { .. })
+        ));
+        assert!(matches!(
+            parse("\"\\u\u{1f600}\""),
+            Err(JsonError::BadEscape { .. })
+        ));
+        assert!(matches!(
+            parse("\"\\ud83d\\u12\u{e9}\""),
+            Err(JsonError::BadEscape { .. })
+        ));
     }
 }

@@ -98,7 +98,10 @@ pub struct EpisodeInfo {
 
 impl EpisodeInfo {
     pub fn bound(&self, label: &str) -> Option<&str> {
-        self.bindings.iter().find(|(l, _)| l == label).map(|(_, w)| w.as_str())
+        self.bindings
+            .iter()
+            .find(|(l, _)| l == label)
+            .map(|(_, w)| w.as_str())
     }
 }
 
@@ -238,9 +241,11 @@ pub struct AppointmentInfo {
     pub ended: Option<(String, String, String, String)>,
 }
 
-/// The key of a position: organisation and title.
-pub fn position_key(org: &str, title: &str) -> String {
-    format!("{org}/{title}")
+/// The key of a position: compartment, organisation and title. An
+/// organisation belongs to its compartment: the same name in two
+/// compartments is two organisations, and neither can learn of the other.
+pub fn position_key(compartment: &str, org: &str, title: &str) -> String {
+    format!("{compartment}\u{1f}{org}\u{1f}{title}")
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -318,7 +323,10 @@ impl Ledger {
         Ledger {
             events: Vec::new(),
             // A log is at version 1 unless its genesis says otherwise.
-            state: State { schema_version: 1, ..State::default() },
+            state: State {
+                schema_version: 1,
+                ..State::default()
+            },
         }
     }
 
@@ -341,7 +349,10 @@ impl Ledger {
             .unwrap_or(1);
         let env = Value::obj(vec![
             ("seq", Value::Int(self.events.len() as i64)),
-            ("event_id", Value::str(format!("{}/{}", draft.writer, next_writer_seq))),
+            (
+                "event_id",
+                Value::str(format!("{}/{}", draft.writer, next_writer_seq)),
+            ),
             ("writer", Value::str(draft.writer)),
             ("writer_seq", Value::Int(next_writer_seq)),
             ("record_time", Value::str(draft.record_time)),
@@ -357,7 +368,8 @@ impl Ledger {
         // Exactly the value a replay of the written line gives (members in
         // canonical order): the state never depends on how a draft was
         // built, only on the log.
-        let env = crate::json::parse(&line).map_err(|e| err("E_BODY", format!("event is not valid JSON: {e}")))?;
+        let env = crate::json::parse(&line)
+            .map_err(|e| err("E_BODY", format!("event is not valid JSON: {e}")))?;
         self.apply_hashed(env.clone(), Some(hash))?;
         Ok(env)
     }
@@ -371,7 +383,14 @@ impl Ledger {
     /// `apply`, given the envelope hash already worked out from the exact
     /// canonical line (see store::parse_events): the same check, done once.
     pub fn apply_hashed(&mut self, env: Value, computed: Option<String>) -> GateResult<()> {
-        let checked = check(&self.state, &env, self.events.len(), &self.head(), self.events.last(), computed)?;
+        let checked = check(
+            &self.state,
+            &env,
+            self.events.len(),
+            &self.head(),
+            self.events.last(),
+            computed,
+        )?;
         commit(&mut self.state, checked, self.events.len());
         self.events.push(env);
         Ok(())
@@ -411,7 +430,10 @@ impl Ledger {
     pub fn as_of(&self, t: &str) -> Ledger {
         let mut l = Ledger::new();
         for env in &self.events {
-            let rt = env.get("record_time").and_then(|v| v.as_str()).unwrap_or("");
+            let rt = env
+                .get("record_time")
+                .and_then(|v| v.as_str())
+                .unwrap_or("");
             if rt > t {
                 break; // record_time is monotonic, so this is a prefix
             }
@@ -425,21 +447,70 @@ impl Ledger {
 
 /// The single state change an accepted event makes.
 pub enum Change {
-    Register { writer: String, info: WriterInfo, version: Option<i64> },
-    Episode { id: String, info: EpisodeInfo },
-    NewClaim { id: String, info: ClaimInfo },
-    Corroborate { id: String, writer: String, party: String },
-    Verdict { event: String, info: VerdictInfo, party: String },
+    Register {
+        writer: String,
+        info: WriterInfo,
+        version: Option<i64>,
+    },
+    Episode {
+        id: String,
+        info: EpisodeInfo,
+    },
+    NewClaim {
+        id: String,
+        info: ClaimInfo,
+    },
+    Corroborate {
+        id: String,
+        writer: String,
+        party: String,
+    },
+    Verdict {
+        event: String,
+        info: VerdictInfo,
+        party: String,
+    },
     /// `closes`: open disputes this refutation ends, with the outcome each
     /// takes (the refuted claim loses).
-    Supersede { event: String, info: SupersessionInfo, closes: Vec<(String, String)> },
-    Resolve { supersession: String, event: String, outcome: String, party: String },
-    Appeal { event: String, info: AppealInfo },
-    Handoff { event: String, info: HandoffInfo },
-    Position { info: PositionInfo },
-    Appoint { event: String, info: AppointmentInfo },
-    Dismiss { appointment: String, event: String, by: String, reason: String, time: String },
-    ResolveAppeal { appeal: String, event: String, outcome: String, party: String },
+    Supersede {
+        event: String,
+        info: SupersessionInfo,
+        closes: Vec<(String, String)>,
+    },
+    Resolve {
+        supersession: String,
+        event: String,
+        outcome: String,
+        party: String,
+    },
+    Appeal {
+        event: String,
+        info: AppealInfo,
+    },
+    Handoff {
+        event: String,
+        info: HandoffInfo,
+    },
+    Position {
+        info: PositionInfo,
+    },
+    Appoint {
+        event: String,
+        info: AppointmentInfo,
+    },
+    Dismiss {
+        appointment: String,
+        event: String,
+        by: String,
+        reason: String,
+        time: String,
+    },
+    ResolveAppeal {
+        appeal: String,
+        event: String,
+        outcome: String,
+        party: String,
+    },
     SchemaVersion(i64),
 }
 
@@ -456,7 +527,10 @@ fn err(code: &'static str, msg: impl Into<String>) -> GateError {
 /// "Not found" and "not accessible" are one answer, so the gate never
 /// confirms that hidden content exists.
 fn not_found(what: &str, id: &str) -> GateError {
-    err("E_REF", format!("{what} '{id}' does not exist or is not accessible"))
+    err(
+        "E_REF",
+        format!("{what} '{id}' does not exist or is not accessible"),
+    )
 }
 
 fn first_duplicate_key(v: &Value) -> Option<String> {
@@ -520,7 +594,10 @@ fn need_compartment(w: &WriterInfo, c: &str) -> GateResult<()> {
     if w.in_compartment(c) {
         Ok(())
     } else {
-        Err(err("E_COMPARTMENT", format!("no access to compartment '{c}'")))
+        Err(err(
+            "E_COMPARTMENT",
+            format!("no access to compartment '{c}'"),
+        ))
     }
 }
 
@@ -549,7 +626,11 @@ fn visible_item_compartment<'a>(st: &'a State, w: &WriterInfo, id: &str) -> Gate
 
 fn commit(st: &mut State, checked: Checked, seq: usize) {
     match checked.change {
-        Change::Register { writer, mut info, version } => {
+        Change::Register {
+            writer,
+            mut info,
+            version,
+        } => {
             info.seq = seq;
             st.writers.insert(writer, info);
             if let Some(v) = version {
@@ -573,7 +654,11 @@ fn commit(st: &mut State, checked: Checked, seq: usize) {
                 c.parties.push(party);
             }
         }
-        Change::Verdict { event, mut info, party } => {
+        Change::Verdict {
+            event,
+            mut info,
+            party,
+        } => {
             info.seq = seq;
             let c = st.claims.get_mut(&info.claim).expect("checked");
             match info.result.as_str() {
@@ -584,10 +669,17 @@ fn commit(st: &mut State, checked: Checked, seq: usize) {
             c.verifier_parties.push(party);
             st.verdicts.insert(event, info);
         }
-        Change::Supersede { event, mut info, closes } => {
+        Change::Supersede {
+            event,
+            mut info,
+            closes,
+        } => {
             info.seq = seq;
             for (dispute, outcome) in closes {
-                st.supersessions.get_mut(&dispute).expect("checked").resolution = Some(Resolution {
+                st.supersessions
+                    .get_mut(&dispute)
+                    .expect("checked")
+                    .resolution = Some(Resolution {
                     event: event.clone(),
                     outcome,
                     party: info.by_party.clone(),
@@ -595,13 +687,34 @@ fn commit(st: &mut State, checked: Checked, seq: usize) {
                     by_refutation: true,
                 });
             }
-            st.claims.get_mut(&info.old).expect("checked").superseded_by.push(event.clone());
-            st.claims.get_mut(&info.new).expect("checked").supersedes.push(event.clone());
+            st.claims
+                .get_mut(&info.old)
+                .expect("checked")
+                .superseded_by
+                .push(event.clone());
+            st.claims
+                .get_mut(&info.new)
+                .expect("checked")
+                .supersedes
+                .push(event.clone());
             st.supersessions.insert(event, info);
         }
-        Change::Resolve { supersession, event, outcome, party } => {
-            st.supersessions.get_mut(&supersession).expect("checked").resolution =
-                Some(Resolution { event, outcome, party, seq, by_refutation: false });
+        Change::Resolve {
+            supersession,
+            event,
+            outcome,
+            party,
+        } => {
+            st.supersessions
+                .get_mut(&supersession)
+                .expect("checked")
+                .resolution = Some(Resolution {
+                event,
+                outcome,
+                party,
+                seq,
+                by_refutation: false,
+            });
         }
         Change::Handoff { event, mut info } => {
             info.seq = seq;
@@ -609,23 +722,48 @@ fn commit(st: &mut State, checked: Checked, seq: usize) {
         }
         Change::Position { mut info } => {
             info.seq = seq;
-            st.positions.insert(position_key(&info.org, &info.title), info);
+            st.positions.insert(
+                position_key(&info.compartment, &info.org, &info.title),
+                info,
+            );
         }
         Change::Appoint { event, mut info } => {
             info.seq = seq;
             st.appointments.insert(event, info);
         }
-        Change::Dismiss { appointment, event, by, reason, time } => {
-            st.appointments.get_mut(&appointment).expect("checked").ended = Some((event, by, reason, time));
+        Change::Dismiss {
+            appointment,
+            event,
+            by,
+            reason,
+            time,
+        } => {
+            st.appointments
+                .get_mut(&appointment)
+                .expect("checked")
+                .ended = Some((event, by, reason, time));
         }
         Change::Appeal { event, mut info } => {
             info.seq = seq;
-            st.appeals_by_claim.entry(info.claim.clone()).or_default().push(event.clone());
+            st.appeals_by_claim
+                .entry(info.claim.clone())
+                .or_default()
+                .push(event.clone());
             st.appeals.insert(event, info);
         }
-        Change::ResolveAppeal { appeal, event, outcome, party } => {
-            st.appeals.get_mut(&appeal).expect("checked").resolution =
-                Some(Resolution { event, outcome, party, seq, by_refutation: false });
+        Change::ResolveAppeal {
+            appeal,
+            event,
+            outcome,
+            party,
+        } => {
+            st.appeals.get_mut(&appeal).expect("checked").resolution = Some(Resolution {
+                event,
+                outcome,
+                party,
+                seq,
+                by_refutation: false,
+            });
         }
         Change::SchemaVersion(v) => st.schema_version = v,
     }
@@ -700,7 +838,11 @@ fn opponents(st: &State, claim: &str) -> Vec<String> {
     out.extend(verdict_parties(st, claim, Some("refutes")));
     for (_, sp) in involving(st, claim) {
         let other = if sp.kind == "contested" && sp.involves(claim) {
-            if sp.old == claim { &sp.new } else { &sp.old }
+            if sp.old == claim {
+                &sp.new
+            } else {
+                &sp.old
+            }
         } else if sp.kind == "refuted" && sp.old == claim {
             &sp.new
         } else {
@@ -740,18 +882,25 @@ fn argued(st: &State, claim: &str) -> Vec<String> {
 /// adversaries)? Used only when no ordinary neutral judge remains.
 fn backstop_exists(st: &State, compartment: &str, core: &[String]) -> bool {
     st.writers.values().any(|w| {
-        w.can("govern") && w.can("verify") && w.in_compartment(compartment) && !core.contains(&w.party)
+        w.can("govern")
+            && w.can("verify")
+            && w.in_compartment(compartment)
+            && !core.contains(&w.party)
     })
 }
 
 /// Open contest or appeal involving `claim`?
 fn is_disputed(st: &State, claim: &str) -> bool {
-    involving(st, claim).any(|(_, sp)| sp.is_open_dispute()) || appeals_of(st, claim).any(|(_, a)| a.is_open())
+    involving(st, claim).any(|(_, sp)| sp.is_open_dispute())
+        || appeals_of(st, claim).any(|(_, a)| a.is_open())
 }
 
 /// Supersessions involving `claim` (as old or new), from its own lists:
 /// cost proportional to the claim's history, not the whole log.
-fn involving<'a>(st: &'a State, claim: &str) -> impl Iterator<Item = (&'a String, &'a SupersessionInfo)> + 'a {
+fn involving<'a>(
+    st: &'a State,
+    claim: &str,
+) -> impl Iterator<Item = (&'a String, &'a SupersessionInfo)> + 'a {
     st.claims
         .get(claim)
         .into_iter()
@@ -760,7 +909,10 @@ fn involving<'a>(st: &'a State, claim: &str) -> impl Iterator<Item = (&'a String
 }
 
 /// Appeals of `claim`, in log order.
-fn appeals_of<'a>(st: &'a State, claim: &str) -> impl Iterator<Item = (&'a String, &'a AppealInfo)> + 'a {
+fn appeals_of<'a>(
+    st: &'a State,
+    claim: &str,
+) -> impl Iterator<Item = (&'a String, &'a AppealInfo)> + 'a {
     st.appeals_by_claim
         .get(claim)
         .into_iter()
@@ -799,7 +951,8 @@ fn defeat(st: &State, claim: &str) -> Option<(usize, Vec<String>)> {
         }
         if sp.is_ruled() && sp.involves(claim) {
             let r = sp.resolution.as_ref().unwrap();
-            let lost = (r.outcome == "new" && sp.old == claim) || (r.outcome == "old" && sp.new == claim);
+            let lost =
+                (r.outcome == "new" && sp.old == claim) || (r.outcome == "old" && sp.new == claim);
             if lost {
                 events.push((r.seq, Some(vec![sid.clone(), r.event.clone()])));
             }
@@ -863,11 +1016,20 @@ fn check(
     // --- time: two clocks; record time never runs backwards
     let record_time = s(env, "record_time")?;
     if !schema::is_timestamp(record_time) {
-        return Err(err("E_TIME_FORMAT", "record_time must be a real YYYY-MM-DDTHH:MM:SSZ time"));
+        return Err(err(
+            "E_TIME_FORMAT",
+            "record_time must be a real YYYY-MM-DDTHH:MM:SSZ time",
+        ));
     }
-    if let Some(prev_rt) = last.and_then(|e| e.get("record_time")).and_then(|v| v.as_str()) {
+    if let Some(prev_rt) = last
+        .and_then(|e| e.get("record_time"))
+        .and_then(|v| v.as_str())
+    {
         if record_time < prev_rt {
-            return Err(err("E_CLOCK", "record_time is earlier than the previous event"));
+            return Err(err(
+                "E_CLOCK",
+                "record_time is earlier than the previous event",
+            ));
         }
     }
 
@@ -879,7 +1041,10 @@ fn check(
     let writer_seq = n(env, "writer_seq")?;
     let event_id = s(env, "event_id")?;
     if event_id != format!("{writer}/{writer_seq}") {
-        return Err(err("E_EVENT_ID", "event_id must be '<writer>/<writer_seq>'"));
+        return Err(err(
+            "E_EVENT_ID",
+            "event_id must be '<writer>/<writer_seq>'",
+        ));
     }
     let kind = s(env, "kind")?;
     if !schema::EVENT_KINDS.contains(&kind) {
@@ -901,10 +1066,16 @@ fn check(
         }
         let r = schema::register(body, false)?;
         if r.writer != writer || !r.capabilities.contains(&"owner") {
-            return Err(err("E_GENESIS", "genesis must be an owner registering itself"));
+            return Err(err(
+                "E_GENESIS",
+                "genesis must be an owner registering itself",
+            ));
         }
         if writer_seq != 1 {
-            return Err(err("E_WRITER_SEQ", "first event of a writer must have writer_seq 1"));
+            return Err(err(
+                "E_WRITER_SEQ",
+                "first event of a writer must have writer_seq 1",
+            ));
         }
         return done(Change::Register {
             writer: writer.to_string(),
@@ -913,10 +1084,12 @@ fn check(
         });
     }
 
-    let w = st
-        .writers
-        .get(writer)
-        .ok_or_else(|| err("E_UNKNOWN_WRITER", format!("writer '{writer}' is not registered")))?;
+    let w = st.writers.get(writer).ok_or_else(|| {
+        err(
+            "E_UNKNOWN_WRITER",
+            format!("writer '{writer}' is not registered"),
+        )
+    })?;
     if writer_seq != w.last_seq + 1 {
         return Err(err(
             "E_WRITER_SEQ",
@@ -940,7 +1113,10 @@ fn check(
             let strict = st.schema_version >= 2;
             let r = schema::register(body, strict)?;
             if r.schema_version.is_some() {
-                return Err(err("E_BODY", "register: 'schema_version' belongs to the genesis registration only"));
+                return Err(err(
+                    "E_BODY",
+                    "register: 'schema_version' belongs to the genesis registration only",
+                ));
             }
             if !by_owner {
                 // Everything that says who it is comes from its parent: an
@@ -960,24 +1136,43 @@ fn check(
                 // Its id is its parent's, extended: an instance can never
                 // take, or probe for, an id outside its parent's namespace.
                 if !r.writer.starts_with(&format!("{writer}-")) {
-                    return Err(err("E_SPAWN", format!("an instance's id starts with '{writer}-'")));
+                    return Err(err(
+                        "E_SPAWN",
+                        format!("an instance's id starts with '{writer}-'"),
+                    ));
                 }
                 if r.compartments.iter().any(|c| !w.in_compartment(c)) {
-                    return Err(err("E_SPAWN", "an instance cannot enter a compartment its parent is not in"));
+                    return Err(err(
+                        "E_SPAWN",
+                        "an instance cannot enter a compartment its parent is not in",
+                    ));
                 }
-                if r.capabilities.iter().any(|c| matches!(*c, "owner" | "govern" | "spawn") || !w.capabilities.iter().any(|x| x == c)) {
+                if r.capabilities.iter().any(|c| {
+                    matches!(*c, "owner" | "govern" | "spawn")
+                        || !w.capabilities.iter().any(|x| x == c)
+                }) {
                     return Err(err("E_SPAWN", "an instance gets a subset of its parent's capabilities, never owner, govern or spawn"));
                 }
             }
             if st.writers.contains_key(r.writer) {
-                return Err(err("E_DUPLICATE", format!("writer '{}' already registered", r.writer)));
+                return Err(err(
+                    "E_DUPLICATE",
+                    format!("writer '{}' already registered", r.writer),
+                ));
             }
             // An instance acts for a person who is already on record.
             if let Some(op) = r.operator {
                 match st.writers.get(op) {
                     Some(o) if o.kind == "human" => {}
-                    Some(_) => return Err(err("E_IDENTITY", format!("operator '{op}' is not a human"))),
-                    None => return Err(err("E_IDENTITY", format!("operator '{op}' is not registered"))),
+                    Some(_) => {
+                        return Err(err("E_IDENTITY", format!("operator '{op}' is not a human")))
+                    }
+                    None => {
+                        return Err(err(
+                            "E_IDENTITY",
+                            format!("operator '{op}' is not registered"),
+                        ))
+                    }
                 }
             }
             // One session, one writer: otherwise its words could be split
@@ -985,23 +1180,39 @@ fn check(
             // (Checked within the party: a session id is the party's.)
             if let Some(sess) = r.session {
                 if st.writers.values().any(|x| {
-                    x.party == r.party && x.session.as_deref() == Some(sess) && x.surface.as_deref() == r.surface
+                    x.party == r.party
+                        && x.session.as_deref() == Some(sess)
+                        && x.surface.as_deref() == r.surface
                 }) {
-                    return Err(err("E_IDENTITY", format!("session '{sess}' is already registered")));
+                    return Err(err(
+                        "E_IDENTITY",
+                        format!("session '{sess}' is already registered"),
+                    ));
                 }
             }
             // A name says who someone is: no party may take a name another
             // party's writer already has.
             if let Some(n) = r.name {
-                if st.writers.values().any(|x| x.name.as_deref() == Some(n) && x.party != r.party) {
-                    return Err(err("E_IDENTITY", format!("the name '{n}' belongs to another party's writer")));
+                if st
+                    .writers
+                    .values()
+                    .any(|x| x.name.as_deref() == Some(n) && x.party != r.party)
+                {
+                    return Err(err(
+                        "E_IDENTITY",
+                        format!("the name '{n}' belongs to another party's writer"),
+                    ));
                 }
             }
             let mut info = writer_info(&r);
             if !by_owner {
                 info.instance_of = Some(writer.to_string());
             }
-            done(Change::Register { writer: r.writer.to_string(), info, version: None })
+            done(Change::Register {
+                writer: r.writer.to_string(),
+                info,
+                version: None,
+            })
         }
 
         "episode" => {
@@ -1011,10 +1222,17 @@ fn check(
             for (label, x) in &e.bindings {
                 // Only to writers in this compartment, with one answer for
                 // "no such writer" and "not here", so nothing is learnt.
-                if !st.writers.get(*x).map(|o| o.in_compartment(e.compartment)).unwrap_or(false) {
+                if !st
+                    .writers
+                    .get(*x)
+                    .map(|o| o.in_compartment(e.compartment))
+                    .unwrap_or(false)
+                {
                     return Err(err(
                         "E_IDENTITY",
-                        format!("'{label}' is bound to '{x}', who is not a writer in this compartment"),
+                        format!(
+                            "'{label}' is bound to '{x}', who is not a writer in this compartment"
+                        ),
                     ));
                 }
                 // To bind a name to yourself is to claim those words as your
@@ -1036,8 +1254,16 @@ fn check(
                     hidden_chars: schema::has_hidden_chars(e.content),
                     body: body.clone(),
                     participants: e.participants.iter().map(|p| p.to_string()).collect(),
-                    turns: e.turns.iter().map(|(sp, a, b)| (sp.to_string(), *a, *b)).collect(),
-                    bindings: e.bindings.iter().map(|(l, x)| (l.to_string(), x.to_string())).collect(),
+                    turns: e
+                        .turns
+                        .iter()
+                        .map(|(sp, a, b)| (sp.to_string(), *a, *b))
+                        .collect(),
+                    bindings: e
+                        .bindings
+                        .iter()
+                        .map(|(l, x)| (l.to_string(), x.to_string()))
+                        .collect(),
                 },
             })
         }
@@ -1059,8 +1285,13 @@ fn check(
                 if t.compartment != c.compartment {
                     return Err(not_found("claim", target));
                 }
-                if *relation == "answers" && t.body.get("stance").and_then(|v| v.as_str()) != Some("asked") {
-                    return Err(err("E_REFERENCE", format!("claim '{target}' is not a question, so nothing answers it")));
+                if *relation == "answers"
+                    && t.body.get("stance").and_then(|v| v.as_str()) != Some("asked")
+                {
+                    return Err(err(
+                        "E_REFERENCE",
+                        format!("claim '{target}' is not a question, so nothing answers it"),
+                    ));
                 }
             }
             // Did the writer's own party record the episode it quotes?
@@ -1070,7 +1301,9 @@ fn check(
             // recording is only a name). Not quoting: a writer id given as
             // the speaker, or the writer's own registered name.
             let mut speaker_is: Option<String> = if c.source_episode.is_none() {
-                st.writers.contains_key(c.speaker).then(|| c.speaker.to_string())
+                st.writers
+                    .contains_key(c.speaker)
+                    .then(|| c.speaker.to_string())
             } else {
                 None
             };
@@ -1086,7 +1319,11 @@ fn check(
                         "a claim cannot cite an episode from another compartment",
                     ));
                 }
-                self_recorded = st.writers.get(&e.writer).map(|x| x.party == w.party).unwrap_or(false);
+                self_recorded = st
+                    .writers
+                    .get(&e.writer)
+                    .map(|x| x.party == w.party)
+                    .unwrap_or(false);
                 if let Some(b) = e.bound(c.speaker) {
                     speaker_is = Some(b.to_string());
                 }
@@ -1094,7 +1331,11 @@ fn check(
                 // position: an extractor cannot put words in anyone's mouth.
                 if let Some((quote, start)) = c.quote {
                     let content = e.body.get("content").and_then(|v| v.as_str()).unwrap_or("");
-                    let found: String = content.chars().skip(start as usize).take(quote.chars().count()).collect();
+                    let found: String = content
+                        .chars()
+                        .skip(start as usize)
+                        .take(quote.chars().count())
+                        .collect();
                     if found != quote {
                         return Err(err(
                             "E_QUOTE",
@@ -1108,7 +1349,9 @@ fn check(
                     let theirs = if e.turns.is_empty() {
                         e.participants.len() == 1 && e.participants[0] == c.speaker
                     } else {
-                        e.turns.iter().any(|(sp, ts, te)| *ts <= a && b <= *te && sp == c.speaker)
+                        e.turns
+                            .iter()
+                            .any(|(sp, ts, te)| *ts <= a && b <= *te && sp == c.speaker)
                     };
                     if !theirs {
                         return Err(err(
@@ -1121,7 +1364,10 @@ fn check(
             // Hearsay: a claim that someone else said something, without
             // quoting them, is the writer's interpretation, however it is
             // labelled. It cannot be stated with near-certainty.
-            if speaker_is.is_none() && c.source_episode.is_none() && w.name.as_deref() == Some(c.speaker) {
+            if speaker_is.is_none()
+                && c.source_episode.is_none()
+                && w.name.as_deref() == Some(c.speaker)
+            {
                 speaker_is = Some(writer.to_string());
             }
             let id = claim_id(body);
@@ -1151,7 +1397,11 @@ fn check(
             // A quote is only as good as its recording. Quoting someone else
             // from an episode the writer's own party recorded is still that
             // party's account of what was said: the same cap applies.
-            if c.quote.is_some() && self_recorded && !own && c.confidence > schema::PARAPHRASE_MAX_CONFIDENCE {
+            if c.quote.is_some()
+                && self_recorded
+                && !own
+                && c.confidence > schema::PARAPHRASE_MAX_CONFIDENCE
+            {
                 return Err(err(
                     "E_ATTRIBUTION",
                     format!(
@@ -1164,8 +1414,13 @@ fn check(
             match st.claims.get(&id) {
                 // Identical content from another writer corroborates; it never overwrites.
                 Some(existing) => {
-                    if existing.author == writer || existing.corroborated_by.iter().any(|x| x == writer) {
-                        return Err(err("E_DUPLICATE", "this writer already recorded this claim"));
+                    if existing.author == writer
+                        || existing.corroborated_by.iter().any(|x| x == writer)
+                    {
+                        return Err(err(
+                            "E_DUPLICATE",
+                            "this writer already recorded this claim",
+                        ));
                     }
                     if existing.verifier_parties.contains(&w.party) {
                         return Err(err(
@@ -1223,7 +1478,10 @@ fn check(
             // No self-certification: not the author, not a corroborator, and
             // not another identity of any of their parties.
             if c.author == writer || c.corroborated_by.iter().any(|x| x == writer) {
-                return Err(err("E_SELF_VERIFY", "a writer cannot verify a claim it asserted"));
+                return Err(err(
+                    "E_SELF_VERIFY",
+                    "a writer cannot verify a claim it asserted",
+                ));
             }
             if c.parties.contains(&w.party) {
                 return Err(err(
@@ -1232,7 +1490,10 @@ fn check(
                 ));
             }
             if c.verifier_parties.contains(&w.party) {
-                return Err(err("E_DUPLICATE", "this party already gave a verdict on this claim"));
+                return Err(err(
+                    "E_DUPLICATE",
+                    "this party already gave a verdict on this claim",
+                ));
             }
             done(Change::Verdict {
                 event: event_id.to_string(),
@@ -1261,8 +1522,9 @@ fn check(
             // stacking further supersessions on either side of it.
             // Evidence-backed refutation of a claim in an open dispute is
             // allowed and ends that dispute; anything else waits.
-            let under_appeal =
-                appeals_of(st, sp.old).chain(appeals_of(st, sp.new)).any(|(_, a)| a.is_open());
+            let under_appeal = appeals_of(st, sp.old)
+                .chain(appeals_of(st, sp.new))
+                .any(|(_, a)| a.is_open());
             if under_appeal {
                 return Err(err(
                     "E_OPEN_DISPUTE",
@@ -1284,7 +1546,9 @@ fn check(
             if sp.kind == "contested" {
                 // A dispute needs two sides: no contesting your own claim,
                 // and no dispute between claims that share a party.
-                if old.parties.contains(&w.party) || old.parties.iter().any(|p| new.parties.contains(p)) {
+                if old.parties.contains(&w.party)
+                    || old.parties.iter().any(|p| new.parties.contains(p))
+                {
                     return Err(err(
                         "E_SELF_DISPUTE",
                         "a party cannot contest its own claim or set up a dispute with itself",
@@ -1326,10 +1590,16 @@ fn check(
                 // A ruling on this pair is final for its parties, and a
                 // withdrawal is final for the party that withdrew.
                 let reargued = involving(st, sp.old).map(|(_, x)| x).any(|x| {
-                    let same_pair = (x.old == sp.old && x.new == sp.new) || (x.old == sp.new && x.new == sp.old);
-                    let withdrew = x.resolution.as_ref().map(|r| r.outcome == "withdrawn").unwrap_or(false)
+                    let same_pair = (x.old == sp.old && x.new == sp.new)
+                        || (x.old == sp.new && x.new == sp.old);
+                    let withdrew = x
+                        .resolution
+                        .as_ref()
+                        .map(|r| r.outcome == "withdrawn")
+                        .unwrap_or(false)
                         && x.by_party == w.party;
-                    same_pair && ((x.is_ruled() && x.dispute_parties.contains(&w.party)) || withdrew)
+                    same_pair
+                        && ((x.is_ruled() && x.dispute_parties.contains(&w.party)) || withdrew)
                 });
                 if reargued {
                     return Err(err(
@@ -1408,7 +1678,8 @@ fn check(
             // (a withdrawn contest may be raised again); other kinds are
             // recorded once.
             let dup = sp.kind != "contested"
-                && involving(st, sp.old).any(|(_, x)| x.old == sp.old && x.new == sp.new && x.kind == sp.kind);
+                && involving(st, sp.old)
+                    .any(|(_, x)| x.old == sp.old && x.new == sp.new && x.kind == sp.kind);
             if dup {
                 return Err(err("E_DUPLICATE", "this supersession is already recorded"));
             }
@@ -1445,37 +1716,57 @@ fn check(
         "resolve" => {
             let r = schema::resolve(body)?;
             // Withdrawing your own challenge needs only `write`; ruling needs `verify`.
-            need(w, if r.outcome == "withdrawn" { "write" } else { "verify" })?;
+            need(
+                w,
+                if r.outcome == "withdrawn" {
+                    "write"
+                } else {
+                    "verify"
+                },
+            )?;
             if let Some(a) = st
                 .appeals
                 .get(r.dispute)
                 .filter(|a| w.in_compartment(&a.compartment))
             {
                 if !matches!(r.outcome, "reinstated" | "upheld" | "withdrawn") {
-                    return Err(err("E_RESOLVE", "an appeal is decided 'reinstated', 'upheld' or 'withdrawn'"));
+                    return Err(err(
+                        "E_RESOLVE",
+                        "an appeal is decided 'reinstated', 'upheld' or 'withdrawn'",
+                    ));
                 }
                 if a.resolution.is_some() {
                     return Err(err("E_RESOLVE", "this appeal is already decided"));
                 }
                 if r.outcome == "withdrawn" {
                     if a.by_party != w.party {
-                        return Err(err("E_RESOLVE_PARTY", "only the appellant's party may withdraw an appeal"));
+                        return Err(err(
+                            "E_RESOLVE_PARTY",
+                            "only the appellant's party may withdraw an appeal",
+                        ));
                     }
                 } else {
                     // Core stake: advocates and adversaries (frozen at filing,
                     // plus anyone who has since joined the other side).
                     let opp = opponents(st, &a.claim);
                     let verdicts = verdict_parties(st, &a.claim, None);
-                    let core = |p: &str| a.appeal_parties.iter().any(|x| x == p) || opp.iter().any(|x| x == p);
+                    let core = |p: &str| {
+                        a.appeal_parties.iter().any(|x| x == p) || opp.iter().any(|x| x == p)
+                    };
                     let strict = |p: &str| !core(p) && !verdicts.iter().any(|x| x == p);
                     let ok = strict(&w.party)
                         || (w.can("govern")
                             && !core(&w.party)
                             && !st.writers.values().any(|x| {
-                                x.can("verify") && x.in_compartment(&a.compartment) && strict(&x.party)
+                                x.can("verify")
+                                    && x.in_compartment(&a.compartment)
+                                    && strict(&x.party)
                             }));
                     if !ok {
-                        return Err(err("E_RESOLVE_PARTY", "a party with a stake in an appeal cannot decide it"));
+                        return Err(err(
+                            "E_RESOLVE_PARTY",
+                            "a party with a stake in an appeal cannot decide it",
+                        ));
                     }
                 }
                 return done(Change::ResolveAppeal {
@@ -1494,7 +1785,10 @@ fn check(
                 return Err(err("E_RESOLVE", "only contests and appeals are resolved"));
             }
             if !matches!(r.outcome, "old" | "new" | "both" | "withdrawn") {
-                return Err(err("E_RESOLVE", "a contest is decided 'old', 'new', 'both' or 'withdrawn'"));
+                return Err(err(
+                    "E_RESOLVE",
+                    "a contest is decided 'old', 'new', 'both' or 'withdrawn'",
+                ));
             }
             if sp.resolution.is_some() {
                 return Err(err("E_RESOLVE", "this dispute is already resolved"));
@@ -1525,7 +1819,10 @@ fn check(
                             x.can("verify") && x.in_compartment(&sp.compartment) && strict(&x.party)
                         }));
                 if !ok {
-                    return Err(err("E_RESOLVE_PARTY", "a party with a stake in a dispute cannot resolve it"));
+                    return Err(err(
+                        "E_RESOLVE_PARTY",
+                        "a party with a stake in a dispute cannot resolve it",
+                    ));
                 }
             }
             done(Change::Resolve {
@@ -1541,10 +1838,16 @@ fn check(
             let ap = schema::appeal(body)?;
             let c = visible_claim(st, w, ap.claim)?;
             let defeated_at = defeat_seq(st, ap.claim).ok_or_else(|| {
-                err("E_APPEAL", "only a refuted or defeated claim can be appealed")
+                err(
+                    "E_APPEAL",
+                    "only a refuted or defeated claim can be appealed",
+                )
             })?;
             if appeals_of(st, ap.claim).any(|(_, a)| a.is_open()) {
-                return Err(err("E_OPEN_DISPUTE", "this claim already has an open appeal"));
+                return Err(err(
+                    "E_OPEN_DISPUTE",
+                    "this claim already has an open appeal",
+                ));
             }
             if appeals_of(st, ap.claim).any(|(_, a)| a.by_party == w.party) {
                 return Err(err("E_FINAL", "a party may appeal a claim only once"));
@@ -1570,7 +1873,10 @@ fn check(
                     .ok_or_else(|| not_found("supporting verdict", ev))?;
                 let party = st.writers[&v.writer].party.clone();
                 if v.result != "supports" {
-                    return Err(err("E_EVIDENCE", format!("'{ev}' does not support the claim")));
+                    return Err(err(
+                        "E_EVIDENCE",
+                        format!("'{ev}' does not support the claim"),
+                    ));
                 }
                 if stake.contains(&party) {
                     return Err(err(
@@ -1600,7 +1906,10 @@ fn check(
             if !resolver_exists(st, &c.compartment, &strict_excluded)
                 && !backstop_exists(st, &c.compartment, &stake)
             {
-                return Err(err("E_NO_RESOLVER", "no registered writer could neutrally decide this appeal"));
+                return Err(err(
+                    "E_NO_RESOLVER",
+                    "no registered writer could neutrally decide this appeal",
+                ));
             }
             done(Change::Appeal {
                 event: event_id.to_string(),
@@ -1639,7 +1948,10 @@ fn check(
                 match st.handoffs.get(prev) {
                     Some(p) if p.compartment == c.compartment => {
                         if p.frame != c.frame {
-                            return Err(err("E_REFERENCE", "a handoff follows one in the same frame"));
+                            return Err(err(
+                                "E_REFERENCE",
+                                "a handoff follows one in the same frame",
+                            ));
                         }
                     }
                     _ => return Err(not_found("handoff", prev)),
@@ -1662,31 +1974,36 @@ fn check(
             need(w, "write")?;
             let p = schema::position(body)?;
             need_compartment(w, p.compartment)?;
-            let key = position_key(p.org, p.title);
-            // One organisation lives in one compartment.
-            if st.positions.values().any(|x| x.org == p.org && x.compartment != p.compartment) {
-                return Err(not_found("organisation", p.org));
-            }
+            let (c, o) = (p.compartment, p.org);
+            let key = position_key(c, o, p.title);
             if let Some(up) = p.reports_to {
-                if !st.positions.contains_key(&position_key(p.org, up)) {
+                if !st.positions.contains_key(&position_key(c, o, up)) {
                     return Err(not_found("position", up));
                 }
                 // No cycles: the title must not be above the one it reports to.
-                if st.chain_above(p.org, up).iter().any(|t| t == p.title) {
+                if up == p.title || st.chain_above(c, o, up).iter().any(|t| t == p.title) {
                     return Err(err("E_ORG", "a position cannot report to one below it"));
                 }
             }
             // Who may define it: an owner or governor, or the holder of a
             // position it reports to, directly or through others. For an
             // existing title the same must hold of where it reported before.
-            let governs = w.capabilities.iter().any(|c| c == "owner" || c == "govern");
-            let may = |up: Option<&str>| governs || up.is_some_and(|u| st.holds_at_or_above(writer, p.org, u));
+            let governs = st.governs_org(w, c, o);
+            let may = |up: Option<&str>| {
+                governs || up.is_some_and(|u| st.holds_at_or_above(writer, c, o, u))
+            };
             if !may(p.reports_to) {
-                return Err(err("E_ORG", "only an owner, a governor or a holder of a position above may define it"));
+                return Err(err(
+                    "E_ORG",
+                    "only an owner, a governor or a holder of a position above may define it",
+                ));
             }
             if let Some(old) = st.positions.get(&key) {
                 if !may(old.reports_to.as_deref()) {
-                    return Err(err("E_ORG", "only an owner, a governor or a holder of a position above may redefine it"));
+                    return Err(err(
+                        "E_ORG",
+                        "only an owner, a governor or a holder of a position above may redefine it",
+                    ));
                 }
             }
             done(Change::Position {
@@ -1709,20 +2026,38 @@ fn check(
             need_compartment(w, a.compartment)?;
             let pos = st
                 .positions
-                .get(&position_key(a.org, a.title))
-                .filter(|x| x.compartment == a.compartment)
+                .get(&position_key(a.compartment, a.org, a.title))
                 .ok_or_else(|| not_found("position", a.title))?;
-            if !st.writers.get(a.holder).map(|h| h.in_compartment(a.compartment)).unwrap_or(false) {
+            if !st
+                .writers
+                .get(a.holder)
+                .map(|h| h.in_compartment(a.compartment))
+                .unwrap_or(false)
+            {
                 return Err(not_found("writer", a.holder));
             }
-            let governs = w.capabilities.iter().any(|c| c == "owner" || c == "govern");
+            let governs = st.governs_org(w, a.compartment, a.org);
             if a.holder == writer && !governs {
                 return Err(err("E_ORG", "no one appoints themselves"));
             }
-            if !governs && !pos.reports_to.as_deref().is_some_and(|u| st.holds_at_or_above(writer, a.org, u)) {
-                return Err(err("E_ORG", "only an owner, a governor or a holder of a position above may appoint to it"));
+            if !governs
+                && !pos
+                    .reports_to
+                    .as_deref()
+                    .is_some_and(|u| st.holds_at_or_above(writer, a.compartment, a.org, u))
+            {
+                return Err(err(
+                    "E_ORG",
+                    "only an owner, a governor or a holder of a position above may appoint to it",
+                ));
             }
-            if st.appointments.values().any(|x| x.ended.is_none() && x.org == a.org && x.title == a.title && x.holder == a.holder) {
+            if st.appointments.values().any(|x| {
+                x.ended.is_none()
+                    && x.compartment == a.compartment
+                    && x.org == a.org
+                    && x.title == a.title
+                    && x.holder == a.holder
+            }) {
                 return Err(err("E_DUPLICATE", "already holds this position"));
             }
             done(Change::Appoint {
@@ -1751,12 +2086,12 @@ fn check(
             if ap.ended.is_some() {
                 return Err(err("E_ORG", "that appointment has already ended"));
             }
-            let governs = w.capabilities.iter().any(|c| c == "owner" || c == "govern");
+            let governs = st.governs_org(w, &ap.compartment, &ap.org);
             let above = st
                 .positions
-                .get(&position_key(&ap.org, &ap.title))
+                .get(&position_key(&ap.compartment, &ap.org, &ap.title))
                 .and_then(|p| p.reports_to.as_deref())
-                .is_some_and(|u| st.holds_at_or_above(writer, &ap.org, u));
+                .is_some_and(|u| st.holds_at_or_above(writer, &ap.compartment, &ap.org, u));
             // Resigning is always allowed.
             if !(governs || above || ap.holder == writer) {
                 return Err(err("E_ORG", "only an owner, a governor, a holder of a position above, or the holder, may end it"));
@@ -1774,7 +2109,10 @@ fn check(
             need(w, "govern")?;
             let v = schema::schema_change(body)?;
             if v != st.schema_version + 1 {
-                return Err(err("E_SCHEMA_VERSION", "schema version must advance by exactly one"));
+                return Err(err(
+                    "E_SCHEMA_VERSION",
+                    "schema version must advance by exactly one",
+                ));
             }
             done(Change::SchemaVersion(v))
         }
@@ -1895,7 +2233,11 @@ impl ClaimInfo {
         for (aid, a) in appeals_of(st, id) {
             if let Some(r) = &a.resolution {
                 if r.outcome == "reinstated" {
-                    actions.push((r.seq, self.asserted_truth.clone(), won(vec![aid.clone(), r.event.clone()])));
+                    actions.push((
+                        r.seq,
+                        self.asserted_truth.clone(),
+                        won(vec![aid.clone(), r.event.clone()]),
+                    ));
                 }
             }
         }
@@ -1911,34 +2253,69 @@ impl ClaimInfo {
 }
 
 impl State {
-    /// State as a JSON value, restricted to `compartments` (None = all).
-    /// A restricted view contains nothing from other compartments, not even
-    /// their names.
-    /// The titles above `title` in `org`, nearest first (its own not
-    /// included).
-    pub fn chain_above(&self, org: &str, title: &str) -> Vec<String> {
+    /// The titles above `title` in organisation `org` of `compartment`,
+    /// nearest first (its own not included).
+    pub fn chain_above(&self, compartment: &str, org: &str, title: &str) -> Vec<String> {
         let mut out = Vec::new();
-        let mut cur = self.positions.get(&position_key(org, title)).and_then(|p| p.reports_to.clone());
+        let mut cur = self
+            .positions
+            .get(&position_key(compartment, org, title))
+            .and_then(|p| p.reports_to.clone());
         while let Some(t) = cur {
             if out.contains(&t) || out.len() > self.positions.len() {
                 break; // defensive: the gate refuses cycles
             }
-            cur = self.positions.get(&position_key(org, &t)).and_then(|p| p.reports_to.clone());
+            cur = self
+                .positions
+                .get(&position_key(compartment, org, &t))
+                .and_then(|p| p.reports_to.clone());
             out.push(t);
         }
         out
     }
 
-    /// Whether `writer` currently holds `title` in `org`, or a position
-    /// above it.
-    pub fn holds_at_or_above(&self, writer: &str, org: &str, title: &str) -> bool {
-        let mut line = vec![title.to_string()];
-        line.extend(self.chain_above(org, title));
-        self.appointments
+    /// Whether writer `w` governs organisation `org` of `compartment`: it
+    /// is an owner or governor of the party that founded it (the party of
+    /// whoever defined its first position), or of any party if it has no
+    /// positions yet. Other parties' owners act in it only through
+    /// positions they hold.
+    pub fn governs_org(&self, w: &WriterInfo, compartment: &str, org: &str) -> bool {
+        if !w.capabilities.iter().any(|c| c == "owner" || c == "govern") {
+            return false;
+        }
+        let founder = self
+            .positions
             .values()
-            .any(|a| a.ended.is_none() && a.holder == writer && a.org == org && line.contains(&a.title))
+            .filter(|p| p.compartment == compartment && p.org == org)
+            .min_by_key(|p| p.seq)
+            .and_then(|p| self.writers.get(&p.by))
+            .map(|f| f.party.as_str());
+        founder.map_or(true, |f| f == w.party)
     }
 
+    /// Whether `writer` currently holds `title` in organisation `org` of
+    /// `compartment`, or a position above it.
+    pub fn holds_at_or_above(
+        &self,
+        writer: &str,
+        compartment: &str,
+        org: &str,
+        title: &str,
+    ) -> bool {
+        let mut line = vec![title.to_string()];
+        line.extend(self.chain_above(compartment, org, title));
+        self.appointments.values().any(|a| {
+            a.ended.is_none()
+                && a.holder == writer
+                && a.compartment == compartment
+                && a.org == org
+                && line.contains(&a.title)
+        })
+    }
+
+    /// State as a JSON value, restricted to `compartments` (None = all).
+    /// A restricted view contains nothing from other compartments, not even
+    /// their names.
     pub fn to_value(&self, compartments: Option<&[String]>) -> Value {
         self.to_value_sel(compartments, None)
     }
@@ -1979,7 +2356,10 @@ impl State {
                         ("last_activity", Value::str(t)),
                         ("claims", Value::Int(nc)),
                         ("handoffs", Value::Int(nh)),
-                        ("latest_handoff", lh.map(|(_, id)| Value::str(id)).unwrap_or(Value::Null)),
+                        (
+                            "latest_handoff",
+                            lh.map(|(_, id)| Value::str(id)).unwrap_or(Value::Null),
+                        ),
                     ])
                 })
                 .collect(),
@@ -1991,7 +2371,12 @@ impl State {
     /// latest handoff's writer, else of the latest conversation's), enough
     /// episodes for `turns` turns. Returns the selection and the frame (the
     /// most recently active one if none is given).
-    pub fn resume_selection(&self, compartments: &[String], frame: Option<&str>, turns: usize) -> (Selection, Option<String>) {
+    pub fn resume_selection(
+        &self,
+        compartments: &[String],
+        frame: Option<&str>,
+        turns: usize,
+    ) -> (Selection, Option<String>) {
         let seen = |c: &str| compartments.iter().any(|x| x == c);
         let frame: Option<String> = match frame {
             Some(f) => Some(f.to_string()),
@@ -2000,15 +2385,32 @@ impl State {
                     .claims
                     .values()
                     .filter(|c| seen(&c.compartment))
-                    .map(|c| (c.seq, c.body.get("frame").and_then(|v| v.as_str()).unwrap_or("").to_string()));
-                let b = self.handoffs.values().filter(|h| seen(&h.compartment)).map(|h| (h.seq, h.frame.clone()));
+                    .map(|c| {
+                        (
+                            c.seq,
+                            c.body
+                                .get("frame")
+                                .and_then(|v| v.as_str())
+                                .unwrap_or("")
+                                .to_string(),
+                        )
+                    });
+                let b = self
+                    .handoffs
+                    .values()
+                    .filter(|h| seen(&h.compartment))
+                    .map(|h| (h.seq, h.frame.clone()));
                 a.chain(b).max_by_key(|x| x.0).map(|x| x.1)
             }
         };
         let mut sel = Selection::default();
         let mut latest: Option<(usize, &str)> = None;
         if let Some(fr) = frame.as_deref() {
-            for (id, h) in self.handoffs.iter().filter(|(_, h)| seen(&h.compartment) && h.frame == fr) {
+            for (id, h) in self
+                .handoffs
+                .iter()
+                .filter(|(_, h)| seen(&h.compartment) && h.frame == fr)
+            {
                 sel.handoffs.insert(id.clone());
                 if c_later(h.seq, latest) {
                     latest = Some((h.seq, h.writer.as_str()));
@@ -2029,15 +2431,29 @@ impl State {
             // And what refers to them from elsewhere (a critique, an answer
             // filed under another frame).
             for (id, c) in self.claims.iter().filter(|(_, c)| seen(&c.compartment)) {
-                let refs = c.body.get("about").and_then(|v| v.as_array()).unwrap_or(&[]);
-                if refs.iter().any(|r| r.get("claim").and_then(|v| v.as_str()).is_some_and(|t| sel.claims.contains(t))) {
+                let refs = c
+                    .body
+                    .get("about")
+                    .and_then(|v| v.as_array())
+                    .unwrap_or(&[]);
+                if refs.iter().any(|r| {
+                    r.get("claim")
+                        .and_then(|v| v.as_str())
+                        .is_some_and(|t| sel.claims.contains(t))
+                }) {
                     sel.claims.insert(id.clone());
                 }
             }
         }
-        let mut eps: Vec<(&String, &EpisodeInfo)> = self.episodes.iter().filter(|(_, e)| seen(&e.compartment)).collect();
+        let mut eps: Vec<(&String, &EpisodeInfo)> = self
+            .episodes
+            .iter()
+            .filter(|(_, e)| seen(&e.compartment))
+            .collect();
         eps.sort_by_key(|(_, e)| std::cmp::Reverse(e.seq));
-        let writer = latest.map(|x| x.1.to_string()).or_else(|| eps.first().map(|(_, e)| e.writer.clone()));
+        let writer = latest
+            .map(|x| x.1.to_string())
+            .or_else(|| eps.first().map(|(_, e)| e.writer.clone()));
         let mut got = 0;
         for (id, e) in eps {
             if got >= turns {
@@ -2056,25 +2472,48 @@ impl State {
         // rank among them: it says what came first without saying how many
         // hidden events lie between.
         let order: BTreeMap<usize, i64> = {
-            let seen = |c: &str| compartments.map(|cs| cs.iter().any(|x| x == c)).unwrap_or(true);
+            let seen = |c: &str| {
+                compartments
+                    .map(|cs| cs.iter().any(|x| x == c))
+                    .unwrap_or(true)
+            };
             let mut seqs: Vec<usize> = self
                 .claims
                 .values()
                 .filter(|c| seen(&c.compartment))
                 .map(|c| c.seq)
-                .chain(self.handoffs.values().filter(|h| seen(&h.compartment)).map(|h| h.seq))
-                .chain(self.episodes.values().filter(|e| seen(&e.compartment)).map(|e| e.seq))
+                .chain(
+                    self.handoffs
+                        .values()
+                        .filter(|h| seen(&h.compartment))
+                        .map(|h| h.seq),
+                )
+                .chain(
+                    self.episodes
+                        .values()
+                        .filter(|e| seen(&e.compartment))
+                        .map(|e| e.seq),
+                )
                 .collect();
             seqs.sort_unstable();
-            seqs.into_iter().enumerate().map(|(i, s)| (s, i as i64)).collect()
+            seqs.into_iter()
+                .enumerate()
+                .map(|(i, s)| (s, i as i64))
+                .collect()
         };
-        let visible = |c: &str| compartments.map(|cs| cs.iter().any(|x| x == c)).unwrap_or(true);
+        let visible = |c: &str| {
+            compartments
+                .map(|cs| cs.iter().any(|x| x == c))
+                .unwrap_or(true)
+        };
         let strs = |v: &[String]| Value::Array(v.iter().map(|x| Value::str(x.clone())).collect());
 
         let claims: Vec<(String, Value)> = self
             .claims
             .iter()
-            .filter(|(id, c)| visible(&c.compartment) && sel.map_or(true, |s| s.claims.contains(*id)))
+            .filter(|(id, c)| {
+                visible(&c.compartment) && sel.map_or(true, |s| s.claims.contains(*id))
+            })
             .map(|(id, c)| {
                 (
                     id.clone(),
@@ -2120,7 +2559,9 @@ impl State {
         let episodes: Vec<(String, Value)> = self
             .episodes
             .iter()
-            .filter(|(id, e)| visible(&e.compartment) && sel.map_or(true, |s| s.episodes.contains(*id)))
+            .filter(|(id, e)| {
+                visible(&e.compartment) && sel.map_or(true, |s| s.episodes.contains(*id))
+            })
             .map(|(id, e)| {
                 (
                     id.clone(),
@@ -2174,7 +2615,10 @@ impl State {
                         ("compartment", Value::str(p.compartment.clone())),
                         ("org", Value::str(p.org.clone())),
                         ("title", Value::str(p.title.clone())),
-                        ("reports_to", p.reports_to.clone().map(Value::str).unwrap_or(Value::Null)),
+                        (
+                            "reports_to",
+                            p.reports_to.clone().map(Value::str).unwrap_or(Value::Null),
+                        ),
                         ("duties", Value::str(p.duties.clone())),
                         ("by", Value::str(p.by.clone())),
                         ("event", Value::str(p.event.clone())),
@@ -2211,7 +2655,9 @@ impl State {
         let handoffs: Vec<(String, Value)> = self
             .handoffs
             .iter()
-            .filter(|(id, c)| visible(&c.compartment) && sel.map_or(true, |s| s.handoffs.contains(*id)))
+            .filter(|(id, c)| {
+                visible(&c.compartment) && sel.map_or(true, |s| s.handoffs.contains(*id))
+            })
             .map(|(id, c)| {
                 (
                     id.clone(),
@@ -2270,7 +2716,14 @@ impl State {
                     ("compartments", strs(&shown)),
                     ("group", Value::str(self.group(id))),
                 ];
-                for (k, v) in [("name", &w.name), ("model", &w.model), ("operator", &w.operator), ("surface", &w.surface), ("session", &w.session), ("instance_of", &w.instance_of)] {
+                for (k, v) in [
+                    ("name", &w.name),
+                    ("model", &w.model),
+                    ("operator", &w.operator),
+                    ("surface", &w.surface),
+                    ("session", &w.session),
+                    ("instance_of", &w.instance_of),
+                ] {
                     if let Some(v) = v {
                         fields.push((k, Value::str(v.clone())));
                     }
@@ -2303,9 +2756,15 @@ impl State {
 
     /// The open contests and appeals that make `id` disputed (event ids).
     pub fn open_disputes(&self, id: &str) -> Vec<String> {
-        let mut out: Vec<String> =
-            involving(self, id).filter(|(_, sp)| sp.is_open_dispute()).map(|(k, _)| k.clone()).collect();
-        out.extend(appeals_of(self, id).filter(|(_, a)| a.is_open()).map(|(k, _)| k.clone()));
+        let mut out: Vec<String> = involving(self, id)
+            .filter(|(_, sp)| sp.is_open_dispute())
+            .map(|(k, _)| k.clone())
+            .collect();
+        out.extend(
+            appeals_of(self, id)
+                .filter(|(_, a)| a.is_open())
+                .map(|(k, _)| k.clone()),
+        );
         out
     }
 

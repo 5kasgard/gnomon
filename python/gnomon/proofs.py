@@ -734,13 +734,18 @@ class _Org:
     each position, and which appointments have ended."""
 
     def __init__(self, events: list[dict]):
-        self.latest: dict[tuple, tuple] = {}  # (org, title) -> (reports_to or "", event id)
+        # (compartment, org, title) -> (reports_to or "", event id): an
+        # organisation belongs to its compartment.
+        self.latest: dict[tuple, tuple] = {}
+        self.defined: dict[str, tuple] = {}   # position event -> (compartment, org, title)
         self.appoint: dict[str, tuple] = {}   # appointment -> (holder, org, title)
         self.ended: set = set()
         for ev in events:
             kind, b = ev["kind"], ev["body"]
             if kind == "position":
-                self.latest[(b.get("org"), b.get("title"))] = (b.get("reports_to", ""), ev["event_id"])
+                key = (b.get("compartment"), b.get("org"), b.get("title"))
+                self.latest[key] = (b.get("reports_to", ""), ev["event_id"])
+                self.defined[ev["event_id"]] = key
             elif kind == "appoint":
                 self.appoint[ev["event_id"]] = (b.get("holder"), b.get("org"), b.get("title"))
             elif kind == "dismiss":
@@ -750,8 +755,14 @@ class _Org:
         rel, args = fact[0], fact[1:]
         if rel == "position":
             org, title, up = args
-            got = self.latest.get((org, title))
-            return got is not None and got[0] == up and cited == {got[1]}
+            if len(cited) != 1:
+                return False
+            (e,) = cited
+            key = self.defined.get(e)
+            if key is None or key[1:] != (org, title):
+                return False
+            got = self.latest[key]
+            return got[0] == up and got[1] == e
         if rel == "holds":
             if len(cited) != 1:
                 return False

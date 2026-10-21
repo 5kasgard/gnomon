@@ -166,18 +166,24 @@ _RECORD_QUERY = (
 )
 
 
-def outcomes(memory, reader: str) -> tuple[list, bool]:
-    """Every judged result `reader` can see, one outcome each (see the module
-    documentation for what counts): dicts with the result's `claim`, its
-    `author`, the `kind` of work and whether it was a `success`; and whether
-    the record was too large to read in full."""
+def outcomes(memory, reader: str, compartment: Optional[str] = None) -> tuple[list, bool]:
+    """Every judged result `reader` can see (in `compartment` only, if
+    given), one outcome each (see the module documentation for what counts):
+    dicts with the result's `claim`, its `author`, the `kind` of work and
+    whether it was a `success`; and whether the record was too large to read
+    in full."""
     r = memory.query(reader, _RECORD_QUERY, proofs=0)
+    keep = None
+    if compartment is not None:
+        keep = set(memory.state(compartments=[compartment])["state"]["claims"])
     cols = r["variables"]
     votes: dict = {}  # claim -> {verifier group: result}
     meta: dict = {}  # claim -> (author, frame)
     for a in r["answers"]:
         row = dict(zip(cols, a["values"]))
         if not row["F"].startswith("firm/") or row["R"] not in ("supports", "refutes"):
+            continue
+        if keep is not None and row["C"] not in keep:
             continue
         meta[row["C"]] = (row["A"], row["F"])
         votes.setdefault(row["C"], {})[row["GW"]] = row["R"]
