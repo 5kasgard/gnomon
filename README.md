@@ -378,6 +378,24 @@ next-concept model would register, looked strong on the development set
 and added nothing on data it had not seen. The controls are what showed
 it.
 
+**Many weak signals, weighed by small steps.** Eleven cheap signals per
+candidate are crossed with five question cues and weighted by gradient
+steps on 500K only (66 weights). The signals include word and meaning
+scores, whose words they are, length, numbers, surprise when written,
+surprise within the topic, and how atypical a message is of its topic.
+Run once on the other sizes (`bench/beam_learn.md`):
+
+| Length | Hybrid | Learned | Tokens (hybrid → learned) |
+|---|---|---|---|
+| 100K | 63.4 | **68.1** | 4,519 → 645 |
+| 1M | 46.4 | **53.1** | 3,893 → 454 |
+| 10M | 33.0 | **36.1** | 3,548 → 844 |
+
+The learned weights reproduce what memory research describes, with no
+rule written in. Facts are found where a topic's pattern breaks:
+atypicality +1.86. Summaries are found where it holds: -0.79 for summary
+questions.
+
 **Repairable storage.** `gnomon.parity` adds Reed-Solomon parity beside
 the log: 2 parity blocks for every 16 blocks of 4 KiB, 14.4% extra
 storage. Any 2 damaged blocks in a stripe are rebuilt byte for byte, and

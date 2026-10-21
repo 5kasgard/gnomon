@@ -1,0 +1,339 @@
+{
+ "train": "500K",
+ "weights": {
+  "word*all": 3.0943184319127752,
+  "word*order": 0.21661633666685784,
+  "word*summary": -1.744572822833378,
+  "word*when": 0.4231478576101324,
+  "word*count": 1.353498417257916,
+  "word*change": 0.17122949118126732,
+  "sim*all": 3.6365588619138633,
+  "sim*order": 0.17589888798690642,
+  "sim*summary": -0.08977370070297462,
+  "sim*when": -0.060037682680896966,
+  "sim*count": 0.40298335804344787,
+  "sim*change": 0.3650581259593708,
+  "dense_rank*all": 2.360275011206618,
+  "dense_rank*order": -0.6946762835470995,
+  "dense_rank*summary": -1.7169233613943906,
+  "dense_rank*when": 0.8241107093112849,
+  "dense_rank*count": -0.09895308791894362,
+  "dense_rank*change": -0.2574984434501946,
+  "own*all": 1.4353487532356255,
+  "own*order": 3.005638467505447,
+  "own*summary": -2.5544425541191855,
+  "own*when": 0.8080434512535705,
+  "own*count": 0.2683833812851107,
+  "own*change": 0.47887058017489903,
+  "short*all": 2.5355590936318495,
+  "short*order": 0.62236046480922,
+  "short*summary": -1.76288114431946,
+  "short*when": 0.7742274789530261,
+  "short*count": -0.3738404508736874,
+  "short*change": 0.48547357799545837,
+  "number*all": 1.5396602086228668,
+  "number*order": -0.02771626191582286,
+  "number*summary": -0.6207035140337789,
+  "number*when": 0.7441561644284304,
+  "number*count": 0.5559296427880818,
+  "number*change": 0.42619536425057747,
+  "surprise*all": 1.002353500032945,
+  "surprise*order": -0.6401593143668011,
+  "surprise*summary": -0.0019623340579460113,
+  "surprise*when": 0.8878583643265872,
+  "surprise*count": -0.771888943655821,
+  "surprise*change": -0.122798410706088,
+  "topic_surprise*all": 0.4431576450837254,
+  "topic_surprise*order": 0.05156751071347958,
+  "topic_surprise*summary": -0.184374155987589,
+  "topic_surprise*when": 1.0478102656903934,
+  "topic_surprise*count": -0.7982301986383381,
+  "topic_surprise*change": -0.3435573460164276,
+  "atypical*all": 1.863958658565496,
+  "atypical*order": -0.17421792177308953,
+  "atypical*summary": -0.7938417249436152,
+  "atypical*when": 0.3307446645494016,
+  "atypical*count": -0.10875696813640554,
+  "atypical*change": 0.5031597893289149,
+  "position*all": -1.8316295124441142,
+  "position*order": 0.467254332052455,
+  "position*summary": -0.4697663241756903,
+  "position*when": -1.2838606323857684,
+  "position*count": -1.4781737892386004,
+  "position*change": 0.29513256243092884,
+  "bias*all": 1.6349913718811204e-12,
+  "bias*order": -5.835071539886905e-13,
+  "bias*summary": 1.744421144431061e-11,
+  "bias*when": 1.4762447924201124e-11,
+  "bias*count": 9.27328851268387e-12,
+  "bias*change": -2.1065495508840944e-12
+ },
+ "500K (training, in-sample)": {
+  "hybrid": [
+   57.5,
+   54.5,
+   60.7
+  ],
+  "own words first": [
+   61.5,
+   58.4,
+   64.7
+  ],
+  "learned": [
+   65.3,
+   62.1,
+   68.4
+  ],
+  "contradiction_resolution": {
+   "hybrid": 82.1,
+   "own words first": 85.7,
+   "learned": 86.1
+  },
+  "event_ordering": {
+   "hybrid": 5.2,
+   "own words first": 7.4,
+   "learned": 10.0
+  },
+  "information_extraction": {
+   "hybrid": 56.4,
+   "own words first": 63.2,
+   "learned": 73.6
+  },
+  "instruction_following": {
+   "hybrid": 91.2,
+   "own words first": 92.6,
+   "learned": 91.9
+  },
+  "knowledge_update": {
+   "hybrid": 76.3,
+   "own words first": 81.2,
+   "learned": 81.5
+  },
+  "multi_session_reasoning": {
+   "hybrid": 52.8,
+   "own words first": 60.1,
+   "learned": 66.4
+  },
+  "preference_following": {
+   "hybrid": 68.1,
+   "own words first": 71.0,
+   "learned": 73.1
+  },
+  "summarization": {
+   "hybrid": 11.5,
+   "own words first": 9.6,
+   "learned": 14.8
+  },
+  "temporal_reasoning": {
+   "hybrid": 74.5,
+   "own words first": 83.5,
+   "learned": 90.2
+  },
+  "median_tokens": {
+   "hybrid": 4069,
+   "own words first": 1268,
+   "learned": 609
+  }
+ },
+ "100K": {
+  "hybrid": [
+   63.4,
+   60.3,
+   66.5
+  ],
+  "own words first": [
+   65.8,
+   62.5,
+   68.8
+  ],
+  "learned": [
+   68.1,
+   65.6,
+   70.4
+  ],
+  "contradiction_resolution": {
+   "hybrid": 79.9,
+   "own words first": 86.2,
+   "learned": 90.7
+  },
+  "event_ordering": {
+   "hybrid": 14.5,
+   "own words first": 22.4,
+   "learned": 28.2
+  },
+  "information_extraction": {
+   "hybrid": 65.0,
+   "own words first": 56.2,
+   "learned": 59.6
+  },
+  "instruction_following": {
+   "hybrid": 90.8,
+   "own words first": 90.8,
+   "learned": 90.8
+  },
+  "knowledge_update": {
+   "hybrid": 82.7,
+   "own words first": 88.5,
+   "learned": 88.3
+  },
+  "multi_session_reasoning": {
+   "hybrid": 55.4,
+   "own words first": 58.7,
+   "learned": 55.4
+  },
+  "preference_following": {
+   "hybrid": 77.8,
+   "own words first": 81.2,
+   "learned": 79.9
+  },
+  "summarization": {
+   "hybrid": 12.1,
+   "own words first": 7.6,
+   "learned": 17.5
+  },
+  "temporal_reasoning": {
+   "hybrid": 87.5,
+   "own words first": 95.0,
+   "learned": 97.5
+  },
+  "median_tokens": {
+   "hybrid": 4519,
+   "own words first": 1377,
+   "learned": 645
+  }
+ },
+ "1M": {
+  "hybrid": [
+   46.4,
+   44.5,
+   48.4
+  ],
+  "own words first": [
+   50.3,
+   48.4,
+   52.4
+  ],
+  "learned": [
+   53.1,
+   50.6,
+   55.7
+  ],
+  "contradiction_resolution": {
+   "hybrid": 59.7,
+   "own words first": 65.5,
+   "learned": 69.6
+  },
+  "event_ordering": {
+   "hybrid": 3.9,
+   "own words first": 5.6,
+   "learned": 7.4
+  },
+  "information_extraction": {
+   "hybrid": 42.5,
+   "own words first": 45.4,
+   "learned": 52.9
+  },
+  "instruction_following": {
+   "hybrid": 95.2,
+   "own words first": 96.0,
+   "learned": 95.5
+  },
+  "knowledge_update": {
+   "hybrid": 65.4,
+   "own words first": 75.4,
+   "learned": 76.4
+  },
+  "multi_session_reasoning": {
+   "hybrid": 32.7,
+   "own words first": 36.6,
+   "learned": 37.8
+  },
+  "preference_following": {
+   "hybrid": 46.9,
+   "own words first": 49.5,
+   "learned": 54.3
+  },
+  "summarization": {
+   "hybrid": 5.5,
+   "own words first": 5.1,
+   "learned": 6.5
+  },
+  "temporal_reasoning": {
+   "hybrid": 63.5,
+   "own words first": 70.6,
+   "learned": 74.9
+  },
+  "median_tokens": {
+   "hybrid": 3893,
+   "own words first": 1061,
+   "learned": 454
+  }
+ },
+ "10M": {
+  "hybrid": [
+   33.0,
+   29.5,
+   36.5
+  ],
+  "own words first": [
+   36.1,
+   32.3,
+   39.7
+  ],
+  "learned": [
+   36.1,
+   32.9,
+   39.2
+  ],
+  "contradiction_resolution": {
+   "hybrid": 49.7,
+   "own words first": 54.7,
+   "learned": 59.1
+  },
+  "event_ordering": {
+   "hybrid": 1.7,
+   "own words first": 2.1,
+   "learned": 1.8
+  },
+  "information_extraction": {
+   "hybrid": 61.0,
+   "own words first": 70.0,
+   "learned": 70.0
+  },
+  "instruction_following": {
+   "hybrid": 38.8,
+   "own words first": 38.8,
+   "learned": 38.8
+  },
+  "knowledge_update": {
+   "hybrid": 64.8,
+   "own words first": 71.5,
+   "learned": 65.1
+  },
+  "multi_session_reasoning": {
+   "hybrid": 19.2,
+   "own words first": 25.7,
+   "learned": 23.7
+  },
+  "preference_following": {
+   "hybrid": 27.5,
+   "own words first": 27.5,
+   "learned": 29.2
+  },
+  "summarization": {
+   "hybrid": 3.9,
+   "own words first": 2.4,
+   "learned": 2.3
+  },
+  "temporal_reasoning": {
+   "hybrid": 24.9,
+   "own words first": 25.4,
+   "learned": 28.4
+  },
+  "median_tokens": {
+   "hybrid": 3548,
+   "own words first": 1139,
+   "learned": 844
+  }
+ }
+}
