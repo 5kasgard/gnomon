@@ -346,6 +346,16 @@ taking the best turn from each part of the record was tried and did
 nothing (the evidence is not among the top 200 by words to begin with);
 those need dated summaries written once, or meaning, not reordering.
 
+**Sentences instead of messages.** At the same budget, giving the reader
+the sentences that match the question, each tagged with its message id so
+the full message can be fetched back exactly, carries far more of the
+facts BEAM's rubrics require. At 1M tokens, 1,000 tokens of sentences hold
+41.1% of facts, against 21.0% for whole messages and 14.8% for random
+sentences. 2,000 tokens of sentences beat 4,000 tokens of messages. With
+directives in a prompt-cached prefix, that is about 2,100 input tokens per
+question, roughly 50 times less than a cached copy of the whole history
+(`bench/beam_compress.md`; judge-free; a reader run is still to do).
+
 In a spot check, the cited message held the answer's numbers in 44 of 49
 questions, so BEAM's evidence ids are close to, not exactly, right.
 
