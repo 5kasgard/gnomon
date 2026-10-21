@@ -13,7 +13,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE.parent))
 
 from gnomon import GateError, Memory  # noqa: E402
-from gnomon.company import Company, Policy  # noqa: E402
+from gnomon.company import Company, Policy, check_preregistration, preregister  # noqa: E402
 
 
 class CompanyTest(unittest.TestCase):
@@ -68,6 +68,25 @@ class CompanyTest(unittest.TestCase):
         # Reopening finds the same company.
         again = Company.found(self.m, "john", "acme", "acme", self.c.templates)
         self.assertEqual(sorted(again.positions()), sorted(self.c.positions()))
+
+    def test_a_preregistered_protocol_cannot_be_swapped_or_backdated(self):
+        proto = "Floor protocol v1\nshare chosen on one half, scored on the other"
+        reg = preregister(self.m, "john", proto, compartment="acme")
+        result = self.c.note("john", "Floor held out: 0.925", channel="results")
+        self.assertTrue(check_preregistration(self.m, reg["claim"], proto, result, "acme")["ok"])
+        self.assertFalse(check_preregistration(self.m, reg["claim"], proto + " (edited)", result, "acme")["ok"])
+        # A protocol whose text embeds another's hash does not pass for it.
+        other = "sha256:" + __import__("hashlib").sha256(proto.encode()).hexdigest() + " decoy"
+        reg2 = preregister(self.m, "john", other, compartment="acme")
+        self.assertFalse(check_preregistration(self.m, reg2["claim"], proto, result, "acme")["ok"])
+        # A plain note holding a hash is not a registration.
+        note = self.c.note("john", "Preregistered protocol sha256:"
+                           + __import__("hashlib").sha256(proto.encode()).hexdigest(), channel="misc")
+        self.assertFalse(check_preregistration(self.m, note, proto, result, "acme")["ok"])
+        late = preregister(self.m, "john", "Protocol written after the fact", compartment="acme")
+        r = check_preregistration(self.m, late["claim"], "Protocol written after the fact", result, "acme")
+        self.assertFalse(r["ok"])
+        self.assertFalse(r["registered_first"])
 
     def test_refused_personnel_actions_leave_no_trace(self):
         ceo, cos, lead, engs = self.staff()

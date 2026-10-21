@@ -1,0 +1,6 @@
+gold.json
+conv*.txt
+memory_questions.jsonl
+full_questions.jsonl
+memory30_questions.jsonl
+memory30_rest.jsonl

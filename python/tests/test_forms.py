@@ -119,7 +119,7 @@ class FormsTest(unittest.TestCase):
         best = cands[-1].word
         for _ in range(60):
             for c in cands:
-                lr.update(p, c.word, (0.9 if c.word == best else 0.3) + rng.uniform(-0.05, 0.05))
+                lr.update(p, c, (0.9 if c.word == best else 0.3) + rng.uniform(-0.05, 0.05))
         self.assertEqual(lr.choose(p, cands).word, best)
         again = Learner.from_dict(lr.to_dict())
         self.assertEqual(again.choose(p, cands).word, best)

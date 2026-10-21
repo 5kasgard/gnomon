@@ -86,26 +86,60 @@ def build(sample: dict, workdir: Path) -> tuple[Memory, str, dict]:
     return m, "owner", ids
 
 
-def evaluate(data: list, ks: list[int], kinds=("turns",), tuning: dict | None = None) -> dict:
-    per_cat = defaultdict(lambda: {"n": 0, **{f"recall@{k}": 0.0 for k in ks}, **{f"all@{k}": 0 for k in ks}})
+def corrections(path: Path | None) -> dict:
+    """Evidence corrections from an audit of LoCoMo's answer key
+    (github.com/dial481/locomo-audit, errors.json): (sample index,
+    question) -> the evidence the audit says is right. Only citation errors
+    change evidence; answer errors do not affect retrieval."""
+    if not path:
+        return {}
+    out = {}
+    for e in json.loads(path.read_text(encoding="utf-8")):
+        m = re.match(r"locomo_(\d+)_qa", e.get("question_id", ""))
+        if m and e.get("correct_evidence") and set(e["correct_evidence"]) != set(e.get("cited_evidence", [])):
+            out[(int(m.group(1)), e["question"].strip())] = {x.strip() for x in e["correct_evidence"]}
+    return out
+
+
+def session_of(dia_id: str | None) -> str | None:
+    return dia_id.split(":", 1)[0] if dia_id else None
+
+
+def evaluate(data: list, ks: list[int], kinds=("turns",), tuning: dict | None = None,
+             fixes: dict | None = None, offset: int = 0) -> dict:
+    per_cat = defaultdict(lambda: {"n": 0, **{f"recall@{k}": 0.0 for k in ks}, **{f"all@{k}": 0 for k in ks},
+                                   **{f"session@{k}": 0.0 for k in ks}})
     timing = []
+    fixes = fixes or {}
     with tempfile.TemporaryDirectory() as d:
-        for sample in data:
+        for si, sample in enumerate(data):
             m, reader, ids = build(sample, Path(d))
             for qa in sample["qa"]:
-                evidence = {e.strip() for e in qa.get("evidence", []) if e.strip()}
+                # A few evidence entries hold two ids ("D8:6; D9:17") or a
+                # malformed one ("D"): split the former, drop the latter.
+                evidence = {x.strip() for e in qa.get("evidence", []) for x in re.split(r"[;,]", e)
+                            if re.fullmatch(r"D\d+:\d+", x.strip())}
+                evidence = fixes.get((si + offset, qa["question"].strip()), evidence)
                 if not evidence:
                     continue
                 t0 = time.perf_counter()
-                r = m.recall(reader, qa["question"], k=max(ks), kinds=list(kinds), tuning=tuning)
+                r = m.recall(reader, qa["question"], k=max(max(ks), 200), kinds=list(kinds), tuning=tuning)
                 timing.append(time.perf_counter() - t0)
                 got = [ids.get((h["episode"], int(h["id"].rsplit("#", 1)[1]))) for h in r["hits"]]
+                # Sessions ranked by their best turn, as session-level retrievers report.
+                sessions = []
+                for g in got:
+                    sg = session_of(g)
+                    if sg and sg not in sessions:
+                        sessions.append(sg)
+                ev_sessions = {session_of(e) for e in evidence}
                 c = per_cat[qa["category"]]
                 c["n"] += 1
                 for k in ks:
                     found = evidence & set(got[:k])
                     c[f"recall@{k}"] += len(found) / len(evidence)
                     c[f"all@{k}"] += int(found == evidence)
+                    c[f"session@{k}"] += len(ev_sessions & set(sessions[:k])) / len(ev_sessions)
     out = {}
     for cat, c in sorted(per_cat.items()):
         n = c["n"]
@@ -135,6 +169,8 @@ def main() -> int:
     p.add_argument("--ablation", action="store_true", help="each ranking technique on and off")
     p.add_argument("--tuning", help="JSON tuning to evaluate, e.g. '{\"session\": 300}'")
     p.add_argument("--grid", help="JSON {knob: [values,...]}: evaluate each value of each knob alone")
+    p.add_argument("--audit", help="errors.json from github.com/dial481/locomo-audit: score against corrected "
+                                   "evidence")
     a = p.parse_args()
     if a.data:
         path = Path(a.data)
@@ -146,7 +182,9 @@ def main() -> int:
         path = clone / "data" / "locomo10.json"
     ks = [int(x) for x in a.ks.split(",")]
     data = load(path)
+    offset = 5 if a.split == "test" else 0
     data = {"all": data, "dev": data[:5], "test": data[5:]}[a.split]
+    fixes = corrections(Path(a.audit)) if a.audit else {}
     if a.ablation:
         techniques = ["joins", "speaker_prior", "propagate", "prf"]
         configs = [("BM25 only", {t: False for t in techniques})]
@@ -170,11 +208,11 @@ def main() -> int:
                 row = evaluate(data, ks, tuning=t)["all (1-4)"]
                 print(f"{knob + '=' + str(v):<28}" + "".join(f"{row[f'recall@{k}']:>8}" for k in ks), flush=True)
         return 0
-    res = evaluate(data, ks, tuning=json.loads(a.tuning) if a.tuning else None)
+    res = evaluate(data, ks, tuning=json.loads(a.tuning) if a.tuning else None, fixes=fixes, offset=offset)
     if a.json:
         print(json.dumps(res, indent=1))
         return 0
-    cols = [f"recall@{k}" for k in ks] + [f"all@{k}" for k in ks]
+    cols = [f"recall@{k}" for k in ks] + [f"all@{k}" for k in ks] + [f"session@{k}" for k in ks]
     print(f"{'category':<14}{'n':>6}" + "".join(f"{c:>11}" for c in cols))
     for cat, row in res.items():
         if cat == "latency_ms":
