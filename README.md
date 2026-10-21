@@ -455,6 +455,13 @@ questions, `bench/situation.md`):
 
 This is evidence presence, not answers. A reader run is next.
 
+The model is needed only once. A Haiku sub-agent costs about 79K tokens
+before it reads anything. So Haiku's choices on one development history
+were distilled into a logistic regression on static embeddings, which
+selects for free. On the same four test histories it kept the evidence for
+81.7% of questions, against 75.7% for Haiku and 41.1% for random sentences
+of the same share (`bench/situation_distil.py`).
+
 **Compartments: the right mechanism depends on the record.** Within a
 dataset, choosing the method by question type gains 0.3-2.2 points. Across
 datasets the winner flips. Plain words score 70.4 on LoCoMo, where the

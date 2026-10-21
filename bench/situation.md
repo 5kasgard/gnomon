@@ -71,3 +71,38 @@ into the top 10 by any cheap signal measured. A small model reading each
 history once, selecting the user's own sentences about their situation
 without rewriting them, and loading that selection whole, puts the
 evidence in front of the reader for about four questions in five.
+
+## Cheaper: distil the selector into code (`situation_distil.py`)
+
+**Sub-agent overhead, measured.** A Haiku sub-agent that does nothing costs
+about 79K tokens (`subagent_tokens` for "reply ok"), and every step inside
+an agent pays it again. A reader that reads, writes and replies is three
+such steps. Most of the 615K tokens per history was overhead, not reading.
+
+**The toolmaker step.** A logistic regression was trained on static
+embeddings plus six word flags, using Haiku's keep/skip labels from one
+development history (4,831 sentences, 1,223 kept). It was then run on the
+four test histories, with no model calls:
+
+| Test (202 questions), evidence among the kept sentences | Recall |
+|---|---|
+| Haiku readers (v2), about 35K tokens kept | 75.7 |
+| Distilled, same number of sentences as Haiku kept | 77.2 |
+| **Distilled, the dev share (25.3% of sentences), about 48K tokens** | **81.7** |
+| Distilled, twice the dev share | 90.1 |
+| Random sentences, dev share | 41.1 |
+
+The distilled scores agree with Haiku's own choices at AUC 0.68-0.78.
+The "same number" row borrows Haiku's test counts and is shown only for
+comparison. The dev-share row uses nothing from the test set.
+
+**What this changes.** The model is needed once, to label one history.
+After that every history, and every new turn, is selected by code at
+about 45,000 sentences a second, for no tokens.
+
+**Caveats:**
+- This was designed after the Haiku test run, but trained only on
+  development data, with the budget fixed from development. One run.
+- The classifier learnt from one persona's history in one benchmark.
+- For a real user, the design is to have a model label a sample of their
+  own history once, then train the classifier on those labels.
