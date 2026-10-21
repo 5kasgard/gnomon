@@ -150,6 +150,25 @@ class Modern(Fixture):
         r = self.s.call("recall", {"query": "x", "kinds": ["pages"]})
         self.assertTrue(r["isError"])
 
+    def test_context_tiers_and_expand(self):
+        r = self.s.call("record_conversation", {
+            "messages": [{"speaker": "John", "text": "Always give times in 24-hour format. We ship on March 3."},
+                         {"speaker": "Claude", "text": "Always glad to help. Shipping is set for March 3."}],
+            "compartment": "lab", "frame": "chat", "extract": False})
+        self.assertFalse(r["isError"], r)
+        r = self.s.call("context", {"query": "when do we ship", "budget": 300})
+        self.assertFalse(r["isError"], r)
+        text, sc = r["content"][0]["text"], r["structuredContent"]
+        self.assertTrue(text.startswith("Standing instructions"))
+        self.assertIn("John: Always give times in 24-hour format.", text)
+        self.assertNotIn("Always glad to help", text.split("From the record")[0])
+        self.assertTrue(sc["view"])
+        r = self.s.call("expand", {"pointer": sc["view"][0]["pointer"]})
+        self.assertFalse(r["isError"], r)
+        self.assertIn("March 3", r["content"][0]["text"])
+        r = self.s.call("expand", {"pointer": "nobody/1#0"})
+        self.assertTrue(r["isError"])
+
     def test_record_conversation_extracts_and_leaves_residue(self):
         r = self.s.call("record_conversation", {
             "messages": [{"speaker": "John", "text": "Let's use Rust for the core. Maybe Python on top?"},

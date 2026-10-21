@@ -27,3 +27,23 @@ scripts.
 Score: `python bench/beam_qa/score.py bench/beam_qa gold.json` (gold.json
 comes from make.py; BEAM's text is not copied into this repository).
 One run per condition.
+
+## View comparison (2026-10-21, fixed before any reader ran)
+
+Same 10 conversations and 100 questions. Each question gets one view of
+the memory at 1,000 or 2,000 tokens (`make_views.py`): whole messages in
+rank order, with the last one cut to fill the budget, or matching
+sentences each tagged [m<id>]. Eight Haiku sub-agents, one per view,
+budget and half of the conversations. The gold answers were outside the
+readers' folder.
+
+Prompt: "Open <file>. Each line is a JSON object with an id, a question,
+and "memory": the only text you may use for that question. Answer each
+question from its own memory only, in one short sentence that states the
+specific facts asked for (names, numbers, dates, versions). If the memory
+does not contain the answer, answer exactly "Not mentioned". Write one
+JSON line per question, {"id": ..., "answer": ...}, to <answers file>."
+The same restrictions as above apply. Scored with score.py: token F1,
+numbers right, abstention, and false "Not mentioned".
+
+Results: `score_views.py`, `views_results.json`, and the summary in `../beam_compress.md`.

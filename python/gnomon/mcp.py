@@ -194,6 +194,38 @@ TOOLS: list[dict] = [
         "annotations": {"readOnlyHint": True, "openWorldHint": False},
     },
     {
+        "name": "context",
+        "title": "Context for a reply, in tiers",
+        "description": (
+            "What to read before answering, within a token budget: first the user's standing "
+            "instructions and preferences (\"Always...\", \"Never...\", \"I prefer...\"), which apply "
+            "whatever the question is about and change rarely, so keep them at the front where a prompt "
+            "cache can hold them; then the sentences of the record that bear on the question, each with "
+            "a [pointer] to its turn. On BEAM conversations of a million tokens, sentences carry more of "
+            "the facts an answer needs per token than whole messages. Use `expand` on a pointer to read "
+            "the whole turn exactly as recorded."
+        ),
+        "inputSchema": _schema({
+            "query": {"type": "string", "description": "The question being answered."},
+            "budget": {"type": "integer", "minimum": 100, "maximum": 20000,
+                       "description": "Tokens for the sentences from the record (default 2000)."},
+            "directive_budget": {"type": "integer", "minimum": 0, "maximum": 10000,
+                                 "description": "Tokens for standing instructions (default 1500)."},
+            "now": {"type": "string", "description": "When the question is asked (YYYY-MM-DDTHH:MM:SSZ)."},
+            "as_of": {"type": "string", "description": "Use only what was recorded by then."},
+        }, ["query"]),
+        "annotations": {"readOnlyHint": True, "openWorldHint": False},
+    },
+    {
+        "name": "expand",
+        "title": "Expand a pointer",
+        "description": "The whole turn a [pointer] from `context` or `recall` names, exactly as recorded.",
+        "inputSchema": _schema({
+            "pointer": {"type": "string", "description": "e.g. owner/12#3"},
+        }, ["pointer"]),
+        "annotations": {"readOnlyHint": True, "openWorldHint": False},
+    },
+    {
         "name": "query_language",
         "title": "Query language reference",
         "description": "The base relations, the built-in views and the syntax for `query`.",
@@ -644,6 +676,27 @@ class Server:
         slim = [{k: h[k] for k in ("kind", "id", "episode", "turn", "speaker", "speaker_is", "time", "score")
                  if k in h} for h in r["hits"]]
         return "\n".join(lines), {"hits": slim, "searched": r["searched"], "query_terms": r["query_terms"]}
+
+    def _tiers(self):
+        if getattr(self, "_tier_cache", None) is None:
+            from .consolidate import Tiers
+            self._tier_cache = Tiers(self.memory, self.writer)
+        return self._tier_cache
+
+    def t_context(self, a: dict) -> tuple[str, Any]:
+        opts = {"now": a["now"]} if "now" in a else {}
+        c = self._tiers().context(a["query"], budget=a.get("budget", 2000),
+                                  directive_budget=a.get("directive_budget", 1500), as_of=a.get("as_of"), **opts)
+        return c["text"], {"standing": [d["source"] for d in c["standing"]],
+                           "view": [{k: s[k] for k in ("pointer", "start", "end")} for s in c["view"]],
+                           "tokens": c["tokens"]}
+
+    def t_expand(self, a: dict) -> tuple[str, Any]:
+        try:
+            t = self._tiers().expand(a["pointer"])
+        except (KeyError, IndexError, ValueError) as e:
+            raise ToolError(f"cannot expand {a['pointer']!r}: {e}")
+        return f"{_ts(t['time'])} {_line(t['speaker'])}: {t['text']}", {k: t[k] for k in ("pointer", "start", "end")}
 
     def t_query_language(self, a: dict) -> tuple[str, Any]:
         schema = _native.call("gn_views")["schema"]

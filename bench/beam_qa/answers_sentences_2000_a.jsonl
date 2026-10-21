@@ -1,0 +1,50 @@
+{"id": "m35_info0", "answer": "You set aside $10 from the $80 gift budget as a new contingency fund."}
+{"id": "m35_info1", "answer": "Not mentioned"}
+{"id": "m35_know0", "answer": "Gift purchases were due by December 10th, according to your checklist."}
+{"id": "m35_know1", "answer": "The estimated grocery cost from Migros is $360."}
+{"id": "m35_temp0", "answer": "10 days passed, from December 13 to December 23."}
+{"id": "m35_temp1", "answer": "Jordan's rehearsal dinner was 6 days before your Christmas Eve dinner, on December 18 versus December 24."}
+{"id": "m35_mult0", "answer": "You are planning for 15 people, and Secret Santa gifts are budgeted at $30 per person."}
+{"id": "m35_mult1", "answer": "Not mentioned"}
+{"id": "m35_abst0", "answer": "Not mentioned"}
+{"id": "m35_abst1", "answer": "Not mentioned"}
+{"id": "m25_info0", "answer": "Not mentioned"}
+{"id": "m25_info1", "answer": "Run a soft launch with the select group, gather feedback through in-app surveys, email forms and user interviews, and iterate before a phased rollout."}
+{"id": "m25_know0", "answer": "85 users had signed up for the Istanbul pilot by August 14, 2024, after 45 had signed up by May 19, 2024."}
+{"id": "m25_know1", "answer": "The memory cites a 14% upsell rate for coaching services, and says the September 8, 2024 upsell emails increased it by 12%."}
+{"id": "m25_temp0", "answer": "30 days passed, from the June 1, 2024 prototype deadline to the July 1, 2024 launch."}
+{"id": "m25_temp1", "answer": "Not mentioned"}
+{"id": "m25_mult0", "answer": "Denise's three new influencer partners reach 25,000 followers combined, although 15,000 was the earlier expected reach."}
+{"id": "m25_mult1", "answer": "The memory suggests pursuing grants and angel investors, building a cash reserve, and using coaching upsells such as free trials and tiered pricing to protect revenue and retention."}
+{"id": "m25_abst0", "answer": "Not mentioned"}
+{"id": "m25_abst1", "answer": "The memory only has a suggested plan, not the draft: a 12-page document due April 20, 2024, covering the executive summary, company description, organization and management, products and services, and marketing and sales strategy, built week by week from March 10."}
+{"id": "m1_info0", "answer": "You planned React 18.2 for the frontend, Node.js 18 for the backend, and PostgreSQL 14 for the database."}
+{"id": "m1_info1", "answer": "Port 4000."}
+{"id": "m1_know0", "answer": "March 18, 2024, your adjusted deadline (originally March 15, 2024)."}
+{"id": "m1_know1", "answer": "A 20-minute TTL (1200 seconds), extended from 15 minutes."}
+{"id": "m1_temp0", "answer": "7 days passed, from the March 25, 2024 integration deadline to the April 1, 2024 sprint review."}
+{"id": "m1_temp1", "answer": "10 days, from April 10, 2024 to April 20, 2024."}
+{"id": "m1_mult0", "answer": "The memory suggests a token bucket or Bull-based queue with exponential backoff for 429 errors, express-rate-limit, TTL tuning and Redis Cluster, starting from 180ms latency and an 85% cache hit rate."}
+{"id": "m1_mult1", "answer": "Four: language detection results, the last 10 messages per user session, recent translations, and the last 20 messages for the /api/memory endpoint."}
+{"id": "m1_abst0", "answer": "Your background is in clinical psychology, but the memory does not say where you studied."}
+{"id": "m1_abst1", "answer": "You reported a 90% satisfaction rate from user testing of the multi-language switching feature."}
+{"id": "m34_info0", "answer": "Not mentioned"}
+{"id": "m34_info1", "answer": "Pursue grants, sponsorships and crowdfunding, offer tiered sponsorship packages such as Platinum at 10,000 TRY, and review the budget regularly."}
+{"id": "m34_know0", "answer": "Not mentioned"}
+{"id": "m34_know1", "answer": "Instagram followers rose 15% within one week of the influencer partnerships."}
+{"id": "m34_temp0", "answer": "Not mentioned"}
+{"id": "m34_temp1", "answer": "0 hours, since the puppet show runs 2:00 to 3:00 PM and face painting runs 3:30 to 5:00 PM."}
+{"id": "m34_mult0", "answer": "Not mentioned"}
+{"id": "m34_mult1", "answer": "Pay Steve the full 7,000 TRY from the remaining budget, offer DJ Mert a 2,500 TRY partial payment upfront, and cover Anadolu Dans's 6,000 TRY from the contingency fund."}
+{"id": "m34_abst0", "answer": "Not mentioned"}
+{"id": "m34_abst1", "answer": "Not mentioned"}
+{"id": "m13_info0", "answer": "You first set aside $50,000 as initial capital, later increased to $60,000."}
+{"id": "m13_info1", "answer": "Use a weekly study plan with fixed time blocks, weekly segments and daily goals, track progress with a calendar or to-do list, and keep flexible catch-up slots."}
+{"id": "m13_know0", "answer": "You allocated $60,000, increased from $50,000."}
+{"id": "m13_know1", "answer": "July 18, 2024."}
+{"id": "m13_temp0", "answer": "0 days, since both the Mehmet viewing and the visit deadline are April 10, 2024."}
+{"id": "m13_temp1", "answer": "Not mentioned"}
+{"id": "m13_mult0", "answer": "2 banks: Halkbank and Ziraat Bank."}
+{"id": "m13_mult1", "answer": "The memory notes an $80,000 Halkbank pre-approval at 9.5% APR and a projected net monthly cash flow of $2,233, and suggests cutting expenses, raising rent and keeping a contingency fund."}
+{"id": "m13_abst0", "answer": "Not mentioned"}
+{"id": "m13_abst1", "answer": "Halkbank offers 9.5% APR (about $790 monthly, $144,400 total interest) and Ziraat Bank offers 10.2% APR (about $813 monthly, $152,680 total interest), a difference of about $8,280 over 30 years."}
