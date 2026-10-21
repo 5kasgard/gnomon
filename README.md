@@ -346,6 +346,28 @@ taking the best turn from each part of the record was tried and did
 nothing (the evidence is not among the top 200 by words to begin with);
 those need dated summaries written once, or meaning, not reordering.
 
+**A meaning layer.** Next to word ranking, Gnomon can rank by meaning
+using static embeddings (model2vec potion-retrieval-32M). That is a lookup
+table rather than a network, encoding about 45,000 messages a second on two
+CPUs. The two rankings are fused by reciprocal rank. The settings were
+fixed on 500K and then run once on the other sizes. Recall@10, words
+alone against hybrid (`bench/beam_dense.md`):
+
+| Length | Words | Words + meaning | Tokens sent |
+|---|---|---|---|
+| 100K | 59.0 | **63.4** | 5,363 -> 4,519 |
+| 1M | 40.2 | **46.4** | 6,045 -> 3,893 |
+| 10M | 24.3 | **33.0** | 5,308 -> 3,589 |
+
+Hybrid recalls more evidence and sends fewer tokens at every size.
+Questions that join facts across sessions gain most: 20.8 -> 32.7 at 1M.
+
+**Repairable storage.** `gnomon.parity` adds Reed-Solomon parity beside
+the log: 2 parity blocks for every 16 blocks of 4 KiB, 14.4% extra
+storage. Any 2 damaged blocks in a stripe are rebuilt byte for byte, and
+the hash chain then proves the repair. More damage than that is refused,
+never guessed. It protects 50 MiB in about half a second.
+
 **Sentences instead of messages.** Gnomon's `context` gives the reader
 the sentences that match the question, each tagged with a pointer to its
 turn (`expand` returns the whole turn exactly). The standing directives
