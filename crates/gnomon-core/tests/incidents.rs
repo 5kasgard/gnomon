@@ -16,10 +16,20 @@ use gnomon_core::ledger::{envelope_hash, Ledger, VerifyStatus};
 fn si008_parallel_writers_cannot_collide() {
     let mut l = lab();
     let a = l
-        .append(draft("claude-c1", 10, "claim", claim_body("A", "asserted", "true")))
+        .append(draft(
+            "claude-c1",
+            10,
+            "claim",
+            claim_body("A", "asserted", "true"),
+        ))
         .unwrap();
     let b = l
-        .append(draft("gpt-g1", 10, "claim", claim_body("B", "asserted", "true")))
+        .append(draft(
+            "gpt-g1",
+            10,
+            "claim",
+            claim_body("B", "asserted", "true"),
+        ))
         .unwrap();
     assert_ne!(a.get("event_id"), b.get("event_id"));
 
@@ -39,8 +49,13 @@ fn si008_parallel_writers_cannot_collide() {
 #[test]
 fn si010_writer_cannot_reuse_or_skip_ids() {
     let mut l = lab();
-    l.append(draft("gpt-g1", 10, "claim", claim_body("first", "asserted", "true")))
-        .unwrap();
+    l.append(draft(
+        "gpt-g1",
+        10,
+        "claim",
+        claim_body("first", "asserted", "true"),
+    ))
+    .unwrap();
     let last = l.events.last().unwrap().clone();
     for bad_seq in [1, 3] {
         let env = last
@@ -58,7 +73,12 @@ fn si010_writer_cannot_reuse_or_skip_ids() {
 #[test]
 fn arp001_author_cannot_verify_own_claim() {
     let mut l = lab();
-    let id = add_claim(&mut l, "gpt-g1", 10, claim_body("gate passed", "asserted", "true"));
+    let id = add_claim(
+        &mut l,
+        "gpt-g1",
+        10,
+        claim_body("gate passed", "asserted", "true"),
+    );
     let r = l.append(draft(
         "gpt-g1",
         11,
@@ -77,7 +97,12 @@ fn arp001_author_cannot_verify_own_claim() {
 #[test]
 fn arp001_second_identity_of_same_party_cannot_verify() {
     let mut l = lab();
-    let id = add_claim(&mut l, "claude-c1", 10, claim_body("x holds", "asserted", "true"));
+    let id = add_claim(
+        &mut l,
+        "claude-c1",
+        10,
+        claim_body("x holds", "asserted", "true"),
+    );
     let r = l.append(draft(
         "claude-c2",
         11,
@@ -126,8 +151,18 @@ fn arp001_schema_change_needs_govern_capability() {
 #[test]
 fn arp001_party_to_dispute_cannot_resolve_it() {
     let mut l = lab();
-    let old = add_claim(&mut l, "claude-c1", 10, claim_body("design A is best", "asserted", "true"));
-    let new = add_claim(&mut l, "gpt-g1", 11, claim_body("design B is best", "asserted", "true"));
+    let old = add_claim(
+        &mut l,
+        "claude-c1",
+        10,
+        claim_body("design A is best", "asserted", "true"),
+    );
+    let new = add_claim(
+        &mut l,
+        "gpt-g1",
+        11,
+        claim_body("design B is best", "asserted", "true"),
+    );
     let sup = l
         .append(draft(
             "gpt-g1",
@@ -156,14 +191,24 @@ fn arp001_party_to_dispute_cannot_resolve_it() {
     };
     // Both parties (and the old claim's party via a second identity) are refused.
     for w in ["gpt-g1", "claude-c1", "claude-c2"] {
-        assert_eq!(code(l.append(draft(w, 13, "resolve", resolve("new")))), "E_RESOLVE_PARTY", "{w}");
+        assert_eq!(
+            code(l.append(draft(w, 13, "resolve", resolve("new")))),
+            "E_RESOLVE_PARTY",
+            "{w}"
+        );
     }
     // A neutral party resolves it.
-    assert_eq!(code(l.append(draft("kimi-k1", 14, "resolve", resolve("new")))), "OK");
+    assert_eq!(
+        code(l.append(draft("kimi-k1", 14, "resolve", resolve("new")))),
+        "OK"
+    );
     assert_eq!(l.state.truth(&old).unwrap(), "false");
     assert_eq!(l.state.truth(&new).unwrap(), "true");
     // And it cannot be re-resolved.
-    assert_eq!(code(l.append(draft("john", 15, "resolve", resolve("old")))), "E_RESOLVE");
+    assert_eq!(
+        code(l.append(draft("john", 15, "resolve", resolve("old")))),
+        "E_RESOLVE"
+    );
 }
 
 // ------------------------------------------------- The Field / RabbitHole
@@ -178,9 +223,15 @@ fn field_overflow_family_is_unrepresentable() {
     assert!(json::parse("9007199254740993").is_err());
     let mut l = lab();
     let body = claim_body("x", "asserted", "true").with("confidence", Value::Int(10_001));
-    assert_eq!(code(l.append(draft("claude-c1", 10, "claim", body))), "E_BODY");
+    assert_eq!(
+        code(l.append(draft("claude-c1", 10, "claim", body))),
+        "E_BODY"
+    );
     let body = claim_body("x", "asserted", "true").with("confidence", Value::Int(-1));
-    assert_eq!(code(l.append(draft("claude-c1", 10, "claim", body))), "E_BODY");
+    assert_eq!(
+        code(l.append(draft("claude-c1", 10, "claim", body))),
+        "E_BODY"
+    );
 }
 
 /// "Budget exhausted" was once reported as "settled". Verification with a
@@ -208,9 +259,15 @@ fn field_honest_states() {
     let body = claim_body("maybe", "asserted", "true")
         .with("origin", Value::str("guessed"))
         .with("confidence", Value::Int(10_000));
-    assert_eq!(code(l.append(draft("claude-c1", 10, "claim", body))), "E_BODY");
+    assert_eq!(
+        code(l.append(draft("claude-c1", 10, "claim", body))),
+        "E_BODY"
+    );
     let body = claim_body("is it?", "asked", "true");
-    assert_eq!(code(l.append(draft("claude-c1", 11, "claim", body))), "E_BODY");
+    assert_eq!(
+        code(l.append(draft("claude-c1", 11, "claim", body))),
+        "E_BODY"
+    );
 }
 
 // ------------------------------------------- Swarm and memory failures
@@ -232,9 +289,15 @@ fn suggestion_and_decision_are_distinct_claims() {
 fn hidden_channels_rejected_in_claims_flagged_in_episodes() {
     let mut l = lab();
     let body = claim_body("normal\u{200b}text", "asserted", "true");
-    assert_eq!(code(l.append(draft("claude-c1", 10, "claim", body))), "E_HIDDEN_CHARS");
+    assert_eq!(
+        code(l.append(draft("claude-c1", 10, "claim", body))),
+        "E_HIDDEN_CHARS"
+    );
     let body = claim_body("tag\u{e0041}smuggle", "asserted", "true");
-    assert_eq!(code(l.append(draft("claude-c1", 10, "claim", body))), "E_HIDDEN_CHARS");
+    assert_eq!(
+        code(l.append(draft("claude-c1", 10, "claim", body))),
+        "E_HIDDEN_CHARS"
+    );
 
     let ep = Value::obj(vec![
         ("compartment", Value::str("lab")),
@@ -259,8 +322,12 @@ fn hidden_channels_rejected_in_claims_flagged_in_episodes() {
 #[test]
 fn compartments_do_not_leak() {
     let mut l = lab();
-    let private = claim_body("private note", "asserted", "true").with("compartment", Value::str("private"));
-    assert_eq!(code(l.append(draft("claude-c1", 10, "claim", private.clone()))), "E_COMPARTMENT");
+    let private =
+        claim_body("private note", "asserted", "true").with("compartment", Value::str("private"));
+    assert_eq!(
+        code(l.append(draft("claude-c1", 10, "claim", private.clone()))),
+        "E_COMPARTMENT"
+    );
     let id = add_claim(&mut l, "john", 11, private);
     let r = l.append(draft(
         "gpt-g1",
@@ -282,8 +349,18 @@ fn compartments_do_not_leak() {
 #[test]
 fn refutation_requires_a_refuting_verdict() {
     let mut l = lab();
-    let old = add_claim(&mut l, "claude-c1", 10, claim_body("cache is safe", "asserted", "true"));
-    let new = add_claim(&mut l, "gpt-g1", 11, claim_body("cache leaks across users", "asserted", "true"));
+    let old = add_claim(
+        &mut l,
+        "claude-c1",
+        10,
+        claim_body("cache is safe", "asserted", "true"),
+    );
+    let new = add_claim(
+        &mut l,
+        "gpt-g1",
+        11,
+        claim_body("cache leaks across users", "asserted", "true"),
+    );
     let sup = |ev: Vec<Value>| {
         Value::obj(vec![
             ("old", Value::str(old.clone())),
@@ -293,7 +370,15 @@ fn refutation_requires_a_refuting_verdict() {
             ("reason", Value::str("leak reproduced")),
         ])
     };
-    assert_eq!(code(l.append(draft("gpt-g1", 12, "supersede", sup(vec![Value::str(new.clone())])))), "E_EVIDENCE");
+    assert_eq!(
+        code(l.append(draft(
+            "gpt-g1",
+            12,
+            "supersede",
+            sup(vec![Value::str(new.clone())])
+        ))),
+        "E_EVIDENCE"
+    );
     let v = l
         .append(draft(
             "kimi-k1",
@@ -307,7 +392,10 @@ fn refutation_requires_a_refuting_verdict() {
         ))
         .unwrap();
     let v_id = v.get("event_id").unwrap().clone();
-    assert_eq!(code(l.append(draft("gpt-g1", 14, "supersede", sup(vec![v_id])))), "OK");
+    assert_eq!(
+        code(l.append(draft("gpt-g1", 14, "supersede", sup(vec![v_id])))),
+        "OK"
+    );
     assert_eq!(l.state.truth(&old).unwrap(), "false");
 }
 
@@ -316,7 +404,12 @@ fn refutation_requires_a_refuting_verdict() {
 #[test]
 fn narrowing_keeps_old_claim_true_in_its_domain() {
     let mut l = lab();
-    let old = add_claim(&mut l, "claude-c1", 10, claim_body("F = ma exactly", "asserted", "true"));
+    let old = add_claim(
+        &mut l,
+        "claude-c1",
+        10,
+        claim_body("F = ma exactly", "asserted", "true"),
+    );
     let new_body = claim_body("F = ma at low speeds", "asserted", "true")
         .with("validity_domain", Value::str("v much less than c"));
     let new = add_claim(&mut l, "gpt-g1", 11, new_body);
@@ -344,19 +437,36 @@ fn identical_claims_corroborate() {
     let mut l = lab();
     let body = claim_body("tests pass on main", "asserted", "true");
     let id = add_claim(&mut l, "claude-c1", 10, body.clone());
-    l.append(draft("gpt-g1", 11, "claim", body.clone())).unwrap();
+    l.append(draft("gpt-g1", 11, "claim", body.clone()))
+        .unwrap();
     assert_eq!(l.state.claims[&id].author, "claude-c1");
-    assert_eq!(l.state.claims[&id].corroborated_by, vec!["gpt-g1".to_string()]);
-    assert_eq!(code(l.append(draft("gpt-g1", 12, "claim", body))), "E_DUPLICATE");
+    assert_eq!(
+        l.state.claims[&id].corroborated_by,
+        vec!["gpt-g1".to_string()]
+    );
+    assert_eq!(
+        code(l.append(draft("gpt-g1", 12, "claim", body))),
+        "E_DUPLICATE"
+    );
 }
 
 /// Record time never runs backwards.
 #[test]
 fn clock_cannot_run_backwards() {
     let mut l = lab();
-    l.append(draft("claude-c1", 30, "claim", claim_body("later", "asserted", "true")))
-        .unwrap();
-    let r = l.append(draft("gpt-g1", 20, "claim", claim_body("earlier", "asserted", "true")));
+    l.append(draft(
+        "claude-c1",
+        30,
+        "claim",
+        claim_body("later", "asserted", "true"),
+    ))
+    .unwrap();
+    let r = l.append(draft(
+        "gpt-g1",
+        20,
+        "claim",
+        claim_body("earlier", "asserted", "true"),
+    ));
     assert_eq!(code(r), "E_CLOCK");
 }
 
@@ -365,6 +475,9 @@ fn clock_cannot_run_backwards() {
 fn unknown_fields_are_refused() {
     let mut l = lab();
     let body = claim_body("x", "asserted", "true").with("reliability", Value::str("high"));
-    assert_eq!(code(l.append(draft("claude-c1", 10, "claim", body))), "E_BODY");
+    assert_eq!(
+        code(l.append(draft("claude-c1", 10, "claim", body))),
+        "E_BODY"
+    );
     let _ = j("{}");
 }

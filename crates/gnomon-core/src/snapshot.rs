@@ -39,11 +39,10 @@ use std::sync::OnceLock;
 
 use crate::json::Value;
 use crate::ledger::{
-    AppealInfo, ClaimInfo, EpisodeInfo, HandoffInfo, Ledger, Resolution, State, SupersessionInfo, VerdictInfo,
-    WriterInfo,
+    AppealInfo, AppointmentInfo, ClaimInfo, EpisodeInfo, HandoffInfo, Ledger, PositionInfo,
+    Resolution, State, SupersessionInfo, VerdictInfo, WriterInfo,
 };
 use crate::sha256::digest;
-
 
 const MAGIC: &[u8; 8] = b"GNSNAP2\n";
 /// Magic, code hash, bytes covered, their hash, HMAC.
@@ -57,7 +56,11 @@ pub const MIN_EVENTS: usize = 1000;
 pub fn min_events() -> usize {
     static N: OnceLock<usize> = OnceLock::new();
     *N.get_or_init(|| {
-        std::env::var("GNOMON_SNAPSHOT_MIN_EVENTS").ok().and_then(|v| v.parse().ok()).unwrap_or(MIN_EVENTS).max(1)
+        std::env::var("GNOMON_SNAPSHOT_MIN_EVENTS")
+            .ok()
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(MIN_EVENTS)
+            .max(1)
     })
 }
 
@@ -121,7 +124,9 @@ impl<'a> Reader<'a> {
     fn len(&mut self) -> Option<usize> {
         let n = u64::dec(self)?;
         // No collection can hold more items than there are bytes left.
-        usize::try_from(n).ok().filter(|n| *n <= self.b.len() - self.at)
+        usize::try_from(n)
+            .ok()
+            .filter(|n| *n <= self.b.len() - self.at)
     }
 }
 
@@ -257,6 +262,18 @@ impl<A: Codec, B: Codec, C: Codec> Codec for (A, B, C) {
     }
 }
 
+impl<A: Codec, B: Codec, C: Codec, D: Codec> Codec for (A, B, C, D) {
+    fn enc(&self, w: &mut Vec<u8>) {
+        self.0.enc(w);
+        self.1.enc(w);
+        self.2.enc(w);
+        self.3.enc(w);
+    }
+    fn dec(r: &mut Reader) -> Option<Self> {
+        Some((A::dec(r)?, B::dec(r)?, C::dec(r)?, D::dec(r)?))
+    }
+}
+
 impl<T: Codec> Codec for BTreeMap<String, T> {
     fn enc(&self, w: &mut Vec<u8>) {
         self.len().enc(w);
@@ -361,22 +378,126 @@ macro_rules! codec_struct {
 }
 
 codec_struct!(WriterInfo {
-    seq, party, kind, capabilities, compartments, last_seq, name, model, operator, surface, session, instance_of
+    seq,
+    party,
+    kind,
+    capabilities,
+    compartments,
+    last_seq,
+    name,
+    model,
+    operator,
+    surface,
+    session,
+    instance_of
 });
-codec_struct!(EpisodeInfo { seq, compartment, writer, record_time, hidden_chars, body, participants, turns, bindings });
+codec_struct!(EpisodeInfo {
+    seq,
+    compartment,
+    writer,
+    record_time,
+    hidden_chars,
+    body,
+    participants,
+    turns,
+    bindings
+});
 codec_struct!(ClaimInfo {
-    body, compartment, asserted_truth, author, speaker_is, first_event, seq, assertions, record_time,
-    corroborated_by, parties, verifier_parties, supports, refutes, abstains, superseded_by, supersedes
+    body,
+    compartment,
+    asserted_truth,
+    author,
+    speaker_is,
+    first_event,
+    seq,
+    assertions,
+    record_time,
+    corroborated_by,
+    parties,
+    verifier_parties,
+    supports,
+    refutes,
+    abstains,
+    superseded_by,
+    supersedes
 });
-codec_struct!(Resolution { event, outcome, party, seq, by_refutation });
+codec_struct!(Resolution {
+    event,
+    outcome,
+    party,
+    seq,
+    by_refutation
+});
 codec_struct!(SupersessionInfo {
-    old, new, kind, compartment, evidence, by, by_party, record_time, seq, dispute_parties, resolution
+    old,
+    new,
+    kind,
+    compartment,
+    evidence,
+    by,
+    by_party,
+    record_time,
+    seq,
+    dispute_parties,
+    resolution
 });
-codec_struct!(VerdictInfo { claim, result, writer, seq });
-codec_struct!(HandoffInfo { seq, compartment, frame, writer, record_time, body });
-codec_struct!(AppealInfo { claim, compartment, evidence, by, by_party, record_time, seq, appeal_parties, resolution });
+codec_struct!(VerdictInfo {
+    claim,
+    result,
+    writer,
+    seq
+});
+codec_struct!(HandoffInfo {
+    seq,
+    compartment,
+    frame,
+    writer,
+    record_time,
+    body
+});
+codec_struct!(AppealInfo {
+    claim,
+    compartment,
+    evidence,
+    by,
+    by_party,
+    record_time,
+    seq,
+    appeal_parties,
+    resolution
+});
+codec_struct!(PositionInfo {
+    compartment,
+    org,
+    title,
+    reports_to,
+    duties,
+    by,
+    event,
+    seq
+});
+codec_struct!(AppointmentInfo {
+    compartment,
+    org,
+    title,
+    holder,
+    by,
+    record_time,
+    seq,
+    ended
+});
 codec_struct!(State {
-    writers, episodes, claims, supersessions, verdicts, appeals, handoffs, appeals_by_claim, schema_version
+    writers,
+    episodes,
+    claims,
+    supersessions,
+    verdicts,
+    appeals,
+    handoffs,
+    positions,
+    appointments,
+    appeals_by_claim,
+    schema_version
 });
 codec_struct!(Ledger { events, state });
 
@@ -400,7 +521,10 @@ fn ours(meta: &std::fs::Metadata, forbidden: u32) -> bool {
 fn our_dir(dir: &Path) -> Option<()> {
     use std::os::unix::fs::DirBuilderExt;
     if !dir.exists() {
-        let _ = std::fs::DirBuilder::new().recursive(true).mode(0o700).create(dir);
+        let _ = std::fs::DirBuilder::new()
+            .recursive(true)
+            .mode(0o700)
+            .create(dir);
     }
     let meta = std::fs::symlink_metadata(dir).ok()?;
     (meta.is_dir() && ours(&meta, 0o022)).then_some(())
@@ -415,7 +539,10 @@ fn key() -> Option<&'static [u8; 32]> {
             Some(d) if !d.is_empty() => PathBuf::from(d),
             _ => match std::env::var_os("XDG_STATE_HOME") {
                 Some(d) if !d.is_empty() => PathBuf::from(d).join("gnomon"),
-                _ => PathBuf::from(std::env::var_os("HOME")?).join(".local").join("state").join("gnomon"),
+                _ => PathBuf::from(std::env::var_os("HOME")?)
+                    .join(".local")
+                    .join("state")
+                    .join("gnomon"),
             },
         };
         our_dir(&dir)?;
@@ -424,9 +551,17 @@ fn key() -> Option<&'static [u8; 32]> {
             use std::io::{Read, Write};
             use std::os::unix::fs::OpenOptionsExt;
             let mut k = [0u8; 32];
-            std::fs::File::open("/dev/urandom").ok()?.read_exact(&mut k).ok()?;
+            std::fs::File::open("/dev/urandom")
+                .ok()?
+                .read_exact(&mut k)
+                .ok()?;
             let tmp = dir.join(format!("snapshot.key.{}.tmp", std::process::id()));
-            let mut f = std::fs::OpenOptions::new().write(true).create_new(true).mode(0o600).open(&tmp).ok()?;
+            let mut f = std::fs::OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .mode(0o600)
+                .open(&tmp)
+                .ok()?;
             let written = f.write_all(&k).and_then(|_| f.sync_all());
             drop(f);
             // Never replace a key another process made first: its snapshots
@@ -489,13 +624,26 @@ fn unseal(snap: &[u8], log: &[u8], key: &[u8; 32]) -> Option<(Ledger, usize)> {
     }
     let mac = crate::sha256::hmac(key, &[&snap[..HEADER - 32], &snap[HEADER..]]);
     // Compared in full whatever the first difference: no timing to learn from.
-    if mac.iter().zip(&snap[HEADER - 32..HEADER]).fold(0u8, |acc, (a, b)| acc | (a ^ b)) != 0 {
+    if mac
+        .iter()
+        .zip(&snap[HEADER - 32..HEADER])
+        .fold(0u8, |acc, (a, b)| acc | (a ^ b))
+        != 0
+    {
         return None;
     }
-    if covered == 0 || covered > log.len() || log[covered - 1] != b'\n' || digest(&log[..covered])[..] != snap[48..80] {
+    if covered == 0
+        || covered > log.len()
+        || log[covered - 1] != b'\n'
+        || digest(&log[..covered])[..] != snap[48..80]
+    {
         return None;
     }
-    let mut r = Reader { b: &snap[HEADER..], at: 0, depth: 0 };
+    let mut r = Reader {
+        b: &snap[HEADER..],
+        at: 0,
+        depth: 0,
+    };
     let ledger = Ledger::dec(&mut r)?;
     if r.at != snap.len() - HEADER {
         return None;
@@ -504,7 +652,10 @@ fn unseal(snap: &[u8], log: &[u8], key: &[u8; 32]) -> Option<(Ledger, usize)> {
     let last_line = log[..covered - 1].rsplit(|b| *b == b'\n').next()?;
     let last = crate::json::parse(std::str::from_utf8(last_line).ok()?).ok()?;
     let head = |v: &Value| v.get("hash").and_then(|h| h.as_str()).map(str::to_string);
-    if ledger.events.len() != lines || ledger.events.last().and_then(head) != head(&last) || head(&last).is_none() {
+    if ledger.events.len() != lines
+        || ledger.events.last().and_then(head) != head(&last)
+        || head(&last).is_none()
+    {
         return None;
     }
     Some((ledger, covered))
@@ -560,14 +711,21 @@ pub enum Loaded {
 /// Read the snapshot beside `log_path` for `log`.
 pub fn load(log_path: &Path, log: &[u8]) -> Loaded {
     let path = path_for(log_path);
-    let Ok(meta) = std::fs::symlink_metadata(&path) else { return Loaded::Absent };
+    let Ok(meta) = std::fs::symlink_metadata(&path) else {
+        return Loaded::Absent;
+    };
     #[cfg(unix)]
-    if !meta.is_file() || !ours(&meta, 0o022) || our_dir(path.parent().expect("has a parent")).is_none() {
+    if !meta.is_file()
+        || !ours(&meta, 0o022)
+        || our_dir(path.parent().expect("has a parent")).is_none()
+    {
         return Loaded::Unusable;
     }
     #[cfg(not(unix))]
     let _ = meta;
-    let Ok(snap) = std::fs::read(&path) else { return Loaded::Absent };
+    let Ok(snap) = std::fs::read(&path) else {
+        return Loaded::Absent;
+    };
     match covers(&snap) {
         Some(n) if n > log.len() => Loaded::Absent,
         _ => match decode(&snap, log) {
@@ -609,11 +767,22 @@ fn try_save(log_path: &Path, ledger: &Ledger, log: &[u8]) -> std::io::Result<()>
         opts.mode(0o600);
     }
     let mut f = opts.open(&tmp)?;
-    let res = f.write_all(&seal(ledger, log, key)).and_then(|_| f.sync_data());
+    let res = f
+        .write_all(&seal(ledger, log, key))
+        .and_then(|_| f.sync_data());
     drop(f);
     // Keep a snapshot that covers more (from a process that saw more).
-    let newer = std::fs::read(&target).ok().and_then(|s| covers(&s)).is_some_and(|c| c > log.len());
-    let res = res.and_then(|_| if newer { Err(fail()) } else { std::fs::rename(&tmp, &target) });
+    let newer = std::fs::read(&target)
+        .ok()
+        .and_then(|s| covers(&s))
+        .is_some_and(|c| c > log.len());
+    let res = res.and_then(|_| {
+        if newer {
+            Err(fail())
+        } else {
+            std::fs::rename(&tmp, &target)
+        }
+    });
     if res.is_err() {
         let _ = std::fs::remove_file(&tmp);
     }

@@ -429,6 +429,28 @@ class Memory:
         comps = None if compartments is None else _dumps(list(compartments))
         return _unwrap(_native.call("gn_state", self.path, as_of, comps))
 
+    # ------------------------------------------------------- organisations
+    def position(self, writer: str, org: str, title: str, *, compartment: str, duties: str,
+                 reports_to: Optional[str] = None, record_time: Optional[str] = None) -> dict:
+        """Define (or redefine) a position in an organisation: its title,
+        whom it reports to (None: the organisation's owners) and its duties.
+        Allowed to owners and governors, and to holders of a position it
+        reports to, directly or through others."""
+        body = {"compartment": compartment, "org": org, "title": title, "duties": duties}
+        if reports_to is not None:
+            body["reports_to"] = reports_to
+        return self.append(writer, "position", body, record_time)
+
+    def appoint(self, writer: str, org: str, title: str, holder: str, *, compartment: str,
+                record_time: Optional[str] = None) -> str:
+        """Appoint `holder` to a position; returns the appointment's id."""
+        body = {"compartment": compartment, "org": org, "title": title, "holder": holder}
+        return self.append(writer, "appoint", body, record_time)["event_id"]
+
+    def dismiss(self, writer: str, appointment: str, reason: str, record_time: Optional[str] = None) -> dict:
+        """End an appointment (or, by its holder, resign)."""
+        return self.append(writer, "dismiss", {"appointment": appointment, "reason": reason}, record_time)
+
     def writers(self, compartments: Optional[Iterable[str]] = None) -> dict:
         """The registered writers, as `state()` shows them (all, or those in
         `compartments`), without rendering the rest of the state."""

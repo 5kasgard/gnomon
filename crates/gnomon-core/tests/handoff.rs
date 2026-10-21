@@ -23,7 +23,8 @@ fn strs(xs: &[&str]) -> Value {
 fn a_handoff_carries_the_work() {
     let mut l = lab();
     let c = claim_body("Use SQLite.", "decided", "true");
-    l.append(draft("claude-c1", 10, "claim", c.clone())).unwrap();
+    l.append(draft("claude-c1", 10, "claim", c.clone()))
+        .unwrap();
     let h = handoff("db", "Picked SQLite; the schema is next.")
         .with("goal", Value::str("A working prototype"))
         .with("done", strs(&["picked the database"]))
@@ -33,7 +34,10 @@ fn a_handoff_carries_the_work() {
         .with(
             "artifacts",
             Value::Array(vec![Value::obj(vec![
-                ("uri", Value::str("https://github.com/5kasgard/gnomon/commit/abc")),
+                (
+                    "uri",
+                    Value::str("https://github.com/5kasgard/gnomon/commit/abc"),
+                ),
                 ("note", Value::str("the commit")),
             ])]),
         );
@@ -47,25 +51,56 @@ fn a_handoff_carries_the_work() {
 #[test]
 fn handoffs_are_checked() {
     let mut l = lab();
-    let secret = claim_body("The supplier is Acme.", "decided", "true").with("compartment", Value::str("private"));
-    l.append(draft("john", 10, "claim", secret.clone())).unwrap();
-    l.append(draft("claude-c1", 11, "handoff", handoff("db", "Start."))).unwrap();
+    let secret = claim_body("The supplier is Acme.", "decided", "true")
+        .with("compartment", Value::str("private"));
+    l.append(draft("john", 10, "claim", secret.clone()))
+        .unwrap();
+    l.append(draft("claude-c1", 11, "handoff", handoff("db", "Start.")))
+        .unwrap();
     let hidden = l
-        .append(draft("gpt-g1", 12, "handoff", handoff("db", "x").with("refs", strs(&[&claim_id(&secret)]))))
+        .append(draft(
+            "gpt-g1",
+            12,
+            "handoff",
+            handoff("db", "x").with("refs", strs(&[&claim_id(&secret)])),
+        ))
         .unwrap_err();
     let missing = l
-        .append(draft("gpt-g1", 12, "handoff", handoff("db", "x").with("refs", strs(&["c:nothing"]))))
+        .append(draft(
+            "gpt-g1",
+            12,
+            "handoff",
+            handoff("db", "x").with("refs", strs(&["c:nothing"])),
+        ))
         .unwrap_err();
     assert_eq!(hidden.code, missing.code);
     for (body, want) in [
-        (handoff("db", "x").with("follows", Value::str("nobody/1")), "E_REF"),
-        (handoff("other", "x").with("follows", Value::str("claude-c1/1")), "E_REFERENCE"),
+        (
+            handoff("db", "x").with("follows", Value::str("nobody/1")),
+            "E_REF",
+        ),
+        (
+            handoff("other", "x").with("follows", Value::str("claude-c1/1")),
+            "E_REFERENCE",
+        ),
         (handoff("db", "x").with("next", strs(&[""])), "E_BODY"),
-        (handoff("db", "x").with("next", strs(&["sneaky\u{200b}"])), "E_HIDDEN_CHARS"),
-        (handoff("db", "x").with("refs", strs(&["claude-c1/1", "claude-c1/1"])), "E_BODY"),
-        (handoff("db", "x").with("colour", Value::str("red")), "E_BODY"),
+        (
+            handoff("db", "x").with("next", strs(&["sneaky\u{200b}"])),
+            "E_HIDDEN_CHARS",
+        ),
+        (
+            handoff("db", "x").with("refs", strs(&["claude-c1/1", "claude-c1/1"])),
+            "E_BODY",
+        ),
+        (
+            handoff("db", "x").with("colour", Value::str("red")),
+            "E_BODY",
+        ),
         (handoff("db", "").with("next", strs(&["a"])), "E_BODY"),
-        (handoff("db", "x").with("compartment", Value::str("private")), "E_COMPARTMENT"),
+        (
+            handoff("db", "x").with("compartment", Value::str("private")),
+            "E_COMPARTMENT",
+        ),
         (
             handoff("db", "x").with(
                 "artifacts",
@@ -74,9 +109,21 @@ fn handoffs_are_checked() {
             "E_BODY",
         ),
     ] {
-        assert_eq!(code(l.append(draft("gpt-g1", 12, "handoff", body.clone()))), want, "{body:?}");
+        assert_eq!(
+            code(l.append(draft("gpt-g1", 12, "handoff", body.clone()))),
+            want,
+            "{body:?}"
+        );
     }
     let many: Vec<String> = (0..65).map(|i| format!("step {i}")).collect();
     let refs: Vec<&str> = many.iter().map(|s| s.as_str()).collect();
-    assert_eq!(code(l.append(draft("gpt-g1", 12, "handoff", handoff("db", "x").with("next", strs(&refs))))), "E_BODY");
+    assert_eq!(
+        code(l.append(draft(
+            "gpt-g1",
+            12,
+            "handoff",
+            handoff("db", "x").with("next", strs(&refs))
+        ))),
+        "E_BODY"
+    );
 }

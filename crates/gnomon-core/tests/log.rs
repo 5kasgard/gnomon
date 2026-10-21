@@ -14,11 +14,7 @@ use gnomon_core::ledger::Ledger;
 use gnomon_core::store::{self, StoreError};
 
 fn tmp(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!(
-        "gnomon-test-{}-{}",
-        std::process::id(),
-        name
-    ));
+    let dir = std::env::temp_dir().join(format!("gnomon-test-{}-{}", std::process::id(), name));
     let _ = fs::remove_dir_all(&dir);
     fs::create_dir_all(&dir).unwrap();
     dir.join("log.jsonl")
@@ -28,13 +24,39 @@ fn write_lab_log(path: &PathBuf) -> Ledger {
     let l = lab();
     for (i, env) in l.events.iter().enumerate() {
         let _ = i;
-        let mut f = fs::OpenOptions::new().create(true).append(true).open(path).unwrap();
+        let mut f = fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+            .unwrap();
         writeln!(f, "{}", canonical(env)).unwrap();
     }
     // Plus a few claims through the public store API.
-    store::append(path, draft("claude-c1", 10, "claim", claim_body("A", "asserted", "true"))).unwrap();
-    store::append(path, draft("gpt-g1", 11, "claim", claim_body("B", "suggested", "unknown"))).unwrap();
-    store::append(path, draft("kimi-k1", 12, "claim", claim_body("C", "decided", "true"))).unwrap();
+    store::append(
+        path,
+        draft(
+            "claude-c1",
+            10,
+            "claim",
+            claim_body("A", "asserted", "true"),
+        ),
+    )
+    .unwrap();
+    store::append(
+        path,
+        draft(
+            "gpt-g1",
+            11,
+            "claim",
+            claim_body("B", "suggested", "unknown"),
+        ),
+    )
+    .unwrap();
+    store::append(
+        path,
+        draft("kimi-k1", 12, "claim", claim_body("C", "decided", "true")),
+    )
+    .unwrap();
     store::open(path, None).unwrap()
 }
 
@@ -46,7 +68,10 @@ fn rebuild_from_log_is_identical() {
     for _ in 0..3 {
         let rebuilt = store::open(&path, None).unwrap();
         assert_eq!(rebuilt.state.digest(), digest);
-        assert_eq!(canonical(&rebuilt.state.to_value(None)), canonical(&original.state.to_value(None)));
+        assert_eq!(
+            canonical(&rebuilt.state.to_value(None)),
+            canonical(&original.state.to_value(None))
+        );
     }
 }
 
@@ -95,7 +120,10 @@ fn torn_tail_is_reported_not_dropped() {
     write_lab_log(&path);
     let mut f = fs::OpenOptions::new().append(true).open(&path).unwrap();
     f.write_all(b"{\"seq\":99,\"partial").unwrap();
-    assert!(matches!(store::open(&path, None), Err(StoreError::TornTail { .. })));
+    assert!(matches!(
+        store::open(&path, None),
+        Err(StoreError::TornTail { .. })
+    ));
 }
 
 #[test]
@@ -106,7 +134,10 @@ fn non_canonical_lines_are_rejected() {
     // Same content, different whitespace: still tampering.
     let spaced = text.replacen("{\"body\":", "{ \"body\":", 1);
     fs::write(&path, spaced).unwrap();
-    assert!(matches!(store::open(&path, None), Err(StoreError::Malformed { .. })));
+    assert!(matches!(
+        store::open(&path, None),
+        Err(StoreError::Malformed { .. })
+    ));
 }
 
 #[test]
@@ -148,14 +179,27 @@ fn cache_never_hides_tampering() {
     write_lab_log(&path);
     // Warm the cache through both read and write paths.
     store::with_ledger(&path, |_| ()).unwrap();
-    store::append(&path, draft("claude-c1", 20, "claim", claim_body("D", "asserted", "true"))).unwrap();
+    store::append(
+        &path,
+        draft(
+            "claude-c1",
+            20,
+            "claim",
+            claim_body("D", "asserted", "true"),
+        ),
+    )
+    .unwrap();
     // Tamper behind the cache's back, keeping the length identical.
     let mut bytes = fs::read(&path).unwrap();
     let pos = bytes.len() / 2;
     bytes[pos] = if bytes[pos] == b'a' { b'b' } else { b'a' };
     fs::write(&path, &bytes).unwrap();
     assert!(store::with_ledger(&path, |_| ()).is_err());
-    assert!(store::append(&path, draft("gpt-g1", 21, "claim", claim_body("E", "asserted", "true"))).is_err());
+    assert!(store::append(
+        &path,
+        draft("gpt-g1", 21, "claim", claim_body("E", "asserted", "true"))
+    )
+    .is_err());
     // Truncation is also noticed (the cached bytes no longer match).
     let text = fs::read_to_string(&path).unwrap();
     let _ = text;
@@ -168,7 +212,10 @@ fn rejected_appends_leave_the_log_untouched() {
     let before = fs::read(&path).unwrap();
     let bad = claim_body("x", "asserted", "true").with("confidence", Value::Int(99_999));
     assert!(store::append(&path, draft("claude-c1", 20, "claim", bad)).is_err());
-    let unregistered = store::append(&path, draft("mallory", 20, "claim", claim_body("y", "asserted", "true")));
+    let unregistered = store::append(
+        &path,
+        draft("mallory", 20, "claim", claim_body("y", "asserted", "true")),
+    );
     assert!(unregistered.is_err());
     assert_eq!(fs::read(&path).unwrap(), before);
 }
@@ -187,14 +234,21 @@ fn line_hashes_equal_envelope_hashes() {
     let tricky = claim_body("The file's hash is listed below.", "asserted", "true")
         .with("observed", Value::str(",\"hash\":\"00\""));
     l.append(draft("claude-c1", 10, "claim", tricky)).unwrap();
-    let text: String = l.events.iter().map(|e| gnomon_core::json::canonical(e) + "\n").collect();
+    let text: String = l
+        .events
+        .iter()
+        .map(|e| gnomon_core::json::canonical(e) + "\n")
+        .collect();
     std::fs::write(&path, &text).unwrap();
     // Reading it back goes through the line-hash path; it must accept the
     // log and agree with envelope_hash on every event.
     gnomon_core::store::with_ledger(&path, |r| {
         assert_eq!(r.events.len(), l.events.len());
         for e in &r.events {
-            assert_eq!(e.get("hash").and_then(|h| h.as_str()).unwrap(), envelope_hash(e));
+            assert_eq!(
+                e.get("hash").and_then(|h| h.as_str()).unwrap(),
+                envelope_hash(e)
+            );
         }
     })
     .unwrap();

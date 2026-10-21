@@ -38,15 +38,29 @@ pub enum StoreError {
     /// The log file does not exist (only appends may create it).
     NotFound,
     /// Line `line` (0-based) is not valid canonical JSON.
-    Malformed { line: usize, reason: String },
+    Malformed {
+        line: usize,
+        reason: String,
+    },
     /// The file ends with a partial line: a crash interrupted a write.
-    TornTail { line: usize },
+    TornTail {
+        line: usize,
+    },
     /// The log failed verification at `seq`.
-    Invalid { seq: usize, error: GateError },
+    Invalid {
+        seq: usize,
+        error: GateError,
+    },
     /// Verification ran out of budget: not a pass.
-    Exhausted { checked: usize, total: usize },
+    Exhausted {
+        checked: usize,
+        total: usize,
+    },
     /// A checkpoint expected more events or a different head.
-    CheckpointMismatch { expected_count: usize, found_count: usize },
+    CheckpointMismatch {
+        expected_count: usize,
+        found_count: usize,
+    },
     /// The file changed between verification and write (should be
     /// impossible under the lock; checked anyway).
     Concurrent,
@@ -85,9 +99,15 @@ fn parse_lines(text: &str) -> Result<Vec<(Value, String)>, StoreError> {
     }
     let lines = &lines[..complete];
     let one = |i: usize, line: &str| -> Result<(Value, String), StoreError> {
-        let v = json::parse(line).map_err(|e| StoreError::Malformed { line: i, reason: e.to_string() })?;
+        let v = json::parse(line).map_err(|e| StoreError::Malformed {
+            line: i,
+            reason: e.to_string(),
+        })?;
         if canonical(&v) != *line {
-            return Err(StoreError::Malformed { line: i, reason: "line is not in canonical form".to_string() });
+            return Err(StoreError::Malformed {
+                line: i,
+                reason: "line is not in canonical form".to_string(),
+            });
         }
         let h = match v.get("hash").and_then(|h| h.as_str()) {
             Some(h) => {
@@ -107,7 +127,10 @@ fn parse_lines(text: &str) -> Result<Vec<(Value, String)>, StoreError> {
         };
         Ok((v, h))
     };
-    let threads = std::thread::available_parallelism().map(|n| n.get()).unwrap_or(1).min(8);
+    let threads = std::thread::available_parallelism()
+        .map(|n| n.get())
+        .unwrap_or(1)
+        .min(8);
     if threads < 2 || lines.len() < 2048 {
         return lines.iter().enumerate().map(|(i, l)| one(i, l)).collect();
     }
@@ -118,10 +141,18 @@ fn parse_lines(text: &str) -> Result<Vec<(Value, String)>, StoreError> {
             .enumerate()
             .map(|(k, ls)| {
                 let one = &one;
-                scope.spawn(move || ls.iter().enumerate().map(|(i, l)| one(k * chunk + i, l)).collect())
+                scope.spawn(move || {
+                    ls.iter()
+                        .enumerate()
+                        .map(|(i, l)| one(k * chunk + i, l))
+                        .collect()
+                })
             })
             .collect();
-        handles.into_iter().map(|h| h.join().expect("parse thread")).collect()
+        handles
+            .into_iter()
+            .map(|h| h.join().expect("parse thread"))
+            .collect()
     });
     let mut out = Vec::with_capacity(lines.len());
     for p in parts {
@@ -131,10 +162,19 @@ fn parse_lines(text: &str) -> Result<Vec<(Value, String)>, StoreError> {
 }
 
 /// Replay parsed lines through the gate, with their envelope hashes.
-fn verify_lines(mut ledger: Ledger, lines: Vec<(Value, String)>, base: usize) -> Result<Ledger, StoreError> {
+fn verify_lines(
+    mut ledger: Ledger,
+    lines: Vec<(Value, String)>,
+    base: usize,
+) -> Result<Ledger, StoreError> {
     for (i, (ev, h)) in lines.into_iter().enumerate() {
         let known = if h.is_empty() { None } else { Some(h) };
-        ledger.apply_hashed(ev, known).map_err(|error| StoreError::Invalid { seq: base + i, error })?;
+        ledger
+            .apply_hashed(ev, known)
+            .map_err(|error| StoreError::Invalid {
+                seq: base + i,
+                error,
+            })?;
     }
     Ok(ledger)
 }
@@ -194,7 +234,10 @@ pub fn audit(path: &Path, budget: Option<usize>) -> Result<VerifyStatus, StoreEr
             return Ok(VerifyStatus::Broken { seq: i, error });
         }
     }
-    Ok(VerifyStatus::Ok { count: total, head: ledger.head() })
+    Ok(VerifyStatus::Ok {
+        count: total,
+        head: ledger.head(),
+    })
 }
 
 /// Open and fully verify an existing log. `budget` limits how many events
@@ -300,18 +343,42 @@ fn verified_for(key: &Path, bytes: Vec<u8>) -> Result<Cached, StoreError> {
     let c = match loaded {
         Loaded::Usable(ledger, covered) => {
             let snap_events = ledger.events.len();
-            let start = Cached { bytes: bytes[..covered].to_vec(), ledger, snap_events };
-            let c = if covered == bytes.len() { start } else { extend_verified(start, bytes)? };
+            let start = Cached {
+                bytes: bytes[..covered].to_vec(),
+                ledger,
+                snap_events,
+            };
+            let c = if covered == bytes.len() {
+                start
+            } else {
+                extend_verified(start, bytes)?
+            };
             if crate::snapshot::checking() {
                 let text = utf8(c.bytes.clone())?;
                 let full = verify_lines(Ledger::new(), parse_lines(&text)?, 0)?;
                 if full != c.ledger {
                     let (a, b) = (&full, &c.ledger);
-                    let what = if a.events != b.events { "events" } else if a.state.writers != b.state.writers { "writers" }
-                        else if a.state.episodes != b.state.episodes { "episodes" } else if a.state.claims != b.state.claims { "claims" }
-                        else if a.state.supersessions != b.state.supersessions { "supersessions" } else if a.state.verdicts != b.state.verdicts { "verdicts" }
-                        else if a.state.appeals != b.state.appeals { "appeals" } else if a.state.handoffs != b.state.handoffs { "handoffs" }
-                        else if a.state.appeals_by_claim != b.state.appeals_by_claim { "appeals_by_claim" } else { "schema_version" };
+                    let what = if a.events != b.events {
+                        "events"
+                    } else if a.state.writers != b.state.writers {
+                        "writers"
+                    } else if a.state.episodes != b.state.episodes {
+                        "episodes"
+                    } else if a.state.claims != b.state.claims {
+                        "claims"
+                    } else if a.state.supersessions != b.state.supersessions {
+                        "supersessions"
+                    } else if a.state.verdicts != b.state.verdicts {
+                        "verdicts"
+                    } else if a.state.appeals != b.state.appeals {
+                        "appeals"
+                    } else if a.state.handoffs != b.state.handoffs {
+                        "handoffs"
+                    } else if a.state.appeals_by_claim != b.state.appeals_by_claim {
+                        "appeals_by_claim"
+                    } else {
+                        "schema_version"
+                    };
                     eprintln!("gnomon: a snapshot of {} differs from a full replay in {what} ({} vs {} events)", key.display(), a.events.len(), b.events.len());
                     std::process::abort();
                 }
@@ -321,7 +388,11 @@ fn verified_for(key: &Path, bytes: Vec<u8>) -> Result<Cached, StoreError> {
         Loaded::Absent | Loaded::Unusable => {
             let text = utf8(bytes)?;
             let ledger = verify_lines(Ledger::new(), parse_lines(&text)?, 0)?;
-            Cached { bytes: text.into_bytes(), ledger, snap_events: 0 }
+            Cached {
+                bytes: text.into_bytes(),
+                ledger,
+                snap_events: 0,
+            }
         }
     };
     Ok(c)
@@ -331,7 +402,10 @@ fn extend_verified(mut entry: Cached, bytes: Vec<u8>) -> Result<Cached, StoreErr
     let base = entry.ledger.events.len();
     let tail = utf8(bytes[entry.bytes.len()..].to_vec())?;
     let lines = parse_lines(&tail).map_err(|e| match e {
-        StoreError::Malformed { line, reason } => StoreError::Malformed { line: base + line, reason },
+        StoreError::Malformed { line, reason } => StoreError::Malformed {
+            line: base + line,
+            reason,
+        },
         StoreError::TornTail { line } => StoreError::TornTail { line: base + line },
         other => other,
     })?;
@@ -365,7 +439,11 @@ fn put_cache(key: PathBuf, entry: Cached) {
 
 /// Number of logs currently cached (for tests and diagnostics).
 pub fn cached_logs() -> usize {
-    cache().lock().unwrap_or_else(|p| p.into_inner()).entries.len()
+    cache()
+        .lock()
+        .unwrap_or_else(|p| p.into_inner())
+        .entries
+        .len()
 }
 
 /// Run `f` on the verified ledger of an existing log. The file is read
@@ -383,7 +461,11 @@ pub fn with_ledger<T>(path: &Path, f: impl FnOnce(&Ledger) -> T) -> Result<T, St
     let out = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| f(&c.ledger)));
     // Only cache the snapshot if no newer bytes were cached meanwhile.
     {
-        let current = cache().lock().unwrap_or_else(|p| p.into_inner()).entries.contains_key(&key);
+        let current = cache()
+            .lock()
+            .unwrap_or_else(|p| p.into_inner())
+            .entries
+            .contains_key(&key);
         if !current {
             put_cache(key, c);
         }

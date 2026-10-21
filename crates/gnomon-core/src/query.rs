@@ -52,6 +52,10 @@ pub fn schema() -> Schema {
         ("episode", 3),
         ("participant", 2),
         ("handoff", 4),
+        ("position", 3),
+        ("holds", 3),
+        ("appointed", 4),
+        ("dismissed", 2),
         ("bound", 3),
         ("writer", 3),
         ("identity", 3),
@@ -66,6 +70,12 @@ pub fn schema() -> Schema {
 /// Built-in views: ordinary Datalog over the base relations, so anyone can
 /// read exactly what each one means.
 pub const VIEWS: &str = r#"
+% Organisations: U is above T in O (directly or through others).
+above(O, T, U) :- position(O, T, U), U != "".
+above(O, T, U) :- position(O, T, M), M != "", above(O, M, U).
+% B oversees W: B holds a position above one W holds.
+oversees(B, W) :- holds(W, O, T), above(O, T, U), holds(B, O, U).
+
 % Currently true and not under an open dispute.
 believed(C) :- truth(C, "true"), not disputed(C).
 % Currently false: refuted, or lost a ruling.
@@ -110,7 +120,12 @@ acts_for(W, H) :- identity(W, "operator", H).
 "#;
 
 /// Run `program` against `ledger`, showing only `compartments`.
-pub fn run(ledger: &Ledger, compartments: &[String], program: &str, lim: Limits) -> GateResult<Value> {
+pub fn run(
+    ledger: &Ledger,
+    compartments: &[String],
+    program: &str,
+    lim: Limits,
+) -> GateResult<Value> {
     let schema = schema();
     let prog = Program::compile(&schema, VIEWS, program, &lim)?;
     let mut eng = Engine::new(&prog, lim);
@@ -123,11 +138,16 @@ pub fn run(ledger: &Ledger, compartments: &[String], program: &str, lim: Limits)
     let through = b
         .last_visible()
         .map(|seq| {
-            let time = ledger.events[seq].get("record_time").cloned().unwrap_or(Value::Null);
+            let time = ledger.events[seq]
+                .get("record_time")
+                .cloned()
+                .unwrap_or(Value::Null);
             b.event_ref(seq).with("time", time)
         })
         .unwrap_or(Value::Null);
-    Ok(eng.answers(&|i| b.event_ref(b.sources[i]))?.with("through", through))
+    Ok(eng
+        .answers(&|i| b.event_ref(b.sources[i]))?
+        .with("through", through))
 }
 
 struct Builder<'a> {
@@ -149,8 +169,20 @@ impl<'a> Builder<'a> {
             .enumerate()
             .filter_map(|(i, e)| e.get("event_id").and_then(|v| v.as_str()).map(|id| (id, i)))
             .collect();
-        let needed = schema().into_iter().map(|(n, _)| n).filter(|n| prog.needs(n)).collect();
-        Builder { ledger, prog, visible, seq_of, sources: Vec::new(), source_of: HashMap::new(), needed }
+        let needed = schema()
+            .into_iter()
+            .map(|(n, _)| n)
+            .filter(|n| prog.needs(n))
+            .collect();
+        Builder {
+            ledger,
+            prog,
+            visible,
+            seq_of,
+            sources: Vec::new(),
+            source_of: HashMap::new(),
+            needed,
+        }
     }
 
     fn sees(&self, compartment: &str) -> bool {
@@ -189,7 +221,9 @@ impl<'a> Builder<'a> {
 
     fn body(&self, event_id: &str) -> &'a Value {
         let seq = self.seq_of[event_id];
-        self.ledger.events[seq].get("body").expect("every event has a body")
+        self.ledger.events[seq]
+            .get("body")
+            .expect("every event has a body")
     }
 
     fn add(&self, eng: &mut Engine, rel: &str, row: Vec<Val>, src: usize) -> GateResult<()> {
@@ -198,7 +232,13 @@ impl<'a> Builder<'a> {
 
     /// A fact that only a set of events establishes together. Relations
     /// the query cannot reach are skipped: they cannot change an answer.
-    fn add_all(&self, eng: &mut Engine, rel: &str, row: Vec<Val>, srcs: Vec<usize>) -> GateResult<()> {
+    fn add_all(
+        &self,
+        eng: &mut Engine,
+        rel: &str,
+        row: Vec<Val>,
+        srcs: Vec<usize>,
+    ) -> GateResult<()> {
         if !self.needed.contains(rel) {
             return Ok(());
         }
@@ -214,9 +254,27 @@ impl<'a> Builder<'a> {
         // Claims and their fields, from the event that first recorded each
         // (skipped entirely when the query uses none of them).
         const CLAIM_RELS: &[&str] = &[
-            "claim", "statement", "speaker", "frame", "compartment", "stance", "origin", "statement_kind",
-            "asserted_truth", "source", "validity_domain", "valid_from", "valid_to", "confidence", "quote_start",
-            "recorded", "author", "reference", "truth", "disputed", "defeated",
+            "claim",
+            "statement",
+            "speaker",
+            "frame",
+            "compartment",
+            "stance",
+            "origin",
+            "statement_kind",
+            "asserted_truth",
+            "source",
+            "validity_domain",
+            "valid_from",
+            "valid_to",
+            "confidence",
+            "quote_start",
+            "recorded",
+            "author",
+            "reference",
+            "truth",
+            "disputed",
+            "defeated",
         ];
         let claims_needed = CLAIM_RELS.iter().any(|r| self.needed.contains(r));
         let need_1 = claims_needed;
@@ -260,7 +318,12 @@ impl<'a> Builder<'a> {
                 for r in refs {
                     let target = r.get("claim").and_then(|v| v.as_str()).unwrap_or("");
                     let rel = r.get("relation").and_then(|v| v.as_str()).unwrap_or("");
-                    self.add(eng, "reference", vec![cid.clone(), s(target), s(rel)], first)?;
+                    self.add(
+                        eng,
+                        "reference",
+                        vec![cid.clone(), s(target), s(rel)],
+                        first,
+                    )?;
                 }
             }
 
@@ -300,34 +363,61 @@ impl<'a> Builder<'a> {
         let need_2 = self.needed.contains("verdict");
 
         for (vid, v) in st.verdicts.iter().filter(|_| need_2) {
-            let visible = st.claims.get(&v.claim).map(|c| self.sees(&c.compartment)).unwrap_or(false);
+            let visible = st
+                .claims
+                .get(&v.claim)
+                .map(|c| self.sees(&c.compartment))
+                .unwrap_or(false);
             if !visible {
                 continue;
             }
-            let method = self.body(vid).get("method").and_then(|m| m.as_str()).unwrap_or("");
+            let method = self
+                .body(vid)
+                .get("method")
+                .and_then(|m| m.as_str())
+                .unwrap_or("");
             let src = self.src(vid);
-            self.add(eng, "verdict", vec![s(vid), s(&v.claim), s(&v.writer), s(&v.result), s(method)], src)?;
+            self.add(
+                eng,
+                "verdict",
+                vec![s(vid), s(&v.claim), s(&v.writer), s(&v.result), s(method)],
+                src,
+            )?;
         }
 
-        let need_3 = ["supersession", "evidence", "resolution"].iter().any(|r| self.needed.contains(r));
+        let need_3 = ["supersession", "evidence", "resolution"]
+            .iter()
+            .any(|r| self.needed.contains(r));
 
         for (sid, sp) in st.supersessions.iter().filter(|_| need_3) {
             if !self.sees(&sp.compartment) {
                 continue;
             }
             let src = self.src(sid);
-            self.add(eng, "supersession", vec![s(sid), s(&sp.old), s(&sp.new), s(&sp.kind), s(&sp.by)], src)?;
+            self.add(
+                eng,
+                "supersession",
+                vec![s(sid), s(&sp.old), s(&sp.new), s(&sp.kind), s(&sp.by)],
+                src,
+            )?;
             for ev in &sp.evidence {
                 self.add(eng, "evidence", vec![s(sid), s(ev)], src)?;
             }
             if let Some(r) = &sp.resolution {
                 // The dispute and the event that ended it, together.
                 let rs = vec![src, self.src(&r.event)];
-                self.add_all(eng, "resolution", vec![s(sid), s(&r.outcome), s(&r.event)], rs)?;
+                self.add_all(
+                    eng,
+                    "resolution",
+                    vec![s(sid), s(&r.outcome), s(&r.event)],
+                    rs,
+                )?;
             }
         }
 
-        let need_4 = ["appeal", "evidence", "resolution"].iter().any(|r| self.needed.contains(r));
+        let need_4 = ["appeal", "evidence", "resolution"]
+            .iter()
+            .any(|r| self.needed.contains(r));
 
         for (aid, a) in st.appeals.iter().filter(|_| need_4) {
             if !self.sees(&a.compartment) {
@@ -341,7 +431,12 @@ impl<'a> Builder<'a> {
             if let Some(r) = &a.resolution {
                 // The dispute and the event that ended it, together.
                 let rs = vec![src, self.src(&r.event)];
-                self.add_all(eng, "resolution", vec![s(aid), s(&r.outcome), s(&r.event)], rs)?;
+                self.add_all(
+                    eng,
+                    "resolution",
+                    vec![s(aid), s(&r.outcome), s(&r.event)],
+                    rs,
+                )?;
             }
         }
 
@@ -352,10 +447,53 @@ impl<'a> Builder<'a> {
                 continue;
             }
             let src = self.src(cid);
-            self.add(eng, "handoff", vec![s(cid), s(&c.frame), s(&c.writer), s(&c.record_time)], src)?;
+            self.add(
+                eng,
+                "handoff",
+                vec![s(cid), s(&c.frame), s(&c.writer), s(&c.record_time)],
+                src,
+            )?;
         }
 
-        let episodes_needed = ["episode", "participant", "bound"].iter().any(|r| self.needed.contains(r));
+        let need_org = ["position", "holds", "appointed", "dismissed"]
+            .iter()
+            .any(|r| self.needed.contains(r));
+        for p in st.positions.values().filter(|_| need_org) {
+            if !self.sees(&p.compartment) {
+                continue;
+            }
+            let src = self.src(&p.event);
+            let up = p.reports_to.clone().unwrap_or_default();
+            self.add(eng, "position", vec![s(&p.org), s(&p.title), s(&up)], src)?;
+        }
+        for (aid, a) in st.appointments.iter().filter(|_| need_org) {
+            if !self.sees(&a.compartment) {
+                continue;
+            }
+            let src = self.src(aid);
+            self.add(
+                eng,
+                "appointed",
+                vec![s(aid), s(&a.holder), s(&a.org), s(&a.title)],
+                src,
+            )?;
+            match &a.ended {
+                None => self.add(
+                    eng,
+                    "holds",
+                    vec![s(&a.holder), s(&a.org), s(&a.title)],
+                    src,
+                )?,
+                Some((ev, ..)) => {
+                    let end = self.src(ev);
+                    self.add(eng, "dismissed", vec![s(aid), s(ev)], end)?
+                }
+            }
+        }
+
+        let episodes_needed = ["episode", "participant", "bound"]
+            .iter()
+            .any(|r| self.needed.contains(r));
         let need_6 = episodes_needed;
 
         for (eid, e) in st.episodes.iter().filter(|_| need_6) {
@@ -375,7 +513,11 @@ impl<'a> Builder<'a> {
 
         // Writers who share a compartment with the reader, from their
         // registration; only the shared compartments are shown.
-        let registered: HashMap<&str, usize> = st.writers.iter().map(|(w, i)| (w.as_str(), i.seq)).collect();
+        let registered: HashMap<&str, usize> = st
+            .writers
+            .iter()
+            .map(|(w, i)| (w.as_str(), i.seq))
+            .collect();
         for (wid, w) in &st.writers {
             let shared: Vec<&String> = w.compartments.iter().filter(|c| self.sees(c)).collect();
             if shared.is_empty() {
@@ -383,7 +525,13 @@ impl<'a> Builder<'a> {
             }
             let src = self.src_seq(registered[wid.as_str()]);
             self.add(eng, "writer", vec![s(wid), s(&w.party), s(&w.kind)], src)?;
-            for (k, v) in [("name", &w.name), ("model", &w.model), ("operator", &w.operator), ("surface", &w.surface), ("session", &w.session)] {
+            for (k, v) in [
+                ("name", &w.name),
+                ("model", &w.model),
+                ("operator", &w.operator),
+                ("surface", &w.surface),
+                ("session", &w.session),
+            ] {
                 if let Some(v) = v {
                     self.add(eng, "identity", vec![s(wid), s(k), s(v)], src)?;
                 }
@@ -415,11 +563,15 @@ impl<'a> Builder<'a> {
         let need_7 = self.needed.contains("speaks_as");
 
         for (id, c) in st.claims.iter().filter(|_| need_7) {
-            let Some(who) = c.speaker_is.as_deref() else { continue };
+            let Some(who) = c.speaker_is.as_deref() else {
+                continue;
+            };
             if !self.sees(&c.compartment) {
                 continue;
             }
-            let Some(wi) = st.writers.get(who) else { continue };
+            let Some(wi) = st.writers.get(who) else {
+                continue;
+            };
             if !wi.compartments.iter().any(|x| self.sees(x)) {
                 continue;
             }
@@ -443,19 +595,66 @@ pub fn event_visible(ledger: &Ledger, visible: &[String], e: &Value) -> bool {
     let sees = |c: &str| visible.iter().any(|x| x == c);
     let id = e.get("event_id").and_then(|v| v.as_str()).unwrap_or("");
     let body = e.get("body");
-    let field = |k: &str| body.and_then(|b| b.get(k)).and_then(|v| v.as_str()).unwrap_or("");
-    let claim_seen = |c: &str| st.claims.get(c).map(|c| sees(&c.compartment)).unwrap_or(false);
+    let field = |k: &str| {
+        body.and_then(|b| b.get(k))
+            .and_then(|v| v.as_str())
+            .unwrap_or("")
+    };
+    let claim_seen = |c: &str| {
+        st.claims
+            .get(c)
+            .map(|c| sees(&c.compartment))
+            .unwrap_or(false)
+    };
     match e.get("kind").and_then(|v| v.as_str()).unwrap_or("") {
         "claim" => body.map(|b| claim_seen(&claim_id(b))).unwrap_or(false),
-        "episode" => st.episodes.get(id).map(|x| sees(&x.compartment)).unwrap_or(false),
-        "verdict" => st.verdicts.get(id).map(|v| claim_seen(&v.claim)).unwrap_or(false),
-        "supersede" => st.supersessions.get(id).map(|x| sees(&x.compartment)).unwrap_or(false),
-        "appeal" => st.appeals.get(id).map(|x| sees(&x.compartment)).unwrap_or(false),
-        "handoff" => st.handoffs.get(id).map(|x| sees(&x.compartment)).unwrap_or(false),
+        "episode" => st
+            .episodes
+            .get(id)
+            .map(|x| sees(&x.compartment))
+            .unwrap_or(false),
+        "verdict" => st
+            .verdicts
+            .get(id)
+            .map(|v| claim_seen(&v.claim))
+            .unwrap_or(false),
+        "supersede" => st
+            .supersessions
+            .get(id)
+            .map(|x| sees(&x.compartment))
+            .unwrap_or(false),
+        "appeal" => st
+            .appeals
+            .get(id)
+            .map(|x| sees(&x.compartment))
+            .unwrap_or(false),
+        "handoff" => st
+            .handoffs
+            .get(id)
+            .map(|x| sees(&x.compartment))
+            .unwrap_or(false),
+        "position" => sees(field("compartment")),
+        "appoint" => st
+            .appointments
+            .get(id)
+            .map(|x| sees(&x.compartment))
+            .unwrap_or(false),
+        "dismiss" => st
+            .appointments
+            .get(field("appointment"))
+            .map(|x| sees(&x.compartment))
+            .unwrap_or(false),
         "resolve" => {
             let d = field("dispute");
-            st.supersessions.get(d).map(|x| sees(&x.compartment)).unwrap_or(false)
-                || st.appeals.get(d).map(|x| sees(&x.compartment)).unwrap_or(false)
+            st.supersessions
+                .get(d)
+                .map(|x| sees(&x.compartment))
+                .unwrap_or(false)
+                || st
+                    .appeals
+                    .get(d)
+                    .map(|x| sees(&x.compartment))
+                    .unwrap_or(false)
         }
         "register" => st
             .writers
@@ -469,21 +668,23 @@ pub fn event_visible(ledger: &Ledger, visible: &[String], e: &Value) -> bool {
 /// The last event the reader can see: where its view of the log ends.
 /// Every event that can bear on a visible fact is at or before it.
 pub fn last_visible(ledger: &Ledger, visible: &[String]) -> Option<usize> {
-(0..ledger.events.len()).rev().find(|&i| event_visible(ledger, visible, &ledger.events[i]))
+    (0..ledger.events.len())
+        .rev()
+        .find(|&i| event_visible(ledger, visible, &ledger.events[i]))
 }
 
 /// Where the reader's view ends, as an event reference with its time.
 pub fn view_end(ledger: &Ledger, visible: &[String]) -> Value {
-match last_visible(ledger, visible) {
-    None => Value::Null,
-    Some(seq) => {
-        let e = &ledger.events[seq];
-        Value::obj(vec![
-            ("event", e.get("event_id").cloned().unwrap_or(Value::Null)),
-            ("kind", e.get("kind").cloned().unwrap_or(Value::Null)),
-            ("hash", e.get("hash").cloned().unwrap_or(Value::Null)),
-            ("time", e.get("record_time").cloned().unwrap_or(Value::Null)),
-        ])
+    match last_visible(ledger, visible) {
+        None => Value::Null,
+        Some(seq) => {
+            let e = &ledger.events[seq];
+            Value::obj(vec![
+                ("event", e.get("event_id").cloned().unwrap_or(Value::Null)),
+                ("kind", e.get("kind").cloned().unwrap_or(Value::Null)),
+                ("hash", e.get("hash").cloned().unwrap_or(Value::Null)),
+                ("time", e.get("record_time").cloned().unwrap_or(Value::Null)),
+            ])
+        }
     }
-}
 }

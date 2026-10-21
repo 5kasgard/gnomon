@@ -27,7 +27,13 @@ pub fn draft(writer: &str, minute: u32, kind: &str, body: Value) -> Draft {
 
 /// Models and tools act for john; each model instance runs its own model
 /// (by its writer id) unless a test says otherwise.
-pub fn register_body(writer: &str, party: &str, kind: &str, caps: &[&str], comps: &[&str]) -> Value {
+pub fn register_body(
+    writer: &str,
+    party: &str,
+    kind: &str,
+    caps: &[&str],
+    comps: &[&str],
+) -> Value {
     let mut v = register_plain(writer, party, kind, caps, comps);
     if kind != "human" {
         if let Value::Object(o) = &mut v {
@@ -40,7 +46,13 @@ pub fn register_body(writer: &str, party: &str, kind: &str, caps: &[&str], comps
     v
 }
 
-pub fn register_plain(writer: &str, party: &str, kind: &str, caps: &[&str], comps: &[&str]) -> Value {
+pub fn register_plain(
+    writer: &str,
+    party: &str,
+    kind: &str,
+    caps: &[&str],
+    comps: &[&str],
+) -> Value {
     Value::obj(vec![
         ("writer", Value::str(writer)),
         ("party", Value::str(party)),
@@ -65,7 +77,8 @@ pub fn lab() -> Ledger {
         "john",
         0,
         "register",
-        register_body("john", "john", "human", &["owner"], &["lab", "private"]).with("schema_version", Value::Int(2)),
+        register_body("john", "john", "human", &["owner"], &["lab", "private"])
+            .with("schema_version", Value::Int(2)),
     ))
     .unwrap();
     for (i, (w, p)) in [
@@ -103,7 +116,8 @@ pub fn claim_body(statement: &str, stance: &str, truth: &str) -> Value {
 }
 
 pub fn add_claim(l: &mut Ledger, writer: &str, minute: u32, body: Value) -> String {
-    l.append(draft(writer, minute, "claim", body.clone())).unwrap();
+    l.append(draft(writer, minute, "claim", body.clone()))
+        .unwrap();
     gnomon_core::ledger::claim_id(&body)
 }
 

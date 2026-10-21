@@ -374,6 +374,37 @@ TOOLS: list[dict] = [
         }, ["kind", "input_tokens", "output_tokens", "stakes_usd"]),
         "annotations": {"readOnlyHint": True, "openWorldHint": False},
     },
+    {
+        "name": "design_team",
+        "title": "Choose an organisational form for a piece of work",
+        "description": (
+            "Spell how a team should be organised for this work from an alphabet of forms (split, assign, "
+            "propose independently, select by a check, route to the expert, take turns, aggregate, critique, "
+            "escalate, review independently, ...), each chosen by a stated rule with the research it rests on "
+            "and the alternatives weighed. Dials from 0 to 1 set effort, breadth (model diversity), scrutiny, "
+            "speed and thrift. Use plan_team to price which models fill the form."
+        ),
+        "inputSchema": _schema({
+            "parts": {"type": "integer", "minimum": 1, "maximum": 1000000, "description": "Independent parts."},
+            "parallel": {"type": "number", "minimum": 0, "maximum": 1,
+                         "description": "Fraction of the work that can run at once (default 1)."},
+            "coupling": {"type": "string", "enum": ["low", "high"],
+                         "description": "high: later steps need exact detail from earlier ones."},
+            "check": {"type": "string", "enum": ["exact", "review", "none"]},
+            "locatable": {"type": "boolean", "description": "A failed check names the fault."},
+            "expert": {"type": "boolean", "description": "One member is clearly best at this."},
+            "open_ended": {"type": "boolean", "description": "No single right answer."},
+            "adversarial": {"type": "boolean", "description": "Conflicting stakeholders or a possible saboteur."},
+            "graded": {"type": "boolean", "description": "The check gives a score (optimisation)."},
+            "tier": {"type": "string", "enum": ["haiku", "sonnet", "opus", "fable"],
+                     "description": "Strongest tier available (default sonnet)."},
+            "families": {"type": "integer", "minimum": 1, "maximum": 1000,
+                         "description": "Distinct model families available (default 1)."},
+            **{k: {"type": "number", "minimum": 0, "maximum": 1, "description": f"Dial: {k} (default 0.5)."}
+               for k in ("effort", "breadth", "scrutiny", "speed", "thrift")},
+        }, []),
+        "annotations": {"readOnlyHint": True, "openWorldHint": False},
+    },
 ]
 TOOL_NAMES = {t["name"] for t in TOOLS}
 
@@ -745,6 +776,17 @@ class Server:
             text += "\n  (the record was too large to read in full: only part of it was used)"
         out["record_truncated"] = rec.truncated
         return text, out
+
+    def t_design_team(self, a: dict) -> tuple[str, Any]:
+        from . import forms
+        dial_keys = ("effort", "breadth", "scrutiny", "speed", "thrift")
+        try:
+            prof = forms.Profile(**{k: v for k, v in a.items() if k not in dial_keys})
+            dials = forms.Dials(**{k: a[k] for k in dial_keys if k in a})
+            d = forms.compose(prof, dials)
+        except (TypeError, ValueError) as e:
+            raise ToolError(str(e))
+        return d.summary(), d.as_dict()
 
     def t_whoami(self, a: dict) -> tuple[str, Any]:
         full = self.memory.writers()

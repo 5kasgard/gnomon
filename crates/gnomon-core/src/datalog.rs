@@ -212,7 +212,10 @@ struct Lexer<'a> {
 
 impl<'a> Lexer<'a> {
     fn new(src: &'a str) -> Self {
-        Lexer { chars: src.char_indices().peekable(), line: 1 }
+        Lexer {
+            chars: src.char_indices().peekable(),
+            line: 1,
+        }
     }
 
     fn tokens(mut self) -> Result<Vec<(Tok, usize)>, GateError> {
@@ -303,7 +306,9 @@ impl<'a> Lexer<'a> {
                     match self.chars.next().map(|(_, c)| c) {
                         None => return Err(qerr(format!("line {line}: unterminated string"))),
                         Some('"') => break,
-                        Some('\n') => return Err(qerr(format!("line {line}: line break inside a string"))),
+                        Some('\n') => {
+                            return Err(qerr(format!("line {line}: line break inside a string")))
+                        }
                         Some('\\') => match self.chars.next().map(|(_, c)| c) {
                             Some('"') => s.push('"'),
                             Some('\\') => s.push('\\'),
@@ -319,16 +324,28 @@ impl<'a> Lexer<'a> {
                                 loop {
                                     match self.chars.next().map(|(_, c)| c) {
                                         Some('}') => break,
-                                        Some(c) if c.is_ascii_hexdigit() && hex.len() < 6 => hex.push(c),
-                                        _ => return Err(qerr(format!("line {line}: bad \\u{{hex}} escape"))),
+                                        Some(c) if c.is_ascii_hexdigit() && hex.len() < 6 => {
+                                            hex.push(c)
+                                        }
+                                        _ => {
+                                            return Err(qerr(format!(
+                                                "line {line}: bad \\u{{hex}} escape"
+                                            )))
+                                        }
                                     }
                                 }
                                 match u32::from_str_radix(&hex, 16).ok().and_then(char::from_u32) {
                                     Some(c) => s.push(c),
-                                    None => return Err(qerr(format!("line {line}: \\u{{{hex}}} is not a character"))),
+                                    None => {
+                                        return Err(qerr(format!(
+                                            "line {line}: \\u{{{hex}}} is not a character"
+                                        )))
+                                    }
                                 }
                             }
-                            _ => return Err(qerr(format!("line {line}: unknown escape in string"))),
+                            _ => {
+                                return Err(qerr(format!("line {line}: unknown escape in string")))
+                            }
                         },
                         Some(c) => s.push(c),
                     }
@@ -430,8 +447,13 @@ impl Parser {
         let line = self.line();
         match self.bump() {
             Some(t) if t == want => Ok(()),
-            Some(t) => Err(qerr(format!("line {line}: expected {what}, found {}", describe(&t)))),
-            None => Err(qerr(format!("line {line}: expected {what}, found the end of the program"))),
+            Some(t) => Err(qerr(format!(
+                "line {line}: expected {what}, found {}",
+                describe(&t)
+            ))),
+            None => Err(qerr(format!(
+                "line {line}: expected {what}, found the end of the program"
+            ))),
         }
     }
 
@@ -449,11 +471,19 @@ impl Parser {
             self.bump();
             let body = self.body()?;
             self.expect(Tok::Dot, "'.' at the end of the query")?;
-            return Ok(RawClause { head: None, body, line });
+            return Ok(RawClause {
+                head: None,
+                body,
+                line,
+            });
         }
         let head = match self.literal()? {
             RawLit::Pos(a) => a,
-            _ => return Err(qerr(format!("line {line}: a rule's head must be a plain atom"))),
+            _ => {
+                return Err(qerr(format!(
+                    "line {line}: a rule's head must be a plain atom"
+                )))
+            }
         };
         let body = if self.peek() == Some(&Tok::If) {
             self.bump();
@@ -462,7 +492,11 @@ impl Parser {
             Vec::new()
         };
         self.expect(Tok::Dot, "'.' at the end of the clause")?;
-        Ok(RawClause { head: Some(head), body, line })
+        Ok(RawClause {
+            head: Some(head),
+            body,
+            line,
+        })
     }
 
     fn body(&mut self) -> Result<Vec<RawLit>, GateError> {
@@ -482,7 +516,9 @@ impl Parser {
                 // No recursion: `not` applies to one atom, once.
                 return match self.positive()? {
                     RawLit::Pos(a) => Ok(RawLit::Neg(a)),
-                    _ => Err(qerr(format!("line {line}: 'not' must be followed by an atom"))),
+                    _ => Err(qerr(format!(
+                        "line {line}: 'not' must be followed by an atom"
+                    ))),
                 };
             }
         }
@@ -520,10 +556,17 @@ impl Parser {
         }
         match left {
             // A bare lower-case word on its own is a proposition: `ready`.
-            RawTerm::Const(Val::Str(s)) if self.toks[self.pos - 1].0 == Tok::Ident(s.to_string()) => {
-                Ok(RawLit::Pos(RawAtom { name: s.to_string(), args: Vec::new() }))
+            RawTerm::Const(Val::Str(s))
+                if self.toks[self.pos - 1].0 == Tok::Ident(s.to_string()) =>
+            {
+                Ok(RawLit::Pos(RawAtom {
+                    name: s.to_string(),
+                    args: Vec::new(),
+                }))
             }
-            _ => Err(qerr(format!("line {line}: expected an atom or a comparison"))),
+            _ => Err(qerr(format!(
+                "line {line}: expected an atom or a comparison"
+            ))),
         }
     }
 
@@ -535,8 +578,13 @@ impl Parser {
             Some(Tok::Str(s)) => Ok(RawTerm::Const(Val::str(&s))),
             Some(Tok::Int(n)) => Ok(RawTerm::Const(Val::Int(n))),
             Some(Tok::Ident(w)) => Ok(RawTerm::Const(Val::str(&w))),
-            Some(t) => Err(qerr(format!("line {line}: expected a term, found {}", describe(&t)))),
-            None => Err(qerr(format!("line {line}: expected a term, found the end of the program"))),
+            Some(t) => Err(qerr(format!(
+                "line {line}: expected a term, found {}",
+                describe(&t)
+            ))),
+            None => Err(qerr(format!(
+                "line {line}: expected a term, found the end of the program"
+            ))),
         }
     }
 }
@@ -577,9 +625,17 @@ const ANSWER: &str = "?";
 impl Program {
     /// Compile `views` (trusted library rules) and `user` (the caller's
     /// program, which must contain exactly one `?-` query) against `schema`.
-    pub fn compile(schema: &Schema, views: &str, user: &str, lim: &Limits) -> Result<Program, GateError> {
+    pub fn compile(
+        schema: &Schema,
+        views: &str,
+        user: &str,
+        lim: &Limits,
+    ) -> Result<Program, GateError> {
         if user.len() > lim.max_program_bytes {
-            return Err(limit(format!("program is longer than {} bytes", lim.max_program_bytes)));
+            return Err(limit(format!(
+                "program is longer than {} bytes",
+                lim.max_program_bytes
+            )));
         }
         let mut p = Program {
             preds: Vec::new(),
@@ -593,10 +649,21 @@ impl Program {
         for (name, arity) in schema {
             p.declare(name, *arity, true, false);
         }
-        let view_clauses = Parser { toks: Lexer::new(views).tokens()?, pos: 0 }.clauses()?;
-        let user_clauses = Parser { toks: Lexer::new(user).tokens()?, pos: 0 }.clauses()?;
+        let view_clauses = Parser {
+            toks: Lexer::new(views).tokens()?,
+            pos: 0,
+        }
+        .clauses()?;
+        let user_clauses = Parser {
+            toks: Lexer::new(user).tokens()?,
+            pos: 0,
+        }
+        .clauses()?;
         if user_clauses.len() > lim.max_clauses {
-            return Err(limit(format!("program has more than {} clauses", lim.max_clauses)));
+            return Err(limit(format!(
+                "program has more than {} clauses",
+                lim.max_clauses
+            )));
         }
         // Declare every head first, so bodies may refer to rules defined later.
         for c in &view_clauses {
@@ -616,7 +683,10 @@ impl Program {
             if c.head.is_none() {
                 queries += 1;
                 if queries > 1 {
-                    return Err(qerr(format!("line {}: a program has exactly one query (?-)", c.line)));
+                    return Err(qerr(format!(
+                        "line {}: a program has exactly one query (?-)",
+                        c.line
+                    )));
                 }
             }
             let origin = format!("line {}", c.line);
@@ -631,7 +701,12 @@ impl Program {
 
     fn declare(&mut self, name: &str, arity: usize, base: bool, view: bool) -> usize {
         let id = self.preds.len();
-        self.preds.push(Pred { name: name.to_string(), arity, base, view });
+        self.preds.push(Pred {
+            name: name.to_string(),
+            arity,
+            base,
+            view,
+        });
         self.by_name.insert(name.to_string(), id);
         id
     }
@@ -671,7 +746,11 @@ impl Program {
 
     fn resolve(&self, a: &RawAtom, line: usize) -> Result<usize, GateError> {
         let id = *self.by_name.get(&a.name).ok_or_else(|| {
-            qerr(format!("line {line}: unknown relation '{}/{}'", a.name, a.args.len()))
+            qerr(format!(
+                "line {line}: unknown relation '{}/{}'",
+                a.name,
+                a.args.len()
+            ))
         })?;
         if self.preds[id].arity != a.args.len() {
             return Err(qerr(format!(
@@ -687,7 +766,10 @@ impl Program {
     fn add_rule(&mut self, c: RawClause, origin: String, lim: &Limits) -> Result<(), GateError> {
         let line = c.line;
         if c.body.len() > lim.max_body {
-            return Err(limit(format!("line {line}: a rule body has more than {} literals", lim.max_body)));
+            return Err(limit(format!(
+                "line {line}: a rule body has more than {} literals",
+                lim.max_body
+            )));
         }
         let mut vars: Vec<String> = Vec::new();
         let var = |name: &str, vars: &mut Vec<String>| -> usize {
@@ -714,15 +796,23 @@ impl Program {
                     Lit::Contains(term(&a.args[0], &mut vars), term(&a.args[1], &mut vars))
                 }
                 RawLit::Neg(a) if a.name == "contains" => {
-                    return Err(qerr(format!("line {line}: write 'not contains' as a separate rule")));
+                    return Err(qerr(format!(
+                        "line {line}: write 'not contains' as a separate rule"
+                    )));
                 }
                 RawLit::Pos(a) => {
                     let pred = self.resolve(a, line)?;
-                    Lit::Pos(Atom { pred, args: a.args.iter().map(|t| term(t, &mut vars)).collect() })
+                    Lit::Pos(Atom {
+                        pred,
+                        args: a.args.iter().map(|t| term(t, &mut vars)).collect(),
+                    })
                 }
                 RawLit::Neg(a) => {
                     let pred = self.resolve(a, line)?;
-                    Lit::Neg(Atom { pred, args: a.args.iter().map(|t| term(t, &mut vars)).collect() })
+                    Lit::Neg(Atom {
+                        pred,
+                        args: a.args.iter().map(|t| term(t, &mut vars)).collect(),
+                    })
                 }
                 RawLit::Cmp(op, l, r) => Lit::Cmp(*op, term(l, &mut vars), term(r, &mut vars)),
             });
@@ -730,17 +820,30 @@ impl Program {
         let head = match &c.head {
             Some(h) => {
                 if h.args.len() > lim.max_arity {
-                    return Err(limit(format!("line {line}: more than {} arguments", lim.max_arity)));
+                    return Err(limit(format!(
+                        "line {line}: more than {} arguments",
+                        lim.max_arity
+                    )));
                 }
                 let pred = self.by_name[&h.name];
-                Atom { pred, args: h.args.iter().map(|t| term(t, &mut vars)).collect() }
+                Atom {
+                    pred,
+                    args: h.args.iter().map(|t| term(t, &mut vars)).collect(),
+                }
             }
             None => {
                 // The query becomes a rule for "?" over its named variables,
                 // in order of first appearance.
-                let names: Vec<String> = vars.iter().filter(|v| !v.starts_with('_')).cloned().collect();
+                let names: Vec<String> = vars
+                    .iter()
+                    .filter(|v| !v.starts_with('_'))
+                    .cloned()
+                    .collect();
                 if names.len() > lim.max_arity {
-                    return Err(limit(format!("line {line}: the query has more than {} variables", lim.max_arity)));
+                    return Err(limit(format!(
+                        "line {line}: the query has more than {} variables",
+                        lim.max_arity
+                    )));
                 }
                 let args = names.iter().map(|n| Term::Var(var(n, &mut vars))).collect();
                 let pred = self.declare(ANSWER, names.len(), false, false);
@@ -749,7 +852,12 @@ impl Program {
                 Atom { pred, args }
             }
         };
-        let rule = Rule { head, body, vars, origin };
+        let rule = Rule {
+            head,
+            body,
+            vars,
+            origin,
+        };
         check_safety(&rule, &self.preds, line)?;
         self.rules.push(rule);
         Ok(())
@@ -825,7 +933,9 @@ impl Program {
     /// facts of unreachable relations cannot affect any answer, so callers
     /// need not load them.
     pub fn needs(&self, name: &str) -> bool {
-        self.pred_id(name).map(|p| self.reachable[p]).unwrap_or(false)
+        self.pred_id(name)
+            .map(|p| self.reachable[p])
+            .unwrap_or(false)
     }
 
     fn rule_text(&self, r: &Rule) -> String {
@@ -1014,7 +1124,13 @@ impl Relation {
 
     /// Values a new row costs: the row, plus its key in every index.
     fn row_cost(&self, arity: usize) -> usize {
-        arity + 1 + self.indexes.keys().map(|m| m.count_ones() as usize + 1).sum::<usize>()
+        arity
+            + 1
+            + self
+                .indexes
+                .keys()
+                .map(|m| m.count_ones() as usize + 1)
+                .sum::<usize>()
     }
 
     fn index(&mut self, mask: u32) -> &HashMap<Vec<Val>, Vec<usize>> {
@@ -1067,11 +1183,25 @@ impl<'p> Engine<'p> {
     pub fn new(prog: &'p Program, lim: Limits) -> Self {
         let rels = (0..prog.preds.len()).map(|_| Relation::default()).collect();
         let marked = vec![false; prog.preds.len()];
-        Engine { prog, rels, facts: 0, steps: 0, cells: 0, lim, dirty: Vec::new(), marked }
+        Engine {
+            prog,
+            rels,
+            facts: 0,
+            steps: 0,
+            cells: 0,
+            lim,
+            dirty: Vec::new(),
+            marked,
+        }
     }
 
     /// Add a base fact. Duplicates merge their sources.
-    pub fn add_base(&mut self, pred: usize, row: Vec<Val>, sources: Vec<usize>) -> Result<(), GateError> {
+    pub fn add_base(
+        &mut self,
+        pred: usize,
+        row: Vec<Val>,
+        sources: Vec<usize>,
+    ) -> Result<(), GateError> {
         debug_assert!(self.prog.preds[pred].base && self.prog.preds[pred].arity == row.len());
         let rel = &mut self.rels[pred];
         if let Some(&i) = rel.set.get(&row) {
@@ -1093,7 +1223,8 @@ impl<'p> Engine<'p> {
         if self.facts > self.lim.max_facts {
             return Err(limit(format!("more than {} facts", self.lim.max_facts)));
         }
-        let cost = self.rels[pred].row_cost(row.len()) + row.iter().map(val_size).sum::<usize>() / 64;
+        let cost =
+            self.rels[pred].row_cost(row.len()) + row.iter().map(val_size).sum::<usize>() / 64;
         self.charge_cells(cost)?;
         self.charge_steps(cost as u64)?;
         self.rels[pred].insert(row, prov);
@@ -1107,7 +1238,10 @@ impl<'p> Engine<'p> {
     fn charge_cells(&mut self, n: usize) -> Result<(), GateError> {
         self.cells += n;
         if self.cells > self.lim.max_cells {
-            return Err(limit(format!("the query needs more than {} values in memory", self.lim.max_cells)));
+            return Err(limit(format!(
+                "the query needs more than {} values in memory",
+                self.lim.max_cells
+            )));
         }
         Ok(())
     }
@@ -1115,13 +1249,20 @@ impl<'p> Engine<'p> {
     fn charge_steps(&mut self, n: u64) -> Result<(), GateError> {
         self.steps += n;
         if self.steps > self.lim.max_steps {
-            return Err(limit(format!("the query needs more than {} steps", self.lim.max_steps)));
+            return Err(limit(format!(
+                "the query needs more than {} steps",
+                self.lim.max_steps
+            )));
         }
         Ok(())
     }
 
     /// The index for `mask`, charging its memory and work when first built.
-    fn index_of(&mut self, pred: usize, mask: u32) -> Result<&HashMap<Vec<Val>, Vec<usize>>, GateError> {
+    fn index_of(
+        &mut self,
+        pred: usize,
+        mask: u32,
+    ) -> Result<&HashMap<Vec<Val>, Vec<usize>>, GateError> {
         if !self.rels[pred].indexes.contains_key(&mask) {
             let n = self.rels[pred].rows.len();
             self.charge_cells(n * (mask.count_ones() as usize + 1))?;
@@ -1137,7 +1278,13 @@ impl<'p> Engine<'p> {
             .prog
             .strata
             .iter()
-            .map(|rules| rules.iter().copied().filter(|&r| self.prog.reachable[self.prog.rules[r].head.pred]).collect())
+            .map(|rules| {
+                rules
+                    .iter()
+                    .copied()
+                    .filter(|&r| self.prog.reachable[self.prog.rules[r].head.pred])
+                    .collect()
+            })
             .collect();
         for rules in &strata {
             if !rules.is_empty() {
@@ -1149,7 +1296,10 @@ impl<'p> Engine<'p> {
 
     fn run_stratum(&mut self, rules: &[usize]) -> Result<(), GateError> {
         // Relations defined in this stratum; lower strata no longer change.
-        let mut here: Vec<usize> = rules.iter().map(|&r| self.prog.rules[r].head.pred).collect();
+        let mut here: Vec<usize> = rules
+            .iter()
+            .map(|&r| self.prog.rules[r].head.pred)
+            .collect();
         here.sort_unstable();
         here.dedup();
         // For each relation of this stratum, the (rule, atom) pairs that read
@@ -1165,7 +1315,8 @@ impl<'p> Engine<'p> {
             }
         }
         // Row counts at the start of the current round, and of the last.
-        let mut snap: HashMap<usize, usize> = here.iter().map(|&p| (p, self.rels[p].rows.len())).collect();
+        let mut snap: HashMap<usize, usize> =
+            here.iter().map(|&p| (p, self.rels[p].rows.len())).collect();
         let mut delta_lo = snap.clone();
         for p in std::mem::take(&mut self.dirty) {
             self.marked[p] = false;
@@ -1196,7 +1347,10 @@ impl<'p> Engine<'p> {
                 for &(r, j) in us {
                     self.charge_steps(1)?;
                     let mut ranges = self.ranges(r, &snap);
-                    ranges[j] = Range { lo: delta_lo[&p], hi: snap[&p] };
+                    ranges[j] = Range {
+                        lo: delta_lo[&p],
+                        hi: snap[&p],
+                    };
                     self.eval_rule(r, &ranges)?;
                 }
             }
@@ -1212,7 +1366,10 @@ impl<'p> Engine<'p> {
             .map(|l| match l {
                 Lit::Pos(a) | Lit::Neg(a) => Range {
                     lo: 0,
-                    hi: snap.get(&a.pred).copied().unwrap_or(self.rels[a.pred].rows.len()),
+                    hi: snap
+                        .get(&a.pred)
+                        .copied()
+                        .unwrap_or(self.rels[a.pred].rows.len()),
                 },
                 _ => Range { lo: 0, hi: 0 },
             })
@@ -1251,7 +1408,11 @@ impl<'p> Engine<'p> {
                 .collect();
             let head = rule.head.pred;
             if !self.rels[head].set.contains_key(&row) {
-                let prov = Prov::Rule { rule: r, premises: premises.clone(), absent: absent.clone() };
+                let prov = Prov::Rule {
+                    rule: r,
+                    premises: premises.clone(),
+                    absent: absent.clone(),
+                };
                 self.store(head, row, prov)?;
             }
             return Ok(());
@@ -1403,12 +1564,18 @@ impl<'p> Engine<'p> {
         for (n, &a) in order.iter().enumerate() {
             let values = Value::Array(rel.rows[a].iter().map(Val::to_json).collect());
             if n >= self.lim.max_proofs {
-                out.charge(rel.rows[a].iter().map(val_size).sum::<usize>() + 32, self.lim.max_output)?;
+                out.charge(
+                    rel.rows[a].iter().map(val_size).sum::<usize>() + 32,
+                    self.lim.max_output,
+                )?;
                 answers.push(Value::obj(vec![("values", values), ("proof", Value::Null)]));
                 continue;
             }
             let node = self.node(prog.answer, a, &mut out, source)?;
-            out.charge(rel.rows[a].iter().map(val_size).sum::<usize>() + 32 + 84, self.lim.max_output)?;
+            out.charge(
+                rel.rows[a].iter().map(val_size).sum::<usize>() + 32 + 84,
+                self.lim.max_output,
+            )?;
             let root = out.hashes[&node].clone();
             answers.push(Value::obj(vec![
                 ("values", values),
@@ -1418,7 +1585,15 @@ impl<'p> Engine<'p> {
             proved += 1;
         }
         Ok(Value::obj(vec![
-            ("variables", Value::Array(prog.answer_vars.iter().map(|v| Value::str(v.clone())).collect())),
+            (
+                "variables",
+                Value::Array(
+                    prog.answer_vars
+                        .iter()
+                        .map(|v| Value::str(v.clone()))
+                        .collect(),
+                ),
+            ),
             ("answers", Value::Array(answers)),
             ("truncated", Value::Bool(truncated)),
             ("proved", Value::Int(proved)),
@@ -1429,7 +1604,13 @@ impl<'p> Engine<'p> {
     }
 
     /// Emit the proof node for a fact (iteratively: proofs can be deep).
-    fn node(&self, pred: usize, row: usize, out: &mut Proofs, source: &dyn Fn(usize) -> Value) -> Result<String, GateError> {
+    fn node(
+        &self,
+        pred: usize,
+        row: usize,
+        out: &mut Proofs,
+        source: &dyn Fn(usize) -> Value,
+    ) -> Result<String, GateError> {
         let max = self.lim.max_output;
         // Post-order without recursion: premises get ids before their users.
         let mut stack: Vec<((usize, usize), bool)> = vec![((pred, row), false)];
@@ -1462,8 +1643,10 @@ impl<'p> Engine<'p> {
                 Prov::Base(srcs) => {
                     out.charge(160 * srcs.len(), max)?;
                     let sources: Vec<Value> = srcs.iter().map(|&s| source(s)).collect();
-                    let event_hashes: Vec<Value> =
-                        sources.iter().map(|x| x.get("hash").cloned().unwrap_or(Value::Null)).collect();
+                    let event_hashes: Vec<Value> = sources
+                        .iter()
+                        .map(|x| x.get("hash").cloned().unwrap_or(Value::Null))
+                        .collect();
                     let digest = hex_digest(
                         canonical(&Value::obj(vec![
                             ("fact", Value::Array(fact.clone())),
@@ -1480,7 +1663,11 @@ impl<'p> Engine<'p> {
                         digest,
                     )
                 }
-                Prov::Rule { rule, premises, absent } => {
+                Prov::Rule {
+                    rule,
+                    premises,
+                    absent,
+                } => {
                     let rule_id = match out.rule_ids.get(rule) {
                         Some(r) => r.clone(),
                         None => {
@@ -1506,14 +1693,25 @@ impl<'p> Engine<'p> {
                     };
                     let mut absent_v = Vec::new();
                     for (p, pat) in absent {
-                        out.charge(16 + pat.iter().map(|v| v.as_ref().map(val_size).unwrap_or(4)).sum::<usize>(), max)?;
+                        out.charge(
+                            16 + pat
+                                .iter()
+                                .map(|v| v.as_ref().map(val_size).unwrap_or(4))
+                                .sum::<usize>(),
+                            max,
+                        )?;
                         let mut a = vec![Value::str(self.prog.preds[*p].name.clone())];
-                        a.extend(pat.iter().map(|v| v.as_ref().map(Val::to_json).unwrap_or(Value::Null)));
+                        a.extend(
+                            pat.iter()
+                                .map(|v| v.as_ref().map(Val::to_json).unwrap_or(Value::Null)),
+                        );
                         absent_v.push(Value::Array(a));
                     }
                     out.charge(8 * premises.len() + 72, max)?;
-                    let premise_hashes: Vec<Value> =
-                        premises.iter().map(|p| Value::str(out.hashes[&out.ids[p]].clone())).collect();
+                    let premise_hashes: Vec<Value> = premises
+                        .iter()
+                        .map(|p| Value::str(out.hashes[&out.ids[p]].clone()))
+                        .collect();
                     let digest = hex_digest(
                         canonical(&Value::obj(vec![
                             ("fact", Value::Array(fact.clone())),
@@ -1527,7 +1725,15 @@ impl<'p> Engine<'p> {
                         Value::obj(vec![
                             ("fact", Value::Array(fact)),
                             ("rule", Value::str(rule_id)),
-                            ("premises", Value::Array(premises.iter().map(|p| Value::str(out.ids[p].clone())).collect())),
+                            (
+                                "premises",
+                                Value::Array(
+                                    premises
+                                        .iter()
+                                        .map(|p| Value::str(out.ids[p].clone()))
+                                        .collect(),
+                                ),
+                            ),
                             ("absent", Value::Array(absent_v)),
                             ("hash", Value::str(digest.clone())),
                         ]),
@@ -1559,7 +1765,9 @@ impl Proofs {
     fn charge(&mut self, n: usize, max: usize) -> Result<(), GateError> {
         self.size += n;
         if self.size > max {
-            return Err(limit(format!("the answers and their proofs would be larger than {max} bytes")));
+            return Err(limit(format!(
+                "the answers and their proofs would be larger than {max} bytes"
+            )));
         }
         Ok(())
     }
@@ -1593,7 +1801,10 @@ fn value(t: &Term, env: &[Option<Val>]) -> Option<Val> {
 /// Integers compare as numbers, strings by code point; values of different
 /// types are never equal and never ordered.
 fn compare(op: Op, a: &Val, b: &Val) -> bool {
-    let same = matches!((a, b), (Val::Int(_), Val::Int(_)) | (Val::Str(_), Val::Str(_)));
+    let same = matches!(
+        (a, b),
+        (Val::Int(_), Val::Int(_)) | (Val::Str(_), Val::Str(_))
+    );
     match op {
         Op::Eq => a == b,
         Op::Ne => a != b,

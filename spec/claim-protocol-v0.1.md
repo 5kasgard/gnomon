@@ -1097,6 +1097,43 @@ expected to cost and risk next to one top-tier agent doing it all.
 | Integrity | No one posts their own work orders or judges their own model's work; only writers of kind `model` whose model id starts with a tier's prefix (`claude-haiku-`, …) count; the record is only what the reader can see. Gnomon refuses a party's verdict on its own party's claims, so models that review each other must be registered as parties of their own. |
 | Shift changes | Handoffs (section 13). |
 
+**Organisations in the record.** Three events make an organisation's
+structure part of the verified log, with authority checked by the gate:
+
+- `position` {compartment, org, title, reports_to?, duties}: defines a
+  title and whom it reports to (none: the owners). One organisation lives
+  in one compartment; no position reports, through others, to itself.
+- `appoint` {compartment, org, title, holder}: puts a writer of that
+  compartment in a position. Many may hold one title; no one holds it twice
+  at once.
+- `dismiss` {appointment, reason}: ends an appointment.
+
+Owners and governors may do all three. Anyone else acts only on positions
+below one they currently hold (directly or through others): a Lead hires
+Engineers, an Engineer hires no one, and a dismissed Lead has no authority
+left. No one appoints themselves; anyone may resign. Queries see
+`position(O, T, ReportsTo)`, `holds(W, O, T)`, `appointed(A, W, O, T)` and
+`dismissed(A, E)`, and the views `above(O, T, U)` and `oversees(B, W)`;
+the independent checker establishes `position` and `holds` by folding the
+log itself, so a holding that has since ended no longer checks.
+
+**A company** (`gnomon.company`) runs on these. It is founded with
+positions that keep the powers apart: the CEO plans and delivers; the
+Chief of Staff allocates work and budget; the Head of People hires and
+reviews; the Head of IT keeps the tools. The Head of Assurance reports to
+no one but the owners, so the gate lets no one in production appoint or
+dismiss it. Staff are instances of a template writer per model tier,
+hired into titles by someone above: titles, not models, are held, and the
+record decides who keeps them. The company's compartment is its internal
+record and memory (work orders, results, memos, decisions, the structure
+chosen for each order); a client is a writer outside the company posting a
+work order there; a subcontractor is a writer of another party, whose
+verdicts count as independent. Personnel reviews propose probation,
+dismissal or promotion by stated thresholds over results judged from
+outside the worker's group; escalating or saying a part could not be done
+is never counted against anyone, and a leaver writes a handoff before the
+appointment ends.
+
 **The decision.** For one unit of work, every option is priced: each tier
 alone, and each rising cascade under each kind of check the work allows.
 Its cost is expected spend on tokens, plus the expected loss
@@ -1134,10 +1171,85 @@ The comparison with the baseline is only as good as these assumptions:
 with independent attempts, a cascade with an exact check is close to
 certain to win on loss. Real measurements decide.
 
+**Organisations** (positions, appointments, dismissals) belong to their
+compartment: the same name in two compartments is two organisations, and
+neither can learn of the other. Owners and governors act in an
+organisation only if their party founded it; anyone else acts through the
+positions they hold. Titles have no leading, trailing, doubled or unusual
+spaces.
+
 **Not yet:** running the agents (the host does that: Claude Code's
 subagents or the API), learning how failures correlate across tiers,
 pricing the risk of a bad plan or integration, latency beyond a price per
 round, and measurements of plans against single agents on real work.
+
+### 15.1 Forms: an alphabet, not one chart
+
+`plan_team` prices which models fill a structure; `gnomon.forms` chooses
+the structure. A form is a word over sixteen letters, each with a size:
+
+| | Letter | What it does |
+|---|---|---|
+| S | Solo | one agent, the whole context |
+| D | Divide | parts with isolated contexts and short, complete briefs |
+| C | Coordinate | a planner assigns parts up front |
+| Q | Queue | fixed order; each agent reads earlier finished work, picks its own role or abstains |
+| P | Propose | independent attempts, ideally across model families; no one reads another's |
+| V | Verify-select | an exact check picks |
+| A | Aggregate | one writer merges independent drafts |
+| R | Route | send to the clear expert and defer |
+| K | Critique-repair | a reviewer names a concrete fault; the author repairs |
+| B | Debate | full answers exchanged over rounds |
+| M | Market | members bid with their own estimates; abstaining is free |
+| G | Ground | coordination through the record: scores, failure causes, never full solutions |
+| E | Evolve | a scored population over generations |
+| H | Hierarchy | floors of managers for more parts than one planner can brief |
+| X | Escalate | cheapest capable tier first, up on a failed check |
+| I | Independent assurance | judges outside the workers' group, majority of distinct groups |
+
+Each letter records when it helps, when it hurts, and its evidence with a
+strength: *measured* (controlled experiments with language-model teams),
+*theory* (Amdahl, Ashby, Galbraith, Mintzberg, Condorcet, Conway, Goodhart,
+Hayek, stigmergy) or *hypothesis*. `compose(profile, dials)` spells a word
+by rules that each cite their evidence:
+
+- **Split only what a short brief can carry.** Low coupling: divide, with
+  as many workers as reach the knee of Amdahl's curve (60% of the best
+  speed-up at speed 0, 95% at speed 1). High coupling with a strong model:
+  one context (splitting cost the strongest model 0.23 on hard
+  constraints; Yu et al. 2026, 2607.16133).
+- **Assign; do not let workers claim.** Pre-assigned teams ran 1.36x
+  faster at the median against 0.88x for self-claiming ones (Mieczkowski
+  et al. 2026, 2603.12229).
+- **With an exact check, propose independently and select.** Reading each
+  other's full solutions erased model diversity within one round; debate
+  and critique lost with mixed families, selection kept a +0.19 diversity
+  gain (Ann et al. 2026, 2608.23541). Critique is added only when a failed
+  check names the fault.
+- **Defer to a known expert.** Deliberating teams fell 6-41% short of their
+  best member even when told who it was (Pappu et al. 2026, 2602.01011).
+- **Open-ended work: strong models take turns, weak ones get structure.**
+  Fixed order with self-chosen roles beat a coordinator by 14% on three
+  models; below a capability threshold the effect reverses (Dochkina 2026,
+  2603.28990). Never more than four voices: returns peak at 2-5 agents
+  (Li et al. 2026, 2606.00655).
+- **Floors only past one planner's reach**, escalation when a check can
+  see failure, and assurance from outside the workers' group always.
+
+The dials, each 0 to 1: effort (attempts, members), breadth (model
+families), scrutiny (reviewers: 1, or 3 with majority), speed (workers),
+thrift (escalation, and the weight of cost in the reward). Every design
+lists what it rejected and why, and warns where the evidence runs out.
+
+**Learning which form pays.** The rules are priors: winners change with
+model bindings (Chen et al. 2026, 2607.25446), and the useful space is a
+short list of about six topologies whose winner varies per task (Yu et
+al. 2026, 2609.02264). `candidates` gives that short list (the composed
+form at lower and higher effort, and one agent alone), and `Learner`
+(LinUCB over ten interpretable task features) chooses among them,
+starting on the composed form and moving off it as the record shows
+another paying better, with reward = quality - thrift x cost / budget.
+The `design_team` MCP tool returns a design.
 
 ## 16. Not yet in v0.1
 

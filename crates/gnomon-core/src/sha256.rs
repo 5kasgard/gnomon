@@ -141,7 +141,13 @@ impl Default for Hasher {
 
 impl Hasher {
     pub fn new() -> Self {
-        Hasher { state: H0, buf: [0; 64], used: 0, len: 0, hardware: has_hardware() }
+        Hasher {
+            state: H0,
+            buf: [0; 64],
+            used: 0,
+            len: 0,
+            hardware: has_hardware(),
+        }
     }
 
     pub fn update(&mut self, mut data: &[u8]) {
@@ -239,7 +245,10 @@ mod ni {
     /// The CPU must support the `sha`, `ssse3` and `sse4.1` features.
     #[target_feature(enable = "sha,sse2,ssse3,sse4.1")]
     pub unsafe fn compress_blocks(state: &mut [u32; 8], blocks: &[u8]) {
-        let mask = _mm_set_epi64x(0x0C0D_0E0F_0809_0A0Bu64 as i64, 0x0405_0607_0001_0203u64 as i64);
+        let mask = _mm_set_epi64x(
+            0x0C0D_0E0F_0809_0A0Bu64 as i64,
+            0x0405_0607_0001_0203u64 as i64,
+        );
         let p = state.as_ptr() as *const __m128i;
         let dcba = _mm_loadu_si128(p);
         let efgh = _mm_loadu_si128(p.add(1));
@@ -310,7 +319,10 @@ mod tests {
             "5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843"
         );
         assert_eq!(
-            hex(super::hmac(&[0xaa; 131], &[b"Test Using Larger Than Block-Size Key - Hash Key First"])),
+            hex(super::hmac(
+                &[0xaa; 131],
+                &[b"Test Using Larger Than Block-Size Key - Hash Key First"]
+            )),
             "60e431591ee0b67f0d8a26aacbf5b77f8e0bc6213728c5140546040f0ee37f54"
         );
     }
@@ -330,7 +342,11 @@ mod tests {
             })
             .collect();
         for n in 0..data.len() {
-            assert_eq!(digest_with(&data[..n], true), digest_with(&data[..n], false), "length {n}");
+            assert_eq!(
+                digest_with(&data[..n], true),
+                digest_with(&data[..n], false),
+                "length {n}"
+            );
         }
     }
 
