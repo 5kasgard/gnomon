@@ -428,6 +428,33 @@ Without that, Gnomon ranks by recall alone and needs nothing beyond the
 standard library. Surprise is computed once per turn as the record grows,
 never again for turns already seen.
 
+**A situation model, written once.** ConvoMem's "implicit connection"
+questions need context the user never repeats. A broken ankle should shape
+next month's weekend plans; a recurring Tuesday appointment should shape
+a meeting time. No cheap signal finds such a sentence among the thousands
+in a history (`bench/convomem_implicit.md`).
+
+Gnomon builds the situation model at write time instead:
+- **Code prefilters** the user's first-person sentences that are not
+  requests.
+- **Four Claude Haiku readers per history,** one quarter each, return the
+  numbers of the sentences about the user's own situation. Nothing is
+  rewritten: each kept fact is the user's exact words with a pointer to
+  its message.
+- **The kept facts load whole** with every question, in a cacheable
+  prefix.
+
+On the untouched test batch (4 histories of about 300 conversations, 202
+questions, `bench/situation.md`):
+
+| Evidence in front of the reader | Recall |
+|---|---|
+| Recall's top 10 | 21.8 |
+| Situation model (about 35K tokens, cached) | **75.7** |
+| Both | **81.7** |
+
+This is evidence presence, not answers. A reader run is next.
+
 **Repairable storage.** `gnomon.parity` adds Reed-Solomon parity beside
 the log: 2 parity blocks for every 16 blocks of 4 KiB, 14.4% extra
 storage. Any 2 damaged blocks in a stripe are rebuilt byte for byte, and
