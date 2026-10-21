@@ -51,7 +51,9 @@ def words(s: str) -> list:
 def facts(q: dict) -> list:
     out = []
     for r in q.get("rubric", []):
-        m = re.search(r"mention[s]?:?\s*(.+)", r, re.I)
+        # v1 read only "should mention:", which missed BEAM's other phrasings
+        # ("should contain:", "should state:") and almost every 1M rubric.
+        m = re.search(r"should (?:mention|contain|state|include)[s]?:?\s*(.+)", r, re.I)
         if m:
             out.append(m.group(1).strip())
     return out
