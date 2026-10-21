@@ -156,7 +156,8 @@ def load_convomem(paths, min_context: int = 150, per_file: int = 60, seed: int =
                 ev = set()
                 for e in item.get("message_evidences", []):
                     ev |= by_text.get(e["text"].strip(), set())
-                qs.append({"question": item["question"], "category": kind, "ev": ev})
+                qs.append({"question": item["question"], "category": kind, "ev": ev,
+                           "rubric": item.get("answer", "")})
             yield f"convomem/{kind}/{n}", bs, qs
 
 

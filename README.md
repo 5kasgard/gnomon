@@ -462,6 +462,14 @@ selects for free. On the same four test histories it kept the evidence for
 81.7% of questions, against 75.7% for Haiku and 41.1% for random sentences
 of the same share (`bench/situation_distil.py`).
 
+**Presence is not use.** In a reader test (2 histories, 123 questions),
+Haiku answering with the situation model used the evidence more often:
+38.2% against 30.1% judge-free, and a blinded judge preferred it 33 to 25
+with 65 ties. That is far less than the jump in presence. The reader has
+to find the one line that applies among about 1,900. So the next lever is
+precision: tens of standing circumstances, not thousands of sentences
+(`bench/situation_reader.md`).
+
 **Compartments: the right mechanism depends on the record.** Within a
 dataset, choosing the method by question type gains 0.3-2.2 points. Across
 datasets the winner flips. Plain words score 70.4 on LoCoMo, where the
