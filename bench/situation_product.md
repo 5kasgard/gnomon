@@ -13,12 +13,10 @@ choice is poor. On the 4 test histories (202 questions), at the same share:
 
 | Selector | Evidence kept | Mean tokens per history |
 |---|---|---|
-| Every first-person, non-request sentence | 96.5% | about 33K x 4 = 132K |
-| Hand-written word flags, top 25% | 58.4% | 9.4K x 4 |
-| Learnt on ConvoMem labels, top 25% | 81.7% | 12.1K x 4 |
-| Random 25% | 46.0% | 8.4K x 4 |
-
-(Token columns are the sum across the 4 histories divided as shown.)
+| Every first-person, non-request sentence | 96.5% | 132.6K |
+| Hand-written word flags, top 25% | 58.4% | 37.6K |
+| Learnt on ConvoMem labels, top 25% | 81.7% | 48.4K |
+| Random 25% | 46.0% | 33.5K |
 
 The learnt selector needs few labels: trained on 1,000 of the 4,831
 labelled sentences it keeps 78.2-78.7% (3 seeds), on 2,000 77.7-79.2%.
@@ -42,3 +40,42 @@ labelled sentences it keeps 78.2-78.7% (3 seeds), on 2,000 77.7-79.2%.
 
 The transfer is a real test: LongMemEval is a different dataset, built
 differently, and its labels never see ConvoMem.
+
+## Result: the weights do not transfer
+
+Haiku kept 347 of the 2,000 LongMemEval sentences (17.3%). About 282K
+Haiku tokens in all, in 2 agents.
+
+| Selector, on the 4 ConvoMem test histories (202 questions) | Evidence kept | Mean tokens per history |
+|---|---|---|
+| LongMemEval-trained, its own share, 17.3% (primary) | **49.0%** | 29.6K |
+| LongMemEval-trained, ConvoMem's share, 25.3% | 60.9% | 41.8K |
+| ConvoMem-trained, 25.3% (reference) | 81.7% | 48.4K |
+
+49.0% is below the 75% bar, so by the rule fixed above no weights ship.
+What matters about a person's situation depends on the history, as which
+ranking mechanism works best did (compartments.md). The answer is the
+same: learn it per memory.
+
+## What shipped
+
+`gnomon.situation` and the MCP tool `situation`:
+
+- Until a memory has learnt its selector, the situation model is every
+  candidate sentence (96.5% of evidence; on these histories about 130K
+  tokens, so `budget` keeps the most recent).
+- Learning, once per memory: `situation` with mode "sample" returns about
+  1,000 numbered candidate sentences and the labelling prompt. The
+  client's model (Claude, in a session) picks the lines; mode "learn"
+  fits the weights and saves them beside the log. Gnomon itself calls no
+  model. From the subsampling above, 1,000 labels keep about 78% of the
+  evidence at a quarter of the size. Those labels came from another
+  history of the same dataset; labels of the person's own history should
+  fit at least as well, but that is untested.
+- The model is the person's exact sentences with pointers, oldest first,
+  with the select-then-answer instruction (B2).
+
+Checked end to end: `gnomon.situation`, given weights learnt with its own
+`train` from the ConvoMem dev labels, keeps the evidence for 81.7% of the
+202 test questions, and its candidates for 96.5%: the same as the bench,
+to the question.

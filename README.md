@@ -122,6 +122,10 @@ The model gets these tools:
 - `attach`, `whoami`: which session's writer it is
 - `remember`, `record_conversation`
 - `recall` ("where did we discuss the budget?")
+- `context`, `expand`: what to read before a reply, in tiers, and the
+  exact turn behind any pointer
+- `situation`: what you have said about your own situation, in your
+  words, for advice that should take it into account
 - `query` ("which decisions still stand?"), with checked proofs
 - `discussion`, `open_questions`
 - `give_verdict`, `supersede`
@@ -482,6 +486,18 @@ Retrieval cues written at encoding time did not help either. Condensing
 loses: the profile kept the evidence for 44% of questions, the reader used
 it less even where kept, and it distracted where it missed. As with facts,
 selecting exact text beats rewriting it.
+
+**In the product: `situation`.** The MCP tool returns the person's own
+sentences about their situation, exact, with pointers, oldest first, and
+asks the reader to pick the lines that apply before answering. It changes
+only when the person says something new, so a prompt cache holds it.
+Which sentences matter does not transfer between datasets: a selector
+learnt from LongMemEval labels kept 49% of ConvoMem's evidence, against
+82% for one learnt on ConvoMem (`bench/situation_product.md`). So each
+memory learns its own, once. The client's model labels a sample of about
+1,000 sentences (`situation` mode "sample", then "learn"), and Gnomon
+calls no model itself. Until then it keeps every candidate sentence. On the
+benchmark, the product path matches the bench exactly (81.7% and 96.5%).
 
 **Compartments: the right mechanism depends on the record.** Within a
 dataset, choosing the method by question type gains 0.3-2.2 points. Across

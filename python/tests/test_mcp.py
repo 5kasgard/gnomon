@@ -169,6 +169,27 @@ class Modern(Fixture):
         r = self.s.call("expand", {"pointer": "nobody/1#0"})
         self.assertTrue(r["isError"])
 
+    def test_situation_holds_the_persons_own_sentences(self):
+        r = self.s.call("record_conversation", {
+            "messages": [{"speaker": "John", "text": "Our team budget is frozen until July. Can you plan an offsite?"},
+                         {"speaker": "Claude", "text": "I can plan a low-cost one."}],
+            "compartment": "lab", "frame": "chat", "extract": False})
+        self.assertFalse(r["isError"], r)
+        r = self.s.call("situation", {})
+        self.assertFalse(r["isError"], r)
+        text = r["content"][0]["text"]
+        self.assertIn("Our team budget is frozen until July.", text)
+        self.assertNotIn("offsite", text)
+        self.assertNotIn("low-cost", text)
+        self.assertEqual(r["structuredContent"]["lines"], 1)
+        self.assertFalse(r["structuredContent"]["learnt"])
+        self.assertTrue(self.s.call("situation", {"mode": "learn", "keep": [0]})["isError"])  # no sample yet
+        r = self.s.call("situation", {"mode": "sample"})
+        self.assertIn("[0] Our team budget is frozen until July.", r["content"][0]["text"])
+        r = self.s.call("situation", {"mode": "learn", "keep": [0]})  # no --meaning: refused, plainly
+        self.assertTrue(r["isError"])
+        self.assertIn("embedder", r["content"][0]["text"])
+
     def test_record_conversation_extracts_and_leaves_residue(self):
         r = self.s.call("record_conversation", {
             "messages": [{"speaker": "John", "text": "Let's use Rust for the core. Maybe Python on top?"},

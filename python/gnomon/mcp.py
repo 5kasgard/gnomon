@@ -226,6 +226,31 @@ TOOLS: list[dict] = [
         "annotations": {"readOnlyHint": True, "openWorldHint": False},
     },
     {
+        "name": "situation",
+        "title": "The person's situation, in their words",
+        "description": (
+            "Everything the person has said about their own situation (commitments, constraints, plans, "
+            "preferences, their team and life), as their exact sentences with [pointers], oldest first. "
+            "Read it before advising: the question often won't mention what matters (\"suggest a team "
+            "offsite\" when they said months ago that the budget is frozen). Pick the lines that should "
+            "change your answer, then answer applying them. It changes only when the person says something "
+            "new, so keep it early in the context where a prompt cache can hold it. Until this memory has "
+            "learnt which sentences matter it keeps all of them; to teach it once (needs --meaning), call "
+            "with mode \"sample\", follow the instructions returned, then call with mode \"learn\"."
+        ),
+        "inputSchema": _schema({
+            "mode": {"type": "string", "enum": ["model", "sample", "learn"],
+                     "description": "model (default): the situation; sample: sentences to label; learn: fit to "
+                                    "the numbers chosen from the sample."},
+            "keep": {"type": "array", "items": {"type": "integer"},
+                     "description": "learn: the numbers of the sample's sentences to keep."},
+            "budget": {"type": "integer", "minimum": 100, "maximum": 200000,
+                       "description": "At most this many tokens; the most recent lines are kept (default: all)."},
+            "as_of": {"type": "string", "description": "Use only what was recorded by then."},
+        }, []),
+        "annotations": {"readOnlyHint": True, "openWorldHint": False},
+    },
+    {
         "name": "query_language",
         "title": "Query language reference",
         "description": "The base relations, the built-in views and the syntax for `query`.",
@@ -714,6 +739,34 @@ class Server:
         except (KeyError, IndexError, ValueError) as e:
             raise ToolError(f"cannot expand {a['pointer']!r}: {e}")
         return f"{_ts(t['time'])} {_line(t['speaker'])}: {t['text']}", {k: t[k] for k in ("pointer", "start", "end")}
+
+    def t_situation(self, a: dict) -> tuple[str, Any]:
+        if getattr(self, "_situation", None) is None:
+            from .situation import Situation
+            self._situation = Situation(self.memory, self.writer, embed=self.embed)
+        s = self._situation
+        mode = a.get("mode", "model")
+        if mode == "sample":
+            from .situation import LABEL_PROMPT
+            self._situation_sample = s.sample()
+            lines = [f"[{i}] {c['text']}" for i, c in enumerate(self._situation_sample)]
+            return (LABEL_PROMPT + "\nThen call `situation` with mode \"learn\" and `keep` set to the chosen "
+                    "numbers.\n\n" + "\n".join(lines)), {"sentences": len(lines)}
+        if mode == "learn":
+            sample = getattr(self, "_situation_sample", None)
+            if not sample:
+                raise ToolError("call `situation` with mode \"sample\" first, in this session")
+            keep = {int(i) for i in a.get("keep", [])}
+            try:
+                w = s.learn([c["text"] for c in sample], [i in keep for i in range(len(sample))])
+            except ValueError as e:
+                raise ToolError(str(e))
+            n = len(s.model(a.get("as_of")))
+            return (f"Learnt from {len(sample)} labelled sentences ({len(keep & set(range(len(sample))))} kept). "
+                    f"The situation model now keeps the top {100 * w['share']:.0f}%: {n} sentences."), \
+                {"share": w["share"], "lines": n}
+        r = s.render(as_of=a.get("as_of"), budget=a.get("budget"))
+        return r["text"], {"lines": len(r["lines"]), "tokens": r["tokens"], "learnt": s.weights is not None}
 
     def t_query_language(self, a: dict) -> tuple[str, Any]:
         schema = _native.call("gn_views")["schema"]
