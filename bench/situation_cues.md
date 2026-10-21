@@ -72,3 +72,33 @@ applying them.
   distinctive words).
 - **Compared with** Haiku A (28.3%) and B (35.0%) on test history 0, 60
   questions.
+
+## Result: select-then-answer (B2), test history 0
+
+| | A (top 10) | B (situation model) | B2 (select, then answer) |
+|---|---|---|---|
+| Uses the evidence | 28.3% | 35.0% | 36.7% |
+| B2 against A, paired | | | better 9, worse 4 |
+
+Of the 50 questions whose evidence was in the model, the reader picked an
+evidence line for 40%. Finding the one relevant line among about 1,900 is
+the bottleneck, whether a model or an embedding does it. Cost: about 242K
+Haiku tokens.
+
+## Next: consolidation into a profile (B3), fixed before running
+
+Human memory condenses many episodes into a compact schema. Here, one
+model pass reads history 0's situation model (about 48K tokens) and writes
+a profile of at most about 120 lines, grouped under headings for areas of
+life and work. Each line states one standing circumstance in plain words
+and cites the numbers of the situation lines it rests on, so it can be
+checked against the record.
+
+- **The reader (Haiku)** gets the profile and the top 10, with the same
+  prompt as B.
+- **Measured:**
+  - uses the evidence (2+ distinctive words);
+  - whether the profile cites an evidence line (presence after
+    consolidation);
+  - the profile's size in tokens.
+- **Compared with** A, B and B2 on the same 60 questions.
