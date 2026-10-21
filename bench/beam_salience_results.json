@@ -1,0 +1,300 @@
+{
+ "model": "minishlab/potion-retrieval-32M",
+ "100K": {
+  "all@10": {
+   "hybrid": [
+    63.4,
+    60.3,
+    66.5
+   ],
+   "hybrid+novelty": [
+    65.3,
+    62.4,
+    68.2
+   ],
+   "ctl-user": [
+    65.8,
+    62.5,
+    68.8
+   ],
+   "ctl-random": [
+    59.6,
+    56.5,
+    62.4
+   ],
+   "source+novelty": [
+    65.6,
+    62.7,
+    68.7
+   ]
+  },
+  "contradiction_resolution@10": {
+   "hybrid": 79.9,
+   "hybrid+novelty": 87.4,
+   "ctl-user": 86.2,
+   "ctl-random": 77.7,
+   "source+novelty": 87.4
+  },
+  "event_ordering@10": {
+   "hybrid": 14.5,
+   "hybrid+novelty": 23.2,
+   "ctl-user": 22.4,
+   "ctl-random": 13.8,
+   "source+novelty": 23.7
+  },
+  "information_extraction@10": {
+   "hybrid": 65.0,
+   "hybrid+novelty": 55.4,
+   "ctl-user": 56.2,
+   "ctl-random": 58.3,
+   "source+novelty": 56.7
+  },
+  "instruction_following@10": {
+   "hybrid": 90.8,
+   "hybrid+novelty": 90.8,
+   "ctl-user": 90.8,
+   "ctl-random": 90.8,
+   "source+novelty": 90.8
+  },
+  "knowledge_update@10": {
+   "hybrid": 82.7,
+   "hybrid+novelty": 84.0,
+   "ctl-user": 88.5,
+   "ctl-random": 72.5,
+   "source+novelty": 84.0
+  },
+  "multi_session_reasoning@10": {
+   "hybrid": 55.4,
+   "hybrid+novelty": 55.0,
+   "ctl-user": 58.7,
+   "ctl-random": 46.6,
+   "source+novelty": 56.7
+  },
+  "preference_following@10": {
+   "hybrid": 77.8,
+   "hybrid+novelty": 79.1,
+   "ctl-user": 81.2,
+   "ctl-random": 77.8,
+   "source+novelty": 80.3
+  },
+  "summarization@10": {
+   "hybrid": 12.1,
+   "hybrid+novelty": 11.7,
+   "ctl-user": 7.6,
+   "ctl-random": 12.2,
+   "source+novelty": 9.7
+  },
+  "temporal_reasoning@10": {
+   "hybrid": 87.5,
+   "hybrid+novelty": 96.2,
+   "ctl-user": 95.0,
+   "ctl-random": 82.5,
+   "source+novelty": 96.2
+  },
+  "median_tokens@10": {
+   "hybrid": 4519,
+   "hybrid+novelty": 2362,
+   "ctl-user": 1377,
+   "ctl-random": 4488,
+   "source+novelty": 2099
+  }
+ },
+ "1M": {
+  "all@10": {
+   "hybrid": [
+    46.4,
+    44.5,
+    48.4
+   ],
+   "hybrid+novelty": [
+    49.8,
+    47.6,
+    52.2
+   ],
+   "ctl-user": [
+    50.3,
+    48.4,
+    52.4
+   ],
+   "ctl-random": [
+    44.1,
+    41.5,
+    46.5
+   ],
+   "source+novelty": [
+    50.5,
+    48.2,
+    53.0
+   ]
+  },
+  "contradiction_resolution@10": {
+   "hybrid": 59.7,
+   "hybrid+novelty": 65.9,
+   "ctl-user": 65.5,
+   "ctl-random": 56.1,
+   "source+novelty": 65.7
+  },
+  "event_ordering@10": {
+   "hybrid": 3.9,
+   "hybrid+novelty": 5.0,
+   "ctl-user": 5.6,
+   "ctl-random": 3.8,
+   "source+novelty": 5.4
+  },
+  "information_extraction@10": {
+   "hybrid": 42.5,
+   "hybrid+novelty": 50.5,
+   "ctl-user": 45.4,
+   "ctl-random": 41.2,
+   "source+novelty": 51.9
+  },
+  "instruction_following@10": {
+   "hybrid": 95.2,
+   "hybrid+novelty": 96.0,
+   "ctl-user": 96.0,
+   "ctl-random": 95.5,
+   "source+novelty": 96.0
+  },
+  "knowledge_update@10": {
+   "hybrid": 65.4,
+   "hybrid+novelty": 73.6,
+   "ctl-user": 75.4,
+   "ctl-random": 58.4,
+   "source+novelty": 74.5
+  },
+  "multi_session_reasoning@10": {
+   "hybrid": 32.7,
+   "hybrid+novelty": 36.2,
+   "ctl-user": 36.6,
+   "ctl-random": 29.4,
+   "source+novelty": 37.3
+  },
+  "preference_following@10": {
+   "hybrid": 46.9,
+   "hybrid+novelty": 45.5,
+   "ctl-user": 49.5,
+   "ctl-random": 45.2,
+   "source+novelty": 46.4
+  },
+  "summarization@10": {
+   "hybrid": 5.5,
+   "hybrid+novelty": 4.8,
+   "ctl-user": 5.1,
+   "ctl-random": 5.4,
+   "source+novelty": 5.0
+  },
+  "temporal_reasoning@10": {
+   "hybrid": 63.5,
+   "hybrid+novelty": 68.0,
+   "ctl-user": 70.6,
+   "ctl-random": 59.3,
+   "source+novelty": 69.8
+  },
+  "median_tokens@10": {
+   "hybrid": 3893,
+   "hybrid+novelty": 2169,
+   "ctl-user": 1061,
+   "ctl-random": 4233,
+   "source+novelty": 1780
+  }
+ },
+ "10M": {
+  "all@10": {
+   "hybrid": [
+    33.0,
+    29.5,
+    36.5
+   ],
+   "hybrid+novelty": [
+    34.3,
+    31.3,
+    37.1
+   ],
+   "ctl-user": [
+    36.1,
+    32.3,
+    39.7
+   ],
+   "ctl-random": [
+    30.6,
+    27.9,
+    33.7
+   ],
+   "source+novelty": [
+    35.3,
+    32.0,
+    38.3
+   ]
+  },
+  "contradiction_resolution@10": {
+   "hybrid": 49.7,
+   "hybrid+novelty": 53.9,
+   "ctl-user": 54.7,
+   "ctl-random": 46.4,
+   "source+novelty": 53.9
+  },
+  "event_ordering@10": {
+   "hybrid": 1.7,
+   "hybrid+novelty": 2.2,
+   "ctl-user": 2.1,
+   "ctl-random": 1.1,
+   "source+novelty": 2.2
+  },
+  "information_extraction@10": {
+   "hybrid": 61.0,
+   "hybrid+novelty": 66.0,
+   "ctl-user": 70.0,
+   "ctl-random": 51.0,
+   "source+novelty": 66.0
+  },
+  "instruction_following@10": {
+   "hybrid": 38.8,
+   "hybrid+novelty": 38.8,
+   "ctl-user": 38.8,
+   "ctl-random": 38.8,
+   "source+novelty": 38.8
+  },
+  "knowledge_update@10": {
+   "hybrid": 64.8,
+   "hybrid+novelty": 65.5,
+   "ctl-user": 71.5,
+   "ctl-random": 57.3,
+   "source+novelty": 68.0
+  },
+  "multi_session_reasoning@10": {
+   "hybrid": 19.2,
+   "hybrid+novelty": 22.8,
+   "ctl-user": 25.7,
+   "ctl-random": 21.3,
+   "source+novelty": 26.2
+  },
+  "preference_following@10": {
+   "hybrid": 27.5,
+   "hybrid+novelty": 26.7,
+   "ctl-user": 27.5,
+   "ctl-random": 27.5,
+   "source+novelty": 29.2
+  },
+  "summarization@10": {
+   "hybrid": 3.9,
+   "hybrid+novelty": 2.3,
+   "ctl-user": 2.4,
+   "ctl-random": 2.4,
+   "source+novelty": 2.3
+  },
+  "temporal_reasoning@10": {
+   "hybrid": 24.9,
+   "hybrid+novelty": 24.5,
+   "ctl-user": 25.4,
+   "ctl-random": 24.0,
+   "source+novelty": 24.5
+  },
+  "median_tokens@10": {
+   "hybrid": 3589,
+   "hybrid+novelty": 1691,
+   "ctl-user": 1150,
+   "ctl-random": 3358,
+   "source+novelty": 1567
+  }
+ }
+}
