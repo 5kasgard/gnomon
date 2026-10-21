@@ -35,3 +35,22 @@ evidence is not in the candidates to begin with: only about 30% of it is
 in the top 200 by words. Reordering cannot fix that; dated summaries
 written once (an offline model pass) or a semantic index might, and are the
 next things to measure.
+
+## Held-out result (run once, after the above was committed)
+recall@10, without -> with; results in `beam_consolidate_results.json`
+(`--ks 5,10,20`, which draws 60 candidates instead of 30, so 500K reads
+52.1 there against 51.5 above; the other sizes are identical).
+
+| | all questions | instructions | preferences | median tokens |
+|---|---|---|---|---|
+| 100K | 45.1 -> 59.0 [55.9, 62.0] | 3.8 -> 90.8 | 41.5 -> 73.9 | 5,902 |
+| 1M | 27.0 -> 40.2 [38.3, 42.4] | 6.2 -> 94.0 | 15.4 -> 43.0 | 6,982 |
+| 10M | 19.9 -> 24.3 [20.7, 27.8] | 0.0 -> 38.8 | 19.2 -> 19.2 | 7,037 |
+
+The fault, reported rather than fixed: the directive store grows with the
+history (median 337 / 685 / 841 / 5,304 tokens at 100K / 500K / 1M / 10M),
+so at 10M it is over three times the fixed budget, and choosing by shared
+words keeps the wrong ones. Candidates for a next version, to be measured
+on data not yet used: keep only the latest directive on each subject (a
+later "I prefer" supersedes an earlier one), and match on the "when I ask
+about X" clause rather than the whole sentence.

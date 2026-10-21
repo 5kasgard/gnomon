@@ -318,10 +318,34 @@ pairs 50-74% at top 10, knowledge updates 42-81%, the message with the
 newest value retrieved 59-82% of the time) and fails where it cannot:
 instructions and preferences set long before and never echoed in the
 question (0-42%), and orderings and summaries whose evidence is spread
-over dozens of messages (under 10% at 1M). Those need proactive standing
-instructions and coverage-oriented retrieval, not better ranking. Recall
-also falls with length (45, 39, 27, 20 at top 10), and at 10M tokens the
-first query of a conversation builds the index (median 117 ms, p95 7.9 s).
+over dozens of messages (under 10% at 1M). Recall also falls with length
+(45, 39, 27, 20 at top 10), and at 10M tokens the first query of a
+conversation builds the index (median 117 ms, p95 7.9 s).
+
+**Standing directives.** "Always use 24-hour time when I ask about
+meetings" is needed by "When is our next meeting?", which shares no words
+with it. `gnomon.consolidate` pulls such sentences ("Always…", "Never…",
+"I prefer…") out of what the user said and loads them with every recall
+inside a fixed 1,500-token budget, counted against the comparison window
+too. Fixed on 500K, then run once on the other sizes
+(`bench/beam_consolidate.md`; `python bench/beam.py --data BEAM --consolidate`, results in
+`bench/beam_consolidate_results.json`):
+
+| Length | All questions, top 10 | Instructions | Preferences | Median tokens |
+|---|---|---|---|---|
+| 100K (held out) | 45.1 → **59.0** | 3.8 → **90.8** | 41.5 → **73.9** | 5,902 |
+| 500K (tuned) | 38.7 → **52.1** | 17.4 → **90.5** | 20.2 → **64.3** | 6,243 |
+| 1M (held out) | 27.0 → **40.2** | 6.2 → **94.0** | 15.4 → **43.0** | 6,982 |
+| 10M (held out) | 19.9 → **24.3** | 0.0 → **38.8** | 19.2 → 19.2 | 7,037 |
+
+At 10M the user's directives come to about 5,300 tokens, over three times
+the budget, and picking among them by shared words loses most of the gain:
+the budget, not the idea, is the limit there, and is left as found rather
+than retuned on the held-out data. Covering order and summary questions by
+taking the best turn from each part of the record was tried and did
+nothing (the evidence is not among the top 200 by words to begin with);
+those need dated summaries written once, or meaning, not reordering.
+
 In a spot check, the cited message held the answer's numbers in 44 of 49
 questions, so BEAM's evidence ids are close to, not exactly, right.
 
