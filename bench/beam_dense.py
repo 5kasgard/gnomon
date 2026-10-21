@@ -18,6 +18,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import random
 import sys
 import tempfile
 import time
@@ -33,6 +35,8 @@ from gnomon.consolidate import directives, standing  # noqa: E402
 
 MODEL = "minishlab/potion-retrieval-32M"
 RRF = 60
+WINDOW = 2000
+CONTROLS = os.environ.get("BEAM_CONTROLS") == "1"
 
 
 def ranks_to_scores(order: list) -> dict:
@@ -61,6 +65,18 @@ def run(root: Path, size: str, ks: list, model) -> list:
             emb = model.encode([x["content"][:4000] for x in order])
             emb = emb / np.maximum(np.linalg.norm(emb, axis=1, keepdims=True), 1e-9)
             bits = np.packbits(emb > 0, axis=1)
+            # Surprise when written: 1 - the closest earlier message (within
+            # the previous WINDOW), computed once at ingest, no query needed.
+            nov = np.ones(len(mids))
+            for s0 in range(1, len(mids), 1024):
+                blk = emb[s0:s0 + 1024]
+                lo = max(0, s0 - WINDOW)
+                sims_prev = blk @ emb[lo:s0 + len(blk)].T
+                for i in range(len(blk)):
+                    upto = s0 + i - lo  # earlier messages only
+                    if upto > 0:
+                        nov[s0 + i] = 1 - sims_prev[i, max(0, upto - WINDOW):upto].max()
+            novelty = dict(zip(mids, nov))
             found = directives(((x["id"], x["role"], x["content"]) for x in order), {"user"})
             for cat, qs in json.loads(qf.read_text(encoding="utf-8")).items():
                 for q in qs:
@@ -82,8 +98,18 @@ def run(root: Path, size: str, ks: list, model) -> list:
                     ham = np.unpackbits(bits ^ qb, axis=1).sum(axis=1)
                     near = np.argsort(ham)[:100]
                     dense_b = [mids[i] for i in near[np.argsort(-sims[near])]]
-                    arms = {"words": words, "dense": dense, "hybrid": fuse(words, dense),
-                            "hybrid-binary": fuse(words, dense_b)}
+                    hyb = fuse(words, dense)
+                    salient = sorted(hyb[:200], key=lambda g: -novelty[g])
+                    arms = {"words": words, "dense": dense, "hybrid": hyb,
+                            "hybrid-binary": fuse(words, dense_b),
+                            "hybrid+novelty": fuse(words, dense, salient)}
+                    if CONTROLS:
+                        rnd = list(hyb[:200]); random.Random(q["question"]).shuffle(rnd)
+                        arms["ctl-short"] = fuse(words, dense, sorted(hyb[:200], key=lambda g: len(by_id[g]["content"])))
+                        arms["ctl-user"] = fuse(words, dense, sorted(hyb[:200], key=lambda g: by_id[g]["role"] != "user"))
+                        arms["ctl-random"] = fuse(words, dense, rnd)
+                        arms["source+novelty"] = fuse(words, dense, sorted(
+                            hyb[:200], key=lambda g: (by_id[g]["role"] != "user", -novelty[g])))
                     load = {x["source"] for x in standing(found, q["question"])}
                     row = {"conv": f"{size}/{d.name}", "category": cat}
                     for name, got in arms.items():
@@ -105,7 +131,9 @@ def main() -> int:
     from model2vec import StaticModel
     model = StaticModel.from_pretrained(MODEL)
     ks = [int(x) for x in a.ks.split(",")]
-    arms = ("words", "dense", "hybrid", "hybrid-binary")
+    arms = ("words", "dense", "hybrid", "hybrid-binary", "hybrid+novelty")
+    if CONTROLS:
+        arms = ("hybrid", "hybrid+novelty", "ctl-user", "ctl-random", "source+novelty")
     out = {}
     for size in a.sizes.split(","):
         t0 = time.time()
