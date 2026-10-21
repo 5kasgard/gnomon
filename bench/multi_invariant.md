@@ -56,3 +56,8 @@ computed. Committed before the run.
   median tokens.
 
 Nothing will be changed after the run.
+
+**Amendment, before any result.** The first extraction ran out of memory
+because it held every qualifying case before sampling. The 60 cases per
+file are now drawn by seeded reservoir sampling while streaming. It is
+still a seeded random sample of 60; only the sampling mechanics changed.

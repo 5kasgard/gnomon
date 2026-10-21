@@ -123,13 +123,20 @@ def load_convomem(paths, min_context: int = 150, per_file: int = 60, seed: int =
     import random
     import ijson
     for path in paths:
-        cases = []
+        # Reservoir sampling (seeded): holds at most `per_file` cases while
+        # streaming, since a file's large cases do not fit in memory at once.
+        rng, cases, seen = random.Random(seed), [], 0
         with open(path, "rb") as f:
-            for i, case in enumerate(ijson.items(f, "item")):
-                if case.get("contextSize", 0) >= min_context:
+            for case in ijson.items(f, "item"):
+                if case.get("contextSize", 0) < min_context:
+                    continue
+                seen += 1
+                if len(cases) < per_file:
                     cases.append(case)
-        rng = random.Random(seed)
-        cases = rng.sample(cases, min(per_file, len(cases)))
+                else:
+                    j = rng.randrange(seen)
+                    if j < per_file:
+                        cases[j] = case
         kind = Path(path).stem
         for n, case in enumerate(cases):
             bs, mid, by_text = [], 0, {}

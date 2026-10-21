@@ -208,8 +208,11 @@ stored, only rebuilt by replaying the log, so two replays always agree.
 
 ## Measured
 
-Every number below is reproducible from `bench/`, with no model and no
-network involved.
+Every number below is reproducible from `bench/`. Recall and the core
+need no model and no network. The meaning-layer results use a small static
+embedding model (model2vec, downloaded once from Hugging Face), and the
+answer results use Claude Haiku as the reader. Each says so where it
+appears.
 
 ### Recall: finding the evidence
 
