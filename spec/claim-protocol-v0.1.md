@@ -1117,6 +1117,23 @@ left. No one appoints themselves; anyone may resign. Queries see
 the independent checker establishes `position` and `holds` by folding the
 log itself, so a holding that has since ended no longer checks.
 
+**A company** (`gnomon.company`) runs on these. It is founded with
+positions that keep the powers apart: the CEO plans and delivers; the
+Chief of Staff allocates work and budget; the Head of People hires and
+reviews; the Head of IT keeps the tools. The Head of Assurance reports to
+no one but the owners, so the gate lets no one in production appoint or
+dismiss it. Staff are instances of a template writer per model tier,
+hired into titles by someone above: titles, not models, are held, and the
+record decides who keeps them. The company's compartment is its internal
+record and memory (work orders, results, memos, decisions, the structure
+chosen for each order); a client is a writer outside the company posting a
+work order there; a subcontractor is a writer of another party, whose
+verdicts count as independent. Personnel reviews propose probation,
+dismissal or promotion by stated thresholds over results judged from
+outside the worker's group; escalating or saying a part could not be done
+is never counted against anyone, and a leaver writes a handoff before the
+appointment ends.
+
 **The decision.** For one unit of work, every option is priced: each tier
 alone, and each rising cascade under each kind of check the work allows.
 Its cost is expected spend on tokens, plus the expected loss

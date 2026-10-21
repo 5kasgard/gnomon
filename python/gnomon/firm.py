@@ -166,11 +166,12 @@ _RECORD_QUERY = (
 )
 
 
-def record_from(memory, reader: str) -> Record:
-    """The firm's track record as `reader` sees it (see the module
-    documentation for what counts)."""
+def outcomes(memory, reader: str) -> tuple[list, bool]:
+    """Every judged result `reader` can see, one outcome each (see the module
+    documentation for what counts): dicts with the result's `claim`, its
+    `author`, the `kind` of work and whether it was a `success`; and whether
+    the record was too large to read in full."""
     r = memory.query(reader, _RECORD_QUERY, proofs=0)
-    writers = memory.writers(compartments=memory._compartments(reader))
     cols = r["variables"]
     votes: dict = {}  # claim -> {verifier group: result}
     meta: dict = {}  # claim -> (author, frame)
@@ -180,17 +181,27 @@ def record_from(memory, reader: str) -> Record:
             continue
         meta[row["C"]] = (row["A"], row["F"])
         votes.setdefault(row["C"], {})[row["GW"]] = row["R"]
-    rec = Record(truncated=bool(r.get("truncated")))
-    for c, by_group in votes.items():
+    out = []
+    for c, by_group in sorted(votes.items()):
         author, frame = meta[c]
-        w = writers.get(author, {})
-        t = tier_of(w.get("model")) if w.get("kind") == "model" else None
-        if t is None:
-            continue
         yes = sum(1 for v in by_group.values() if v == "supports")
         no = len(by_group) - yes
         if yes != no:
-            rec.add(t, frame[len("firm/"):], yes > no)
+            out.append({"claim": c, "author": author, "kind": frame[len("firm/"):].lower(), "success": yes > no})
+    return out, bool(r.get("truncated"))
+
+
+def record_from(memory, reader: str) -> Record:
+    """The firm's track record as `reader` sees it, by tier: only authors of
+    kind `model` whose model id has a tier's prefix count."""
+    results, truncated = outcomes(memory, reader)
+    writers = memory.writers(compartments=memory._compartments(reader))
+    rec = Record(truncated=truncated)
+    for o in results:
+        w = writers.get(o["author"], {})
+        t = tier_of(w.get("model")) if w.get("kind") == "model" else None
+        if t is not None:
+            rec.add(t, o["kind"], o["success"])
     return rec
 
 
