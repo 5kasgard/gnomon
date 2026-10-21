@@ -1186,7 +1186,7 @@ round, and measurements of plans against single agents on real work.
 ### 15.1 Forms: an alphabet, not one chart
 
 `plan_team` prices which models fill a structure; `gnomon.forms` chooses
-the structure. A form is a word over sixteen letters, each with a size:
+the structure. A form is a word over nineteen letters, each with a size:
 
 | | Letter | What it does |
 |---|---|---|
@@ -1205,6 +1205,9 @@ the structure. A form is a word over sixteen letters, each with a size:
 | E | Evolve | a scored population over generations |
 | H | Hierarchy | floors of managers for more parts than one planner can brief |
 | X | Escalate | cheapest capable tier first, up on a failed check |
+| T | Toolmaker | a capable model builds a cheap artifact (program, small model) once for a workload |
+| F | Floor | cheap workers answer what they are sure of; the rest go to one capable tier |
+| N | Batch | many items, and several questions per item, in one request |
 | I | Independent assurance | judges outside the workers' group, majority of distinct groups |
 
 Each letter records when it helps, when it hurts, and its evidence with a
@@ -1233,6 +1236,19 @@ by rules that each cite their evidence:
   models; below a capability threshold the effect reverses (Dochkina 2026,
   2603.28990). Never more than four voices: returns peak at 2-5 agents
   (Li et al. 2026, 2606.00655).
+- **A workload gets a toolmaker, a floor and batches.** With thousands
+  of items under one instruction, the cheap worker is built once and
+  checked on a probe the model labels; it answers what it is confident
+  about and the rest go to one capable tier, 25-100 items per request.
+  Never more than two tiers (a third added nothing in 118 of 135
+  comparisons; arXiv 2605.06350). Measured in `bench/floor`: on spam a
+  linear model matched Claude Haiku for almost nothing; on five-star
+  reviews no cheap worker came close, and the floor saved only what it
+  gave up.
+- **Count, do not self-judge.** At equal tokens, repeated sampling with a
+  vote beat every method where a model assessed its own work (arXiv
+  2607.28576); selection by a computer check or an outside comparator
+  recovers most of what sampling exposes (2605.14163).
 - **Floors only past one planner's reach**, escalation when a check can
   see failure, and assurance from outside the workers' group always.
 
