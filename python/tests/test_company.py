@@ -113,6 +113,24 @@ class CompanyTest(unittest.TestCase):
         handoffs = self.m.state(compartments=["acme"])["state"]["handoffs"]
         self.assertTrue(any(h["writer"] == weak for h in handoffs.values()))
 
+    def test_roles_from_agent_files_and_journals(self):
+        from gnomon.company import roles_from_agent_files
+        d = Path(self.dir.name) / "agents"
+        d.mkdir()
+        (d / "code-reviewer.md").write_text("---\nname: code-reviewer\ndescription: Reviews code for quality.\n"
+                                             "tools: Read, Grep\nmodel: sonnet\n---\nBody.\n")
+        (d / "planner.md").write_text("---\nname: planner\ndescription: Plans the work.\nmodel: opus\n---\n")
+        (d / "broken.md").write_text("no front matter")
+        roles = roles_from_agent_files(str(d))
+        self.assertEqual([(r.title, r.tier) for r in roles], [("Code Reviewer", "sonnet"), ("Planner", "opus")])
+        self.assertEqual(roles[0].tools, ("Read", "Grep"))
+        ceo, cos, lead, engs = self.staff()
+        self.assertEqual(self.c.adopt_roles(ceo, "CEO", roles), ["Code Reviewer", "Planner"])
+        self.assertEqual(self.c.adopt_roles(ceo, "CEO", roles), [])
+        self.c.journal(engs[0], "Started on the parser; the spec is unclear about quoted newlines.")
+        st = self.m.state(compartments=["acme"])["state"]
+        self.assertTrue(any(c["body"]["frame"] == f"org/acme/journal/{engs[0]}" for c in st["claims"].values()))
+
 
 if __name__ == "__main__":
     unittest.main()

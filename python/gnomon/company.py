@@ -38,8 +38,10 @@ organisation that does it, on Gnomon's own primitives:
 
 from __future__ import annotations
 
+import re
 import uuid
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Optional
 
 from . import GateError, Memory, claim
@@ -55,6 +57,44 @@ CONSTITUTION = [
                                          "promotion and dismissal."),
     ("Head of IT", "Chief of Staff", "Keeps the firm's tools: calculators, test runners, web access, checkers."),
 ]
+
+
+@dataclass
+class Role:
+    """A role from a handbook: a title, its duties in one line, the tier its
+    author suggests, and the tools it uses."""
+    title: str
+    duties: str
+    tier: Optional[str] = None
+    tools: tuple = ()
+
+
+def roles_from_agent_files(directory: str) -> list:
+    """Roles read from agent definition files (Markdown with a front matter
+    of `name`, `description`, `model`, `tools`, as in Claude Code's
+    `.claude/agents` and collections such as ECC). Files without a name and
+    a description are skipped."""
+    out = []
+    for f in sorted(Path(directory).glob("*.md")):
+        text = f.read_text(encoding="utf-8", errors="replace")
+        m = re.match(r"---\n(.*?)\n---", text, re.S)
+        if not m:
+            continue
+        meta = {}
+        for line in m.group(1).splitlines():
+            k, sep, v = line.partition(":")
+            if sep:
+                meta[k.strip()] = v.strip()
+        if not meta.get("name") or not meta.get("description"):
+            continue
+        duties = " ".join(meta["description"].split())
+        if len(duties) > 480:
+            duties = duties[:477] + "..."
+        tier = meta.get("model", "").lower() or None
+        tools = tuple(t.strip() for t in meta.get("tools", "").split(",") if t.strip())
+        title = meta["name"].replace("-", " ").strip().title()[:64]
+        out.append(Role(title, duties, tier if tier in ("haiku", "sonnet", "opus", "fable") else None, tools))
+    return out
 
 
 @dataclass
@@ -109,6 +149,17 @@ class Company:
         created by its holder or anyone above."""
         self.memory.position(by, self.org, title, compartment=self.compartment, duties=duties, reports_to=reports_to)
 
+    def adopt_roles(self, by: str, reports_to: str, roles: list) -> list:
+        """Positions for `roles` (see `roles_from_agent_files`) under
+        `reports_to`, skipping titles that exist. Returns the titles made."""
+        have = self.positions()
+        made = []
+        for r in roles:
+            if r.title not in have:
+                self.department(by, r.title, reports_to, r.duties)
+                made.append(r.title)
+        return made
+
     def appoint(self, by: str, title: str, holder: str) -> str:
         return self.memory.appoint(by, self.org, title, holder, compartment=self.compartment)
 
@@ -140,6 +191,11 @@ class Company:
         return self.memory.remember(by, claim(text, speaker=by, frame=f"org/{self.org}/{channel}",
                                               compartment=self.compartment, stance=stance, truth="true",
                                               origin="manual", confidence=9000 if stance == "decided" else 6000))
+
+    def journal(self, writer: str, text: str) -> str:
+        """An entry in a member's own working log (`org/<name>/journal/<writer>`):
+        visible inside the company, as a colleague's notebook would be."""
+        return self.note(writer, text, channel=f"journal/{writer}")
 
     def order(self, by: str, goal: str, kind: str, parent: Optional[str] = None) -> str:
         """A work order (from a client, or a sub-order citing its parent)."""
