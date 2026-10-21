@@ -53,6 +53,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "python"))
 
 from gnomon import Memory  # noqa: E402
+from gnomon.consolidate import directives, standing  # noqa: E402
 from gnomon.ingest import record_messages  # noqa: E402
 
 CHUNK = 90_000  # characters per episode; the core's limit is 100,000
@@ -155,8 +156,10 @@ def cluster_ci(groups: dict, reps: int = 2000) -> tuple:
             round(100 * means[int(0.975 * len(means)) - 1], 1))
 
 
-def evaluate(root: Path, size: str, ks: list) -> dict:
-    """Per-question rows for every conversation of one size."""
+def evaluate(root: Path, size: str, ks: list, consolidate: bool = False) -> dict:
+    """Per-question rows for every conversation of one size. With
+    `consolidate`, the user's standing directives are loaded with every
+    question, their tokens counted in its budget."""
     rows, timing, build_s, conv_tokens = [], [], [], []
     for d in sorted((root / "chats" / size).iterdir(), key=lambda p: int(p.name) if p.name.isdigit() else 0):
         qf = d / "probing_questions" / "probing_questions.json"
@@ -175,6 +178,7 @@ def evaluate(root: Path, size: str, ks: list) -> dict:
             conv_tokens.append(acc)
             by_id = {x["id"]: x for x in order}
             recent = [x["id"] for x in reversed(order)]
+            found = directives(((x["id"], x["role"], x["content"]) for x in order), {"user"}) if consolidate else []
             for cat, qs in json.loads(qf.read_text(encoding="utf-8")).items():
                 for q in qs:
                     ev, upd = evidence(q)
@@ -190,10 +194,13 @@ def evaluate(root: Path, size: str, ks: list) -> dict:
                         g = ids.get((h["episode"], int(h["id"].rsplit("#", 1)[1])))
                         if g is not None and g not in got:
                             got.append(g)
+                    load = standing(found, q["question"]) if consolidate else []
                     row = {"conv": f"{size}/{d.name}", "category": cat}
                     for k in ks:
-                        top = set(got[:k])
-                        budget = sum(tokens(f"{by_id[g]['role']}: {by_id[g]['content']}\n") for g in got[:k] if g in by_id)
+                        picked = got[:k]
+                        top = set(picked) | {x["source"] for x in load}
+                        budget = sum(tokens(f"{by_id[g]['role']}: {by_id[g]['content']}\n") for g in picked if g in by_id)
+                        budget += sum(tokens(x["text"]) + 4 for x in load)
                         same, spent = set(), 0
                         for i in recent:
                             spent += tokens(f"{by_id[i]['role']}: {by_id[i]['content']}\n")
@@ -228,12 +235,13 @@ def main() -> int:
     p.add_argument("--data", required=True, help="path to a clone of github.com/mohammadtavakoli78/BEAM")
     p.add_argument("--sizes", default="100K,500K,1M,10M")
     p.add_argument("--ks", default="5,10,20")
+    p.add_argument("--consolidate", action="store_true", help="load the user's standing directives with every question")
     p.add_argument("--json", help="also write per-question rows and summaries to this file")
     a = p.parse_args()
     ks = [int(x) for x in a.ks.split(",")]
     out = {}
     for size in a.sizes.split(","):
-        res = evaluate(Path(a.data), size, ks)
+        res = evaluate(Path(a.data), size, ks, a.consolidate)
         rows = res["rows"]
         if not rows:
             print(f"{size}: no conversations found")
