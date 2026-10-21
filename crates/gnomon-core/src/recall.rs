@@ -843,6 +843,11 @@ struct AnalysisCache {
     terms: Interner,
     postings: Vec<Vec<(u32, u32)>>,
     size: usize,
+    /// Estimated heap bytes held: the text, its term counts, the postings
+    /// they add, speaker words and dates. The cache is cleared when this
+    /// passes ANALYSIS_CACHE_BYTES, so a long-lived process over large or
+    /// many records stays within a fixed amount of memory.
+    bytes: usize,
 }
 
 impl AnalysisCache {
@@ -855,6 +860,11 @@ impl AnalysisCache {
             }
             self.postings[t].push((idx, f));
         }
+        self.bytes += a.text.len()
+            + a.tf.len() * 16 // the term counts and the postings entries they add
+            + a.speaker_terms.iter().map(|w| w.len() + 24).sum::<usize>()
+            + a.dates.len() * 64
+            + 160; // the Analysis, its Arc and the arena slot
         self.arena.push(Arc::new(a));
         self.size += 1;
         idx
@@ -862,6 +872,23 @@ impl AnalysisCache {
 }
 
 const ANALYSIS_CACHE_MAX: usize = 2_000_000; // turns and claims
+/// The cache's memory ceiling. Counting entries alone let it grow by about
+/// 90 MB for every 14,000 long messages (measured on ConvoMem), so a server
+/// over a large record could run out of memory before reaching the count.
+/// `GNOMON_RECALL_CACHE_MB` overrides it.
+const ANALYSIS_CACHE_BYTES: usize = 512 << 20;
+
+fn cache_bytes_limit() -> usize {
+    static L: OnceLock<usize> = OnceLock::new();
+    *L.get_or_init(|| {
+        std::env::var("GNOMON_RECALL_CACHE_MB")
+            .ok()
+            .and_then(|v| v.trim().parse::<usize>().ok())
+            .filter(|&mb| mb > 0)
+            .map(|mb| mb << 20)
+            .unwrap_or(ANALYSIS_CACHE_BYTES)
+    })
+}
 
 fn analysis_cache() -> &'static Mutex<AnalysisCache> {
     static C: OnceLock<Mutex<AnalysisCache>> = OnceLock::new();
@@ -1168,7 +1195,7 @@ pub fn run(ledger: &Ledger, visible: &[String], req: &Request) -> GateResult<Val
     // The analysis cache is held for the whole question: its slots and
     // postings stay consistent with the units built from it.
     let mut guard = analysis_cache().lock().unwrap_or_else(|p| p.into_inner());
-    if guard.size > ANALYSIS_CACHE_MAX {
+    if guard.size > ANALYSIS_CACHE_MAX || guard.bytes > cache_bytes_limit() {
         *guard = AnalysisCache::default();
     }
     let units = units(ledger, visible, req, &mut guard);
