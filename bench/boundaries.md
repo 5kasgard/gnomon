@@ -70,3 +70,64 @@ openers test had no control for that. This one does.
      of openers among D's lines, against the 10% expected by chance.
 - **Not tuned:** 60 tokens, 2,000 tokens, the window of 5 and the top 10%
   are fixed here, and everything is run once.
+
+## Result (run once): the hypothesis fails; density explains the openers
+
+Evidence recall at 2,000 tokens (`boundaries_results.json`):
+
+| | A, whole messages (hybrid) | F, every person's line | B, openers | D, surprise boundaries |
+|---|---|---|---|---|
+| BEAM 100K | 40.0 | 66.1 | 64.4 | 10.5 |
+| BEAM 500K | 40.0 | 63.5 | 62.4 | 12.6 |
+| BEAM 1M | 28.5 | 52.1 | 51.7 | 8.4 |
+| BEAM 10M | 25.4 | 40.8 | 41.0 | 10.0 |
+| LoCoMo | **78.0** | 40.2 | 10.3 | 5.5 |
+| LongMemEval-S | 74.8 | **77.0** | 45.9 | 15.6 |
+| ConvoMem | **81.8** | 56.8 | 0.0 | 1.8 |
+
+1. **Structure or density? Density.** On BEAM event ordering, openers
+   score 21.4 and every person's line scores 20.7 (B − F +0.7 [−0.1,
+   1.6]). Openers won in beam_openers.md because 60-token lines fit
+   more per token than whole messages. Their position in the
+   conversation added nothing. That claim in beam_openers.md is
+   corrected here.
+2. **A boundary index beyond density? No.** Surprise boundaries lose to
+   every person's line everywhere, by 31 to 62 points. Openers lose
+   badly outside BEAM: ConvoMem's conversations open with filler, so its
+   openers hold no evidence.
+3. **Does surprise find the marked boundaries?** On LongMemEval it does:
+   85% of D's lines are openers, against a 19.5% base rate. On BEAM
+   slightly (86% against 77%), on LoCoMo and ConvoMem not at all. Surprise
+   does mark where conversations change, where they do change sharply.
+   But a boundary is not where the evidence is.
+
+**What the numbers show instead.** The unit of what the reader is given
+decides as much as the ranking does:
+
+- **Where messages are long** (BEAM, where assistant replies run to
+  hundreds of tokens), short lines beat whole messages by 15 to 26
+  points.
+- **Where messages are short** (ConvoMem, LoCoMo), whole messages win,
+  and the person-only index misses the evidence other speakers hold.
+  LoCoMo has two people; ConvoMem has assistant facts.
+
+A budget is a knapsack: each item has a value (relevance) and a cost
+(its tokens). Hybrid retrieval ranks by value alone.
+
+## Next, fixed before running: separate ranking from cost
+
+- **H, hybrid headlines:** hybrid's order (words and meaning over whole
+  messages, of every speaker), each message shown as its first 60
+  tokens with a pointer.
+- **G, every line:** every message of every speaker cut to 60 tokens,
+  ranked by the line fusion as F.
+- **A and F** again, for reference.
+- **Two measures,** because a cut line may not hold the fact:
+  - **lenient:** the evidence message is pointed to;
+  - **strict:** its whole text is in the view, meaning the message was
+    at most 60 tokens, or the arm shows whole messages.
+
+  Strict is a lower bound on what a reader holds without `expand`.
+- **Prediction:** H beats A on lenient recall everywhere, because the
+  same ranking fits more items. H against A on strict recall shows what
+  cutting costs.
