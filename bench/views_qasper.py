@@ -58,7 +58,7 @@ def main():
             sc = {i: sum(math.log(len(paras) / dfp[w]) for w in qw & terms(t)) for i, t in msgs.items()}
             words = [i for i in sorted(sc, key=lambda i: -sc[i]) if sc[i] > 0]
             order = fuse(words, dense)
-            row = {"dataset": "QASPER test", "conv": paper["id"], "category": "all"}
+            row = {"dataset": "QASPER test", "conv": paper["id"], "category": "paper"}
             for arm, (text, got) in views(q, order, msgs, idf, df, n_sent).items():
                 row[arm] = len(gold & terms(text)) / len(gold)
                 row[arm + " ev"] = len(ev & got) / len(ev)
@@ -71,6 +71,7 @@ def main():
     out["preregistered"] = {"chosen": a.chosen, "difference": res[key]}
     if a.json:
         Path(a.json).write_text(json.dumps(out, indent=1, default=float), encoding="utf-8")
+        Path(a.json).with_suffix(".rows.json").write_text(json.dumps(rows), encoding="utf-8")
 
 
 if __name__ == "__main__":

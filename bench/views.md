@@ -89,3 +89,63 @@ Answer words in view at 2,000 tokens (`views_results.json`):
   run's results for every dataset but ConvoMem, so it is not a clean
   test on these datasets. That is why the chosen arm is confirmed on
   QASPER, which no step has seen.
+
+## Result: foraging, and the held-out confirmation fails
+
+Answer words in view at 2,000 tokens (evidence recall), from
+`views_forage_results.json`:
+
+| | A, whole | K | K′, length-aware | S, Gnomon's sentence view |
+|---|---|---|---|---|
+| BEAM 100K | 52.4 (45.1) | 58.8 (70.0) | 59.2 (69.6) | 59.1 (60.0) |
+| BEAM 500K | 51.0 (43.7) | 58.5 (64.9) | 58.2 (64.1) | 56.1 (56.9) |
+| BEAM 1M | 46.4 (32.4) | 55.0 (54.3) | 55.0 (53.9) | 53.3 (44.0) |
+| BEAM 10M | 44.9 (29.6) | 51.7 (44.0) | 51.7 (43.9) | 50.9 (38.7) |
+| LoCoMo | 60.5 (76.2) | 57.9 (78.8) | 60.3 (76.6) | 48.8 (66.7) |
+| LongMemEval-S | 65.5 (74.0) | 65.4 (90.6) | 65.2 (90.1) | 65.8 (83.1) |
+| ConvoMem | 67.4 (81.1) | 64.1 (82.6) | 66.4 (81.2) | 61.2 (79.4) |
+| Mean of the 7 rows | 55.4 | 58.8 | **59.4** (chosen) | 56.5 |
+
+**Held out, run once: QASPER test** (1,069 questions on 391 papers, the
+paragraphs as the record):
+
+| | A | K | K′ | S |
+|---|---|---|---|---|
+| Answer words in view | **80.7** | 73.8 | 74.9 | 68.8 |
+| Evidence recall | 72.2 | 93.5 | 92.3 | 72.0 |
+| Against A | | −6.9 [−8.7, −5.1] | **−5.8 [−7.6, −4.1]** | −11.8 [−13.6, −10.1] |
+
+The chosen view loses on data it had not seen. On papers, the
+paragraph that holds the answer is found more often when cut (92% against
+72%). But the answer often sits outside the 60-token window chosen by the
+question's words, and the whole paragraph holds it.
+
+What holds across all 8 environments:
+
+- **No fixed view is best.** Cutting wins on BEAM by 6 to 9 points, ties
+  on LongMemEval, and loses 1 to 6 points on LoCoMo, ConvoMem and
+  QASPER.
+- **Gnomon's current `context` view (S) is the weakest where messages are
+  short or the answer sits away from the question's words:** −11.7 on
+  LoCoMo, −6.2 on ConvoMem and −11.8 on QASPER against whole messages.
+  That is a finding about the product, and it needs acting on.
+- **This is the same shape as ranking** (compartments.md): the best
+  mechanism depends on the record, and nothing in the question predicts
+  it. There, gated calibration from use worked.
+
+## Next, fixed before running: calibrate the view per memory
+
+The simulation follows calibrate.py, with views as the arms. Each
+environment is treated as one memory:
+
+- the 7 environments above plus QASPER;
+- default A (whole messages);
+- alternatives K, K′ and S.
+
+Each question is one observation of every arm's answer words in view (in
+use: whether the text the reader cited or expanded was in each view).
+The rule is the product's: switch only after at least 10 observations, to
+the arm whose mean paired advantage over the default is above 2 standard
+errors. After n = 10, 20 and 50 observations (200 random orders), score
+the chosen view on the environment's other questions, against the
+default and against the best arm in hindsight.

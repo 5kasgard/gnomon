@@ -144,6 +144,7 @@ def main():
     print("mean over the 7 rows:", {k: round(v, 1) for k, v in means.items()}, "-> chosen:", choice)
     if a.json:
         Path(a.json).write_text(json.dumps(out, indent=1, default=float), encoding="utf-8")
+        Path(a.json).with_suffix(".rows.json").write_text(json.dumps(rows), encoding="utf-8")
 
 
 if __name__ == "__main__":
