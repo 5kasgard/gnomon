@@ -101,3 +101,36 @@ it gets one confirmation on questions this run did not use.
   interval excludes 0 and neither dataset is more than 3 points worse.
   Otherwise the view stays as it is.
 - **Run once.**
+
+## Confirmation result (run once): dates ship
+
+10 reader agents answered the 183 held-out questions in each arm, and 4
+blinded judge agents graded them (`time_view_confirm_results.json`).
+
+| | P | D | Answer words, D − P | Judge, D − P |
+|---|---|---|---|---|
+| LongMemEval-S, multi-session and temporal (103) | 50.3 (judge 63.1) | 49.7 (68.0) | −0.7 [−7.3, +5.8] | +4.9 [−3.9, +13.6] |
+| LoCoMo, temporal (80) | 10.0 (7.5) | 71.3 (66.2) | **+61.3 [+52.9, +69.4]** | **+58.8 [+47.5, +70.0]** |
+| **Pooled (183, primary)** | 32.7 (38.8) | 59.1 (67.2) | **+26.4 [+19.6, +33.4]** | **+28.4 [+20.2, +36.6]** |
+
+The pooled interval excludes 0, and neither dataset is more than 3 points
+worse (LongMemEval −0.7). By the rule fixed above, dates are added to
+`context`'s view: each line reads `[pointer] YYYY-MM-DD speaker: text`, in
+rank order.
+
+What the numbers mean:
+
+- **LoCoMo's gain is mostly mechanical.** Its temporal questions ask
+  "when did ...?", and the answer is the date of the session. Without
+  dates the reader cannot answer at all (7.5%). That is a real failure of
+  the old view, not an artefact. A person's "when did I ...?" has the same
+  shape.
+- **On LongMemEval's held-out questions the gain is small or none.** Most
+  are multi-session counts, which dates do not help.
+- **Across both runs, dates never cost more than 1.5 points** on any set of
+  questions, and the judge never scored them lower.
+- **The first run's primary test fell short.** The knowledge-update gain
+  (+9.0) had an interval including 0. The confirmation was pooled over
+  different question types, so it confirms dates in general, not the
+  knowledge-update gain in particular. The judge's +12.5 [+1.4, +23.6] is
+  the best evidence for that, and it is a secondary measure.
