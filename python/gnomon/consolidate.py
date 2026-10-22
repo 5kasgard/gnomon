@@ -98,6 +98,7 @@ also any some all each more most other such only own same very s t don now there
 again""".split())
 _WORD = re.compile(r"[a-z0-9]+(?:[.,:/-][0-9]+)*")
 _ASSISTANTS = frozenset({"assistant", "claude", "model", "ai", "bot", "system"})
+OPENER_TOKENS = 60
 
 
 def _terms(s: str) -> list:
@@ -162,6 +163,7 @@ class Tiers:
         one, recall's own order is used."""
         self.memory, self.reader, self.speakers, self.ranker = memory, reader, speakers, ranker
         self._at = None
+        self._opener_vecs: dict = {}
 
     def _turns(self, as_of: Optional[str]):
         comps = self.memory.writers()[self.reader]["compartments"]
@@ -170,7 +172,7 @@ class Tiers:
         for eid, ep in eps:
             content = ep["body"]["content"]
             for n, t in enumerate(ep["body"]["turns"]):
-                yield f"{eid}#{n}", t["speaker"], content[t["start"]:t["end"]]
+                yield f"{eid}#{n}", t["speaker"], content[t["start"]:t["end"]], ep["record_time"], n == 0
 
     def _refresh(self, as_of: Optional[str]) -> None:
         # The log only grows, so its size and modification time change with
@@ -179,15 +181,30 @@ class Tiers:
         key = (st.st_size, st.st_mtime_ns, as_of)
         if self._at == key:
             return
-        found, df, n = [], Counter(), 0
-        for pointer, speaker, text in self._turns(as_of):
+        found, df, n, openers, opened = [], Counter(), 0, [], None
+        for pointer, speaker, text, when, first in self._turns(as_of):
             for _, _, body in sentences(text):
                 df.update(set(_terms(body)))
                 n += 1
             ok = (speaker in self.speakers) if self.speakers is not None else speaker.lower() not in _ASSISTANTS
+            eid = pointer.rpartition("#")[0]
+            if first:
+                opened = None
             if ok:
                 found += directives([(pointer, speaker, text)])
-        self.found, self.df, self.n_sent, self._at = found, df, max(n, 1), key
+                if opened != eid and text.strip():
+                    # How the conversation began: the person's first turn, cut short.
+                    opened = eid
+                    openers.append({"pointer": pointer, "speaker": speaker, "time": when,
+                                    "text": text.strip()[:4 * OPENER_TOKENS]})
+        if self.ranker is not None and self.ranker.embed is not None and openers:
+            import numpy as np
+            new = [o for o in openers if o["pointer"] not in self._opener_vecs]
+            if new:
+                V = np.asarray(self.ranker.embed([o["text"] for o in new]), dtype=np.float32)
+                V /= np.maximum(np.linalg.norm(V, axis=1, keepdims=True), 1e-9)
+                self._opener_vecs.update({o["pointer"]: v for o, v in zip(new, V)})
+        self.found, self.df, self.n_sent, self._openers, self._at = found, df, max(n, 1), openers, key
 
     def context(self, query: str, *, budget: int = 2000, directive_budget: int = 1500,
                 as_of: Optional[str] = None, **recall_opts) -> dict:
@@ -216,6 +233,48 @@ class Tiers:
         return {"standing": hot, "view": warm, "text": text,
                 "tokens": {"standing": sum(tokens(d["text"]) for d in hot),
                            "view": sum(tokens(s["text"]) for s in warm), "total": tokens(text)}}
+
+    def openers(self, query: str, *, budget: int = 2000, as_of: Optional[str] = None) -> dict:
+        """How each conversation began, for the conversations that bear on
+        `query`: the person's first turn (at most OPENER_TOKENS), with when
+        and a [pointer], ranked by shared rare words fused with meaning (when
+        a ranker with an embedder is set), kept within `budget` and shown in
+        the order they happened. For "in what order did I...", "how has X
+        progressed" and finding the right conversation: on BEAM it held 21.5%
+        of event-ordering evidence at 2,000 tokens, against 3.5% for
+        retrieving whole messages (bench/beam_openers.md)."""
+        self._refresh(as_of)
+        ops = self._openers
+        if not ops:
+            text = f"No conversations recorded yet, for: {query}"
+            return {"openers": [], "text": text, "tokens": tokens(text)}
+        qw = {w for w in _terms(query) if w not in STOP and len(w) > 2}
+        n = self.n_sent
+        score = [sum(math.log(n / (1 + self.df[w])) for w in qw & set(_terms(o["text"]))) for o in ops]
+        orders = [[i for i in sorted(range(len(ops)), key=lambda i: -score[i]) if score[i] > 0]]
+        if self._opener_vecs and self.ranker is not None:
+            import numpy as np
+            qv = np.asarray(self.ranker.embed([query])[0], dtype=np.float32)
+            qv /= max(float(np.linalg.norm(qv)), 1e-9)
+            sims = [float(self._opener_vecs[o["pointer"]] @ qv) for o in ops]
+            orders.append(sorted(range(len(ops)), key=lambda i: -sims[i]))
+        fused = Counter()
+        for order in orders:
+            for r, i in enumerate(order):
+                fused[i] += 1 / (61 + r)
+        kept, used = [], 0
+        for i, _ in fused.most_common():
+            cost = tokens(ops[i]["text"]) + 12
+            if used + cost > budget:
+                break
+            kept.append(i)
+            used += cost
+        got = [ops[i] for i in sorted(kept)]
+        lines = [f"How the conversations about this began, oldest first, for: {query}"]
+        lines += [f"[{o['pointer']}] {o['time'][:10]} {o['speaker']}: {o['text']}" for o in got]
+        lines.append("(Each [pointer] can be expanded to its whole turn, exactly as recorded.)")
+        text = "\n".join(lines)
+        return {"openers": got, "text": text, "tokens": tokens(text)}
 
     def expand(self, pointer: str, as_of: Optional[str] = None) -> dict:
         """The whole turn a pointer names, exactly as recorded."""

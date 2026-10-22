@@ -68,6 +68,21 @@ class TieredContext(unittest.TestCase):
                          ["Always use 24-hour time when I ask about meetings."])
         self.assertTrue(c["text"].startswith("Standing instructions"))
 
+    def test_openers_show_how_each_conversation_began_in_order(self):
+        record_messages(self.m, "owner", [
+            ("user", "Let's plan the hosting migration to the new provider."),
+            ("assistant", "Sure. First, inventory the services."),
+        ], compartment="chat", record_time="2024-02-01T00:00:00Z")
+        record_messages(self.m, "owner", [
+            ("user", "Back to the hosting migration: the DNS cutover is next."),
+            ("assistant", "Then lower the TTLs first."),
+        ], compartment="chat", record_time="2024-03-01T00:00:00Z")
+        o = self.t.openers("In what order did I work on the hosting migration?")
+        self.assertEqual([x["time"][:7] for x in o["openers"]], ["2024-01", "2024-02", "2024-03"][-len(o["openers"]):])
+        self.assertTrue(all(x["speaker"] == "user" for x in o["openers"]))
+        self.assertIn("DNS cutover", o["text"].splitlines()[-2])
+        self.assertTrue(o["text"].index("plan the hosting") < o["text"].index("DNS cutover"))
+
     def test_warm_tier_points_at_the_exact_words(self):
         c = self.t.context("What is the deploy deadline?", budget=200)
         self.assertTrue(c["view"])

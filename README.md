@@ -350,8 +350,23 @@ the budget, and picking among them by shared words loses most of the gain:
 the budget, not the idea, is the limit there, and is left as found rather
 than retuned on the held-out data. Covering order and summary questions by
 taking the best turn from each part of the record was tried and did
-nothing (the evidence is not among the top 200 by words to begin with);
-those need dated summaries written once, or meaning, not reordering.
+nothing (the evidence is not among the top 200 by words to begin with).
+
+**Openers: navigating by how conversations began.** People raise a topic
+at the start of a conversation. On BEAM, every conversation holding
+event-ordering evidence opens with it. `context` with view `"openers"`
+gives, for the conversations that bear on a question, the person's first
+turn (at most 60 tokens), dated, with a pointer, oldest first. At 2,000
+tokens (pre-registered, run once, `bench/beam_openers.md`):
+
+| Evidence in view | Whole messages (hybrid) | Openers |
+|---|---|---|
+| Ordering and summaries, 4 sizes | 4.4 | **16.0** (+11.6 [9.7, 13.6]) |
+| Event ordering, 100K / 500K / 1M / 10M | 6.6 / 3.1 / 2.5 / 2.1 | 43.8 / 20.3 / 14.1 / 6.7 |
+
+These are pointers, not text: a fact past the first 60 tokens still needs
+`expand`. The shipped version scores 46.1 / 22.0 on ordering at
+100K / 500K.
 
 **A meaning layer.** Next to word ranking, Gnomon can rank by meaning
 using static embeddings (model2vec potion-retrieval-32M). That is a lookup
