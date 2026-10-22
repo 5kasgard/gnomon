@@ -224,3 +224,24 @@ reader can answer. Two contrasts are large enough to check with a reader:
 - **Prediction:** the sign of each paired difference matches the
   proxy's. If either flips, the proxy does not hold, and the view default
   is reopened.
+
+## Result: the proxy holds
+
+Haiku answered from one view each (60 questions per dataset, about 900K
+Haiku tokens in all, `views_reader_results.json`). Paired differences in
+the reader's answers:
+
+| | Proxy (view) | Answer words in the answer | Token F1 |
+|---|---|---|---|
+| LoCoMo, window − sentences | +11.3 | **+11.3 [+3.1, +20.2]** (47.3 vs 36.0) | **+18.9 [+12.1, +25.9]** |
+| QASPER, whole − window | +5.8 | +3.6 [−4.3, +12.0] (47.2 vs 43.6) | +1.3 [−3.3, +5.8] |
+
+Both signs match the prediction:
+
+- **LoCoMo:** clearly. The gap in the reader's answers equals the gap in
+  the views.
+- **QASPER:** in the predicted direction, but 60 questions cannot
+  separate a gap that size from none.
+
+The views measure tracks what a reader can answer, so the conclusions
+above stand on it. The view default is not reopened.
