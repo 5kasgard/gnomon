@@ -42,11 +42,14 @@ TOOL = re.compile(r"<tool>\s*(\{.*?\})\s*</tool>", re.S)
 class Provider:
     def __init__(self, kind: str, model: str | None):
         self.kind, self.calls, self.tokens_in, self.tokens_out = kind, 0, 0, 0
+        self.neurons = 0.0
         if kind == "workers-ai":
-            self.model = model or "@cf/zai-org/glm-4.7-flash"
-            self.url = (f"https://api.cloudflare.com/client/v4/accounts/{os.environ['CF_ACCOUNT_ID']}"
-                        "/ai/v1/chat/completions")
-            self.headers = {"Authorization": f"Bearer {os.environ['CF_API_TOKEN']}", "Content-Type": "application/json"}
+            # Through a small Worker with an AI binding (bench/live.md), so no API token is needed.
+            self.model = model or "@cf/google/gemma-4-26b-a4b-it"
+            self.url = os.environ["PROXY_URL"]
+            self.headers = {"x-key": os.environ["PROXY_KEY"], "Content-Type": "application/json",
+                            "CF-Access-Client-Id": os.environ.get("CF_ACCESS_ID", ""),
+                            "CF-Access-Client-Secret": os.environ.get("CF_ACCESS_SECRET", "")}
         elif kind == "anthropic":
             self.model = model or "claude-haiku-4-5"
             self.url = "https://api.anthropic.com/v1/messages"
@@ -63,7 +66,7 @@ class Provider:
                 return '<tool>{"name": "situation", "args": {}}</tool>'
             return f"(reply {self.calls}) " + " ".join(last.split()[:12])
         if self.kind == "workers-ai":
-            body = {"model": self.model, "max_tokens": max_tokens,
+            body = {"model": self.model, "max_tokens": max_tokens, "chat_template_kwargs": {"enable_thinking": False},
                     "messages": [{"role": "system", "content": system}] + messages}
         else:
             body = {"model": self.model, "max_tokens": max_tokens, "system": system, "messages": messages}
@@ -79,9 +82,12 @@ class Provider:
                 time.sleep(5 * (attempt + 1))
                 print("  retry:", e, flush=True)
         if self.kind == "workers-ai":
+            if "error" in out:
+                raise RuntimeError(out["error"])
             u = out.get("usage", {})
             self.tokens_in += u.get("prompt_tokens", 0)
             self.tokens_out += u.get("completion_tokens", 0)
+            self.neurons += u.get("neurons", 0) or 0
             return out["choices"][0]["message"]["content"] or ""
         u = out.get("usage", {})
         self.tokens_in += u.get("input_tokens", 0)
@@ -161,12 +167,14 @@ def run(a):
                             compartment="chat", record_time=when)
             transcript.append({"session": s, "when": when, "topic": topic, "conversation": convo, "tools": tlog})
             print(f"{p['name']} session {s}: {len(convo)} messages, {len(tlog)} tool calls, "
-                  f"{prov.calls} model calls so far", flush=True)
+                  f"{prov.calls} model calls, {round(prov.neurons)} neurons so far", flush=True)
         (out / f"{p['name']}_transcript.json").write_text(json.dumps(transcript, indent=1), encoding="utf-8")
     (out / "probes.json").write_text(json.dumps(results, indent=1), encoding="utf-8")
     (out / "usage.json").write_text(json.dumps({"provider": prov.kind, "model": prov.model, "calls": prov.calls,
-                                                "tokens_in": prov.tokens_in, "tokens_out": prov.tokens_out}))
-    print("usage:", prov.calls, "calls,", prov.tokens_in, "tokens in,", prov.tokens_out, "out")
+                                                "tokens_in": prov.tokens_in, "tokens_out": prov.tokens_out,
+                                                "neurons": prov.neurons}))
+    print("usage:", prov.calls, "calls,", prov.tokens_in, "tokens in,", prov.tokens_out, "out,",
+          round(prov.neurons), "neurons")
 
 
 def score(a):

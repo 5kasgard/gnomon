@@ -25,5 +25,10 @@ costs, and whether it applies what comes back.
   - It is model-written conversation, so it tests the loop, not realism.
   - Check words are a coarse test.
   - 12 probes is a pilot, not a statistic.
-- **Providers:** Workers AI (free daily allocation) or the Anthropic API,
-  chosen at run time and recorded with the results.
+- **Providers:** Workers AI or the Anthropic API, chosen at run time
+  and recorded with the results.
+  - Workers AI runs on the free daily allocation, through a small proxy
+    Worker with an AI binding. It sits behind a key and a dedicated
+    Cloudflare Access service token, so no API token is needed.
+  - The model is Gemma 4 26B, with thinking turned off.
+  - The proxy, its Access app and the token are deleted after the run.
