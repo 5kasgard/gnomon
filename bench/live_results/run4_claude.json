@@ -1,0 +1,310 @@
+[
+ {
+  "id": "Sam_veg",
+  "applied": {
+   "none": true,
+   "pull": true,
+   "push": true
+  },
+  "calls": [
+   [
+    "situation",
+    null
+   ]
+  ],
+  "answers": {
+   "none": "Two easy options for Friday: a big roasted vegetable and chickpea traybake with feta and lemon, or a pan of mushroom and spinach risotto finished with parmesan. Both are mostly hands-off and work well for two or more people. If you tell me what you already have in the fridge, I can tailor one.",
+   "pull": "Two easy vegetarian options for Friday that keep the washing up low and the protein up for your training. A sheet pan of halloumi, chickpeas and roasted vegetables with a squeeze of lemon takes about 30 minutes and uses one tray. For something closer to your Italian takeout habit, try a lentil ragu over pasta, which is a good first pasta dish and covers your protein needs too.\n",
+   "push": "Here are two easy vegetarian options for Friday that suit your one-pan goal and your protein needs for training. First, a sheet pan dinner: roast chickpeas, peppers and red onion with olive oil and smoked paprika, then add crumbled feta or halloumi in the last few minutes. Second, a simple pasta with a white bean and spinach sauce, which is a good first pasta dish and stays cheap, since your budget is tight until July.\n"
+  },
+  "judge": {
+   "push": true,
+   "pull": true,
+   "none": false
+  }
+ },
+ {
+  "id": "Sam_marathon",
+  "applied": {
+   "none": true,
+   "pull": true,
+   "push": true
+  },
+  "calls": [
+   [
+    "situation",
+    null
+   ]
+  ],
+  "answers": {
+   "none": "A relaxed Saturday morning could be a slow coffee and a walk along a river or through a park, followed by a farmers market run for produce to cook with. If you want something more active, a gentle parkrun or a bike ride with a stop for breakfast works well. Let me know how energetic you want to feel and I can narrow it down.",
+   "pull": "Since you're still easing off hills and stairs for your knee, I'd keep Saturday morning flat and unhurried: an easy run along the river, then a slow coffee at one of the local spots you've been trying out. On the way back, pick up ingredients for a simple sheet pan dinner so the cooking practice starts this weekend. If the knee is still grumbling, swap the run for a long walk and keep the coffee.\n",
+   "push": "Your long run is the session that matters most for the March half, so I'd make Saturday morning that run. Given what your physio said about your knee, pick a flat route and keep the pace easy, and stop if it starts to complain. Once you're done, reward yourself by heading out to one of those local coffee spots you've been tracking down."
+  },
+  "judge": {
+   "push": true,
+   "pull": false,
+   "none": false
+  }
+ },
+ {
+  "id": "Sam_budget",
+  "applied": {
+   "none": true,
+   "pull": true,
+   "push": true
+  },
+  "calls": [
+   [
+    "situation",
+    null
+   ]
+  ],
+  "answers": {
+   "none": "A few low-cost ideas: bring in a nice coffee or pastries one morning, run a team lunch at a place you all like, or take everyone out for a casual drinks or games night. Asking the team what they would enjoy most often gets the best result. If you give me a rough budget per person, I can suggest more specific options.",
+   "pull": "Since your team's budget is frozen until July, I'd keep this low-cost and personal. A shared potluck lunch works well: everyone brings a dish, and it's easy to make sure there's a good vegetarian option. Pair it with a handwritten note for each person that names something specific they did well this quarter, which costs nothing and often lands better than a gift.",
+   "push": "Since your team's budget is frozen until July, I'd keep this low-cost and focused on time and attention. A slow team coffee on you, a shared playlist, or a handwritten thank-you note from each person can feel like a real gesture without spending anything. Offering an afternoon off or a relaxed Friday finish would also suit a hectic month.\n"
+  },
+  "judge": {
+   "push": true,
+   "none": false,
+   "pull": true
+  }
+ },
+ {
+  "id": "Sam_mornings",
+  "applied": {
+   "none": false,
+   "pull": true,
+   "push": true
+  },
+  "calls": [
+   [
+    "situation",
+    null
+   ]
+  ],
+  "answers": {
+   "none": "For six one-on-ones next week, I would book 30 minutes each and leave a 15-minute buffer after every third one so you can catch your breath. Keep Monday for the people you most need to check in with early in the week, and put any longer or more sensitive conversations mid-week. Send me the names and any current topics for each person and I can draft a simple agenda for each slot.",
+   "pull": "Happy to help you plan them. With six people, a 30-minute slot each (with a 5-minute buffer between) fits in about three hours, and you can use the first 10 minutes of each one to ask how they are doing before getting into work. To tailor the plan, tell me roughly what each person needs from these meetings, whether any of them are in the middle of something difficult, and which days and times you have free next week.\n",
+   "push": "Since you don't like meetings before 10am, I'd keep all six between 10 and about 4, with a short buffer after each so one overrunning doesn't squeeze the next. Put the person you have the most friction with early in the week, while you still have energy for a harder conversation, and leave the lighter check-ins for later. If you tell me each person's main topics, I can draft a short agenda for each one."
+  },
+  "judge": {
+   "pull": false,
+   "none": false,
+   "push": true
+  }
+ },
+ {
+  "id": "Sam_lisbon",
+  "applied": {
+   "none": true,
+   "pull": true,
+   "push": true
+  },
+  "calls": [
+   [
+    "situation",
+    null
+   ]
+  ],
+  "answers": {
+   "none": "A good day trip from Lisbon is Sintra, where you can see the Pena Palace and the Moorish Castle, with Cascais and the coast as a relaxed add-on in the afternoon. Take the train from Rossio station, which takes about 40 minutes. Go early to avoid the biggest crowds at the palace.",
+   "pull": "Cascais would suit a relaxed weekend: it is about 40 minutes by train from Cais do Sodr\u00e9, the seafront walks are flat, and you can get a window seat for lunch and some people-watching. Given your knee, I'd skip Sintra's steep hill climbs unless you take the bus up to the palaces. If your knee is still giving you trouble, Set\u00fabal is another easy, low-key option.",
+   "push": "\u00c9vora makes a good low-key day trip from Lisbon: it's about an hour and a half by train, the old town is mostly flat, and there are plenty of caf\u00e9s where you can grab a window seat and people-watch. Cascais is an even easier option, with a flat seafront promenade and a short train ride. Since your physio has you avoiding stairs and hills for now, I'd skip Sintra's steep palace climbs until your knee is better.\n"
+  },
+  "judge": {
+   "push": true,
+   "none": true,
+   "pull": true
+  }
+ },
+ {
+  "id": "Sam_knee",
+  "applied": {
+   "none": true,
+   "pull": true,
+   "push": true
+  },
+  "calls": [
+   [
+    "situation",
+    null
+   ],
+   [
+    "context",
+    "knee physio stairs hills walking running recovery"
+   ]
+  ],
+  "answers": {
+   "none": "For a relaxed Sunday walk, try a loop around a lake or along a flat river path, which keeps the terrain gentle and gives you plenty of places to stop. Choose a route with benches and a cafe at the halfway point so you can rest whenever you need to. If you tell me your city, I can suggest a specific loop.",
+   "pull": "Since you're easing off your knee, I'd keep it flat: pick a riverside or lakeside path, or a park loop with a gentle surface, and aim for something like 3 to 5 km. Start late morning, go at an easy pace, and stop somewhere with a good coffee and a window seat or a bench when you're done. If the knee has been grumbling, stop when it tells you to rather than pushing for the full loop.",
+   "push": "Lisbon is very hilly, so with your knee I'd keep to the flat riverside: start at Cais do Sodr\u00e9 and walk west along the Tejo promenade to Bel\u00e9m, about 6 km each way, stopping for coffee on the way and taking the tram or a taxi back if your knee gets tired. Go in mid-morning when the paths are quiet, and avoid the steep streets of Alfama and Chiado for this one.\n"
+  },
+  "judge": {
+   "pull": true,
+   "push": true,
+   "none": true
+  }
+ },
+ {
+  "id": "Priya_nuts",
+  "applied": {
+   "none": true,
+   "pull": true,
+   "push": true
+  },
+  "calls": [
+   [
+    "situation",
+    null
+   ]
+  ],
+  "answers": {
+   "none": "A simple nut-free vanilla sponge works well for a class cake: beat 175g soft butter with 175g caster sugar, add 3 eggs one at a time, then fold in 175g self-raising flour and 1 teaspoon of vanilla extract with a splash of milk. Bake in a lined 20cm tin at 180C for about 25 minutes, then cool and decorate with icing and sprinkles. Check the packaging on any decorations or chocolate, since many are made in facilities that handle nuts.",
+   "pull": "Here's an easy one: a one-bowl vanilla sponge made by beating 150g softened butter, 150g caster sugar, 3 eggs, 150g self-raising flour and 1 tsp vanilla until smooth, then baking in a lined 20cm tin at 180\u00b0C for about 25 minutes. Since it's for the bake sale and your son has a severe nut allergy, check every ingredient label for \"may contain nuts\" warnings, including the flour, sprinkles, chocolate and any flavouring. A simple icing sugar glaze or buttercream on top will make it look finished with minimal effort.\n",
+   "push": "Here's an easy one: a basic vanilla sponge (2 eggs, 100g each of butter, caster sugar and self-raising flour, 1 tsp vanilla, and a splash of milk), baked at 180\u00b0C for about 20 minutes in a lined tin, then iced with simple buttercream. Since the bake sale is for the whole school and your son has a severe nut allergy, check that every ingredient (chocolate, sprinkles, flour, food colouring) is labelled nut-free rather than just \"may contain,\" and use clean bowls and utensils. Would you like a cupcake version instead, which is easier to portion out for the stall?\n"
+  },
+  "judge": {
+   "push": true,
+   "pull": true,
+   "none": true
+  }
+ },
+ {
+  "id": "Priya_nocar",
+  "applied": {
+   "none": true,
+   "pull": true,
+   "push": true
+  },
+  "calls": [
+   [
+    "situation",
+    null
+   ],
+   [
+    "context",
+    "how does the user get around, car or transport, garden centre trip"
+   ]
+  ],
+  "answers": {
+   "none": "If you don't have a car, check the bus timetable first, since many routes run less often on Saturdays. A taxi or ride-share is the quickest option if the garden centre is not on a direct route. Calling the garden centre to ask about delivery or a shuttle is also worth a try.",
+   "pull": "If you're still getting around by bike and train, a Saturday trip could be a pleasant ride, but check the train timetable first since weekend services are often less frequent. If the car is up to it, that's likely the easier option with the kids, though given how it's been playing up, I'd only rely on it if you're confident it's running. Do you want help working out a bike route or a train timing for Saturday?\n",
+   "push": "Since you've been getting around by bike and train, the simplest plan is to cycle to your nearest station, take the train to the one closest to the garden centre, and then cycle or walk the last stretch. Check Saturday's timetable first, because weekend services can run less often, and build in some spare time for the trip. Raised beds and compost are bulky, though, so if you're planning to buy those, ask whether the garden centre delivers or whether a car hire or a lift would be easier.\n"
+  },
+  "judge": {
+   "push": true,
+   "none": true,
+   "pull": false
+  }
+ },
+ {
+  "id": "Priya_physics",
+  "applied": {
+   "none": false,
+   "pull": false,
+   "push": false
+  },
+  "calls": [
+   [
+    "situation",
+    null
+   ]
+  ],
+  "answers": {
+   "none": "Try a quick demo with a question: drop a metal ball and a piece of paper from the same height and ask the class what will land first, then repeat with the paper crumpled into a ball. Students can predict, watch, and explain, which gets them thinking about air resistance straight away. It takes about ten minutes and needs nothing special.",
+   "pull": "Try a ruler drop: pairs hold a metre ruler between thumb and finger, and the partner drops it without warning, so the catcher has to grab it as fast as they can. Read the distance on the ruler where it was caught and convert it to reaction time with t = sqrt(2d/g), which turns a silly game into a first look at free fall. It needs one ruler per pair, almost no prep, and you can have them predict their times on the board before they start to keep a chaotic room focused.\n",
+   "push": "A paper helicopter drop is a good fit for a lively Year 9 group: give each pair one sheet of A4, have them predict the fall time from a fixed height, then time the drops and rank the designs by result. It gets everyone measuring and arguing over the data, which tends to channel a chaotic room nicely. Set clear rules and a quick demo at the start so it doesn't turn into a free-for-all.\n"
+  },
+  "judge": {
+   "pull": true,
+   "none": true,
+   "push": false
+  }
+ },
+ {
+  "id": "Priya_tuesdays",
+  "applied": {
+   "none": true,
+   "pull": true,
+   "push": true
+  },
+  "calls": [
+   [
+    "situation",
+    null
+   ],
+   [
+    "context",
+    "When should I schedule the parents' evening prep meeting next week?"
+   ]
+  ],
+  "answers": {
+   "none": "Tuesday works well for most parents' evening prep meetings, since it leaves Monday for planning and gives you time to follow up before Thursday. Aim for mid-morning or early afternoon, when you are usually fresh and have not yet had many interruptions. Make sure you check the school calendar for anything else scheduled that day.",
+   "pull": "From what you've told me, Tuesdays are the hardest day for you because of the kids' swimming lessons, and your oldest has football on Tuesdays and Wednesdays, so I'd avoid those evenings. Thursday afternoons are taken by Leo's music lesson, so a Thursday evening or a Monday is probably your cleanest option, though I don't know your full work calendar. Whichever day you pick, try to leave a day or so between the prep and the parents' evening itself so you have time to adjust.\n",
+   "push": "Avoid Tuesdays, since swimming lessons take up that slot, and Wednesdays too, because your oldest has football then. Monday is probably your cleanest option, or Thursday morning before Leo's music lesson in the afternoon. If you can, book it before the school trip prep piles up.\n"
+  },
+  "judge": {
+   "pull": true,
+   "push": true,
+   "none": false
+  }
+ },
+ {
+  "id": "Priya_glasgow",
+  "applied": {
+   "none": false,
+   "pull": true,
+   "push": true
+  },
+  "calls": [
+   [
+    "situation",
+    null
+   ],
+   [
+    "context",
+    "half-term holiday outdoor plans with the kids, location and kids' ages or interests"
+   ]
+  ],
+  "answers": {
+   "none": "For half-term, a good outdoor plan is a walk to a local park or woodland with a picnic and a scavenger hunt, which works for most ages. If it's wet, a visit to a science centre or an indoor climbing or swimming session fills the day well. Check opening hours and book ahead, since half-term tends to be busy.",
+   "pull": "Pollok Country Park is a good bet for half-term: there are highland cows, big open lawns for the football crowd, and the Burrell Collection is right there if the weather turns. If you're packing a picnic, check labels carefully given your son's nut allergy, or stick to a caf\u00e9 with clearly labelled allergen info. Do you want more ideas for a rainy day as well?\n",
+   "push": "Half-term is a good chance to get the kids into the back garden, so you could turn the vegetable patch into a family project: build the raised beds together and let them plant a few quick crops like radishes or salad leaves. If you want to get out, Glasgow Botanic Gardens or Pollok Park would make an easy day by bike or train, with allergy-safe snacks packed for your son. Try to keep at least one morning free of activities so the week feels like a break rather than another logistics job.\n"
+  },
+  "judge": {
+   "pull": true,
+   "push": true,
+   "none": false
+  }
+ },
+ {
+  "id": "Priya_piano",
+  "applied": {
+   "none": false,
+   "pull": false,
+   "push": true
+  },
+  "calls": [
+   [
+    "situation",
+    null
+   ],
+   [
+    "context",
+    "piano pieces to practise, repertoire, current level, skill goals"
+   ]
+  ],
+  "answers": {
+   "none": "For practice this month, try Debussy's Clair de Lune for expressive phrasing, or Chopin's Nocturne in E-flat major, op. 9 no. 2, for a lyrical challenge. If you want something lighter, Bach's Minuets in G major are short and great for finger work. Pick the piece that matches the level you are working at now and build from there.",
+   "pull": "Given you're easing back into piano and want something low-pressure, I'd start with Schumann's \"Melody\" and \"Soldier's March\" from Album for the Young, which are short, friendly, and sound lovely even at an early stage. Burgm\u00fcller's \"Arabesque\" (Op. 100 No. 2) is a good next step once those feel comfortable, since it's still gentle but teaches a bit more hand coordination. For a quick win you can play this week, try the first few bars of the Minuet in G (BWV Anh. 114) and aim to get it smooth at a slow tempo rather than fast.\n",
+   "push": "Since you want this to stay low-pressure, I'd start with pieces that suit a 61-key keyboard and forgive a rough first attempt: Satie's Gymnop\u00e9die No. 1 is slow and lovely even when it's uneven, and the Minuet in G (usually attributed to Petzold) gives you a quick, satisfying win. If you want something to work towards, Burgm\u00fcller's Arabesque (Op. 100 No. 2) is a classic early-intermediate piece that sounds good well before it's perfect. Pick one or two and aim for ten minutes a day rather than full run-throughs.\n"
+  },
+  "judge": {
+   "none": false,
+   "pull": false,
+   "push": true
+  }
+ }
+]
