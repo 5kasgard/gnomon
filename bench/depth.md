@@ -64,3 +64,20 @@ What it shows:
   reader's selection. The select-then-answer instruction helped a little
   in situation_cues.md. The default stays at 2,000 tokens, and `budget`
   remains the knob for a caller who wants recall over precision.
+
+## Next, fixed before running: select, then answer
+
+The same 120 questions and the same 4K views, with each excerpt numbered.
+The reader (Haiku, the same prompt otherwise) first lists the numbers of
+up to 5 excerpts that bear on the question, then answers from them. This
+is the B2 instruction that helped a little in situation_cues.md.
+
+Compared, paired and pooled over the 120, with the answers already
+recorded for plain 4K and plain 2K:
+
+- answer words in the answer;
+- F1;
+- answer length.
+
+Prediction: selection recovers the precision that 4K lost (F1 at least
+2K's) and keeps 4K's recall.
