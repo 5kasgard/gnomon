@@ -63,3 +63,26 @@ the message's rank, and spends the budget on the best sentences
   questions on scientific papers, the paper's paragraphs as the record,
   the hybrid of paragraph meaning and words as the ranking, and the
   annotated answers).
+
+## Result (run once): whole, first 60 tokens, keyword in context
+
+Answer words in view at 2,000 tokens (`views_results.json`):
+
+| | A, whole | H, first 60 | K, keyword in context | K − A |
+|---|---|---|---|---|
+| BEAM 100K (275) | 52.4 | 59.6 | 58.8 | +6.4 [3.8, 9.4] |
+| BEAM 500K (488) | 51.0 | 58.1 | 58.5 | +7.5 [5.5, 9.6] |
+| BEAM 1M (485) | 46.4 | 53.5 | 55.0 | +8.6 [6.3, 11.1] |
+| BEAM 10M (136) | 44.9 | 52.2 | 51.7 | +6.7 [2.5, 11.1] |
+| LoCoMo (1,480) | **60.5** | 59.9 | 57.9 | −2.6 [−3.6, −1.5] |
+| LongMemEval-S (461) | **65.5** | 51.5 | 65.4 | −0.1 [−2.8, 2.6] |
+| ConvoMem (1,058) | **67.4** | 65.8 | 64.1 | −3.4 [−4.3, −2.5] |
+
+- **No view wins everywhere.** Cutting puts more answer text in view on
+  BEAM (+6 to +9) and less on LoCoMo and ConvoMem (−3).
+- **Where the cut lands matters where messages are long.** On
+  LongMemEval, keyword in context holds 13.9 points more than the first 60
+  tokens (K − H +13.9 [10.5, 17.2]), drawing level with whole messages.
+- **K has a flaw on short messages.** For a message shorter than its
+  window, K starts at the best sentence and drops what came before it.
+  The foraging arm K′ fixes that, and was fixed before seeing this.

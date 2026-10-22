@@ -131,3 +131,35 @@ A budget is a knapsack: each item has a value (relevance) and a cost
 - **Prediction:** H beats A on lenient recall everywhere, because the
   same ranking fits more items. H against A on strict recall shows what
   cutting costs.
+
+## Result (run once): ranking and cost, separated
+
+Evidence recall at 2,000 tokens, lenient / strict (median items in view),
+from `knapsack_results.json`:
+
+| | A, whole messages | H, hybrid headlines | G, every line | F, the person's lines | H − A, lenient |
+|---|---|---|---|---|---|
+| BEAM 100K | 40.0 / 40.0 (5) | 65.8 / 35.6 (31) | 64.8 / 37.0 | 66.1 / 39.8 | +25.8 [21.5, 30.4] |
+| BEAM 500K | 40.0 / 40.0 (5) | 60.0 / 40.8 (32) | 60.9 / 42.0 | 63.5 / 45.8 | +20.0 [17.2, 22.8] |
+| BEAM 1M | 28.5 / 28.5 (5) | 49.9 / 33.6 (34) | 49.5 / 34.5 | 52.1 / 38.9 | +21.4 [18.1, 24.8] |
+| BEAM 10M | 25.4 / 25.4 (6) | 37.2 / 18.5 (33) | 38.7 / 19.5 | 40.8 / 20.8 | +11.9 [8.4, 15.3] |
+| LoCoMo | 78.0 / 78.0 (61) | 75.9 / 59.2 (53) | 63.8 / 49.1 | 40.2 / 30.1 | −2.0 [−2.4, −1.6] |
+| LongMemEval-S | 74.8 / 74.8 (8) | 90.7 / 22.5 (32) | 84.9 / 22.2 | 77.0 / 22.6 | +15.9 [13.6, 18.4] |
+| ConvoMem | 81.8 / 81.8 (49) | 81.3 / 46.3 (45) | 75.8 / 44.2 | 56.8 / 36.9 | −0.5 [−0.9, −0.1] |
+
+The prediction held where messages are long and failed where they are
+short:
+
+- **Long messages** (BEAM, LongMemEval): a whole-message view holds 5 to 8
+  items. The same ranking shown as headlines holds 31 to 34 and points to
+  12 to 26 points more of the evidence.
+- **Short messages** (LoCoMo, ConvoMem): whole messages already fit about
+  50 to 60 items, and cutting gains nothing.
+- **Strict recall** (the whole evidence text in view) shows the price.
+  On LongMemEval the headlines hold the full evidence message 22.5% of the
+  time against 74.8%. Its evidence messages are long, and the fact sits
+  past the cut.
+
+Cutting turns text into pointers. Whether it pays depends on how long the
+messages are and where in them the answer sits. So the next measure is the
+answer text itself (views.md).

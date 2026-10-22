@@ -1,0 +1,918 @@
+{
+ "BEAM 100K": {
+  "all": {
+   "A": [
+    40.0,
+    36.2,
+    43.8
+   ],
+   "A strict": [
+    40.0,
+    36.2,
+    43.8
+   ],
+   "A n": 5.0,
+   "H": [
+    65.8,
+    61.8,
+    69.6
+   ],
+   "H strict": [
+    35.6,
+    27.6,
+    43.7
+   ],
+   "H n": 31.0,
+   "G": [
+    64.8,
+    60.5,
+    68.4
+   ],
+   "G strict": [
+    37.0,
+    28.0,
+    45.9
+   ],
+   "G n": 32.0,
+   "F": [
+    66.1,
+    61.7,
+    69.8
+   ],
+   "F strict": [
+    39.8,
+    30.6,
+    48.8
+   ],
+   "F n": 33.0,
+   "H-A": [
+    25.8,
+    21.5,
+    30.4
+   ],
+   "H-A strict": [
+    -4.4,
+    -13.6,
+    4.1
+   ]
+  },
+  "contradiction_resolution": {
+   "A": 69.3,
+   "H": 93.0,
+   "G": 89.0,
+   "F": 90.3,
+   "A strict": 69.3,
+   "H strict": 59.8,
+   "G strict": 57.6,
+   "F strict": 57.6
+  },
+  "event_ordering": {
+   "A": 6.6,
+   "H": 28.7,
+   "G": 34.4,
+   "F": 43.9,
+   "A strict": 6.6,
+   "H strict": 12.1,
+   "G strict": 17.6,
+   "F strict": 21.8
+  },
+  "information_extraction": {
+   "A": 47.9,
+   "H": 75.4,
+   "G": 72.9,
+   "F": 58.3,
+   "A strict": 47.9,
+   "H strict": 29.6,
+   "G strict": 30.0,
+   "F strict": 30.4
+  },
+  "instruction_following": {
+   "A": 8.8,
+   "H": 35.6,
+   "G": 42.5,
+   "F": 48.5,
+   "A strict": 8.8,
+   "H strict": 34.4,
+   "G strict": 38.8,
+   "F strict": 44.0
+  },
+  "knowledge_update": {
+   "A": 74.6,
+   "H": 89.8,
+   "G": 89.0,
+   "F": 91.0,
+   "A strict": 74.6,
+   "H strict": 57.3,
+   "G strict": 57.3,
+   "F strict": 58.5
+  },
+  "multi_session_reasoning": {
+   "A": 31.7,
+   "H": 72.3,
+   "G": 70.2,
+   "F": 67.1,
+   "A strict": 31.7,
+   "H strict": 32.2,
+   "G strict": 38.1,
+   "F strict": 40.4
+  },
+  "preference_following": {
+   "A": 36.8,
+   "H": 68.8,
+   "G": 65.8,
+   "F": 81.6,
+   "A strict": 36.8,
+   "H strict": 32.5,
+   "G strict": 31.6,
+   "F strict": 41.9
+  },
+  "summarization": {
+   "A": 4.6,
+   "H": 25.5,
+   "G": 20.3,
+   "F": 11.8,
+   "A strict": 4.6,
+   "H strict": 1.4,
+   "G strict": 3.1,
+   "F strict": 4.2
+  },
+  "temporal_reasoning": {
+   "A": 76.2,
+   "H": 98.8,
+   "G": 95.0,
+   "F": 97.5,
+   "A strict": 76.2,
+   "H strict": 57.5,
+   "G strict": 55.0,
+   "F strict": 56.2
+  }
+ },
+ "BEAM 500K": {
+  "all": {
+   "A": [
+    40.0,
+    37.3,
+    42.7
+   ],
+   "A strict": [
+    40.0,
+    37.3,
+    42.7
+   ],
+   "A n": 5.0,
+   "H": [
+    60.0,
+    57.1,
+    62.9
+   ],
+   "H strict": [
+    40.8,
+    32.7,
+    48.5
+   ],
+   "H n": 32.0,
+   "G": [
+    60.9,
+    57.7,
+    64.1
+   ],
+   "G strict": [
+    42.0,
+    33.3,
+    50.2
+   ],
+   "G n": 33.0,
+   "F": [
+    63.5,
+    60.5,
+    66.3
+   ],
+   "F strict": [
+    45.8,
+    36.9,
+    54.1
+   ],
+   "F n": 36.0,
+   "H-A": [
+    20.0,
+    17.2,
+    22.8
+   ],
+   "H-A strict": [
+    0.8,
+    -6.8,
+    8.2
+   ]
+  },
+  "contradiction_resolution": {
+   "A": 73.0,
+   "H": 89.2,
+   "G": 86.2,
+   "F": 90.6,
+   "A strict": 73.0,
+   "H strict": 60.2,
+   "G strict": 57.6,
+   "F strict": 61.5
+  },
+  "event_ordering": {
+   "A": 3.1,
+   "H": 11.5,
+   "G": 14.7,
+   "F": 18.4,
+   "A strict": 3.1,
+   "H strict": 6.7,
+   "G strict": 9.2,
+   "F strict": 12.0
+  },
+  "information_extraction": {
+   "A": 50.0,
+   "H": 73.9,
+   "G": 73.6,
+   "F": 73.9,
+   "A strict": 50.0,
+   "H strict": 55.4,
+   "G strict": 54.6,
+   "F strict": 55.4
+  },
+  "instruction_following": {
+   "A": 17.4,
+   "H": 37.1,
+   "G": 38.8,
+   "F": 54.8,
+   "A strict": 17.4,
+   "H strict": 29.0,
+   "G strict": 29.8,
+   "F strict": 45.0
+  },
+  "knowledge_update": {
+   "A": 64.3,
+   "H": 85.7,
+   "G": 85.7,
+   "F": 87.4,
+   "A strict": 64.3,
+   "H strict": 60.4,
+   "G strict": 61.0,
+   "F strict": 62.0
+  },
+  "multi_session_reasoning": {
+   "A": 41.2,
+   "H": 74.1,
+   "G": 76.4,
+   "F": 71.8,
+   "A strict": 41.2,
+   "H strict": 50.9,
+   "G strict": 54.0,
+   "F strict": 55.6
+  },
+  "preference_following": {
+   "A": 34.0,
+   "H": 53.7,
+   "G": 61.3,
+   "F": 69.2,
+   "A strict": 34.0,
+   "H strict": 33.3,
+   "G strict": 40.5,
+   "F strict": 47.6
+  },
+  "summarization": {
+   "A": 8.4,
+   "H": 21.1,
+   "G": 19.2,
+   "F": 11.4,
+   "A strict": 8.4,
+   "H strict": 5.2,
+   "G strict": 5.9,
+   "F strict": 6.1
+  },
+  "temporal_reasoning": {
+   "A": 69.0,
+   "H": 94.0,
+   "G": 92.5,
+   "F": 94.2,
+   "A strict": 69.0,
+   "H strict": 66.7,
+   "G strict": 65.8,
+   "F strict": 67.0
+  }
+ },
+ "BEAM 1M": {
+  "all": {
+   "A": [
+    28.5,
+    26.0,
+    31.1
+   ],
+   "A strict": [
+    28.5,
+    26.0,
+    31.1
+   ],
+   "A n": 5.0,
+   "H": [
+    49.9,
+    47.1,
+    52.8
+   ],
+   "H strict": [
+    33.6,
+    27.8,
+    38.9
+   ],
+   "H n": 34.0,
+   "G": [
+    49.5,
+    47.6,
+    51.4
+   ],
+   "G strict": [
+    34.5,
+    28.4,
+    40.1
+   ],
+   "G n": 37.0,
+   "F": [
+    52.1,
+    49.9,
+    54.2
+   ],
+   "F strict": [
+    38.9,
+    32.3,
+    45.2
+   ],
+   "F n": 43.0,
+   "H-A": [
+    21.4,
+    18.1,
+    24.8
+   ],
+   "H-A strict": [
+    5.0,
+    -0.6,
+    10.6
+   ]
+  },
+  "contradiction_resolution": {
+   "A": 52.1,
+   "H": 74.6,
+   "G": 70.0,
+   "F": 75.5,
+   "A strict": 52.1,
+   "H strict": 52.0,
+   "G strict": 49.4,
+   "F strict": 53.8
+  },
+  "event_ordering": {
+   "A": 2.5,
+   "H": 8.3,
+   "G": 11.0,
+   "F": 13.9,
+   "A strict": 2.5,
+   "H strict": 6.3,
+   "G strict": 8.6,
+   "F strict": 11.1
+  },
+  "information_extraction": {
+   "A": 32.1,
+   "H": 66.5,
+   "G": 63.9,
+   "F": 58.7,
+   "A strict": 32.1,
+   "H strict": 36.1,
+   "G strict": 36.3,
+   "F strict": 39.4
+  },
+  "instruction_following": {
+   "A": 11.0,
+   "H": 34.3,
+   "G": 31.9,
+   "F": 41.4,
+   "A strict": 11.0,
+   "H strict": 29.8,
+   "G strict": 27.9,
+   "F strict": 35.5
+  },
+  "knowledge_update": {
+   "A": 55.9,
+   "H": 79.9,
+   "G": 81.1,
+   "F": 84.2,
+   "A strict": 55.9,
+   "H strict": 55.2,
+   "G strict": 57.8,
+   "F strict": 60.6
+  },
+  "multi_session_reasoning": {
+   "A": 22.2,
+   "H": 52.3,
+   "G": 57.0,
+   "F": 51.8,
+   "A strict": 22.2,
+   "H strict": 29.9,
+   "G strict": 35.9,
+   "F strict": 39.4
+  },
+  "preference_following": {
+   "A": 16.8,
+   "H": 38.4,
+   "G": 36.9,
+   "F": 48.7,
+   "A strict": 16.8,
+   "H strict": 26.2,
+   "G strict": 27.9,
+   "F strict": 38.3
+  },
+  "summarization": {
+   "A": 3.5,
+   "H": 13.4,
+   "G": 12.9,
+   "F": 7.6,
+   "A strict": 3.5,
+   "H strict": 3.1,
+   "G strict": 3.3,
+   "F strict": 4.1
+  },
+  "temporal_reasoning": {
+   "A": 59.0,
+   "H": 79.3,
+   "G": 78.5,
+   "F": 84.3,
+   "A strict": 59.0,
+   "H strict": 61.7,
+   "G strict": 61.6,
+   "F strict": 65.6
+  }
+ },
+ "BEAM 10M": {
+  "all": {
+   "A": [
+    25.4,
+    21.8,
+    28.6
+   ],
+   "A strict": [
+    25.4,
+    21.8,
+    28.6
+   ],
+   "A n": 6.0,
+   "H": [
+    37.2,
+    33.3,
+    41.4
+   ],
+   "H strict": [
+    18.5,
+    8.3,
+    28.1
+   ],
+   "H n": 33.0,
+   "G": [
+    38.7,
+    34.1,
+    43.4
+   ],
+   "G strict": [
+    19.5,
+    8.8,
+    30.0
+   ],
+   "G n": 35.0,
+   "F": [
+    40.8,
+    35.6,
+    45.5
+   ],
+   "F strict": [
+    20.8,
+    10.0,
+    31.4
+   ],
+   "F n": 41.0,
+   "H-A": [
+    11.9,
+    8.4,
+    15.3
+   ],
+   "H-A strict": [
+    -6.8,
+    -17.3,
+    3.1
+   ]
+  },
+  "contradiction_resolution": {
+   "A": 49.0,
+   "H": 67.6,
+   "G": 62.9,
+   "F": 66.2,
+   "A strict": 49.0,
+   "H strict": 34.1,
+   "G strict": 33.6,
+   "F strict": 33.6
+  },
+  "event_ordering": {
+   "A": 2.1,
+   "H": 4.5,
+   "G": 5.7,
+   "F": 6.4,
+   "A strict": 2.1,
+   "H strict": 1.5,
+   "G strict": 1.3,
+   "F strict": 1.5
+  },
+  "information_extraction": {
+   "A": 56.0,
+   "H": 76.0,
+   "G": 71.0,
+   "F": 75.0,
+   "A strict": 56.0,
+   "H strict": 45.0,
+   "G strict": 45.0,
+   "F strict": 45.0
+  },
+  "instruction_following": {
+   "A": 0.0,
+   "H": 0.0,
+   "G": 2.5,
+   "F": 5.0,
+   "A strict": 0.0,
+   "H strict": 0.0,
+   "G strict": 2.5,
+   "F strict": 5.0
+  },
+  "knowledge_update": {
+   "A": 54.8,
+   "H": 75.2,
+   "G": 76.8,
+   "F": 79.3,
+   "A strict": 54.8,
+   "H strict": 39.5,
+   "G strict": 37.0,
+   "F strict": 39.5
+  },
+  "multi_session_reasoning": {
+   "A": 12.8,
+   "H": 37.5,
+   "G": 46.9,
+   "F": 46.9,
+   "A strict": 12.8,
+   "H strict": 19.5,
+   "G strict": 21.0,
+   "F strict": 23.7
+  },
+  "preference_following": {
+   "A": 21.7,
+   "H": 29.2,
+   "G": 32.5,
+   "F": 35.8,
+   "A strict": 21.7,
+   "H strict": 12.5,
+   "G strict": 15.8,
+   "F strict": 16.7
+  },
+  "summarization": {
+   "A": 2.3,
+   "H": 4.9,
+   "G": 11.8,
+   "F": 8.6,
+   "A strict": 2.3,
+   "H strict": 0.3,
+   "G strict": 4.4,
+   "F strict": 4.4
+  },
+  "temporal_reasoning": {
+   "A": 24.9,
+   "H": 33.7,
+   "G": 33.0,
+   "F": 38.0,
+   "A strict": 24.9,
+   "H strict": 10.8,
+   "G strict": 12.2,
+   "F strict": 14.7
+  }
+ },
+ "LoCoMo": {
+  "all": {
+   "A": [
+    78.0,
+    76.4,
+    79.4
+   ],
+   "A strict": [
+    78.0,
+    76.4,
+    79.4
+   ],
+   "A n": 61.0,
+   "H": [
+    75.9,
+    74.3,
+    77.6
+   ],
+   "H strict": [
+    59.2,
+    55.4,
+    63.0
+   ],
+   "H n": 53.0,
+   "G": [
+    63.8,
+    62.3,
+    65.4
+   ],
+   "G strict": [
+    49.1,
+    46.4,
+    51.8
+   ],
+   "G n": 50.0,
+   "F": [
+    40.2,
+    37.0,
+    44.0
+   ],
+   "F strict": [
+    30.1,
+    27.4,
+    33.4
+   ],
+   "F n": 48.0,
+   "H-A": [
+    -2.0,
+    -2.4,
+    -1.6
+   ],
+   "H-A strict": [
+    -18.7,
+    -21.6,
+    -16.0
+   ]
+  },
+  "multi-hop": {
+   "A": 55.4,
+   "H": 51.6,
+   "G": 36.7,
+   "F": 27.5,
+   "A strict": 55.4,
+   "H strict": 39.4,
+   "G strict": 27.3,
+   "F strict": 20.6
+  },
+  "open-domain": {
+   "A": 41.2,
+   "H": 40.7,
+   "G": 34.6,
+   "F": 32.1,
+   "A strict": 41.2,
+   "H strict": 32.5,
+   "G strict": 25.2,
+   "F strict": 25.4
+  },
+  "single-hop": {
+   "A": 87.8,
+   "H": 86.0,
+   "G": 72.2,
+   "F": 43.5,
+   "A strict": 87.8,
+   "H strict": 68.0,
+   "G strict": 56.4,
+   "F strict": 32.8
+  },
+  "temporal": {
+   "A": 82.6,
+   "H": 81.1,
+   "G": 74.0,
+   "F": 44.7,
+   "A strict": 82.6,
+   "H strict": 61.4,
+   "G strict": 56.1,
+   "F strict": 32.9
+  }
+ },
+ "LongMemEval-S": {
+  "all": {
+   "A": [
+    74.8,
+    71.3,
+    77.9
+   ],
+   "A strict": [
+    74.8,
+    71.3,
+    77.9
+   ],
+   "A n": 8.0,
+   "H": [
+    90.7,
+    88.4,
+    92.9
+   ],
+   "H strict": [
+    22.5,
+    19.6,
+    25.4
+   ],
+   "H n": 32.0,
+   "G": [
+    84.9,
+    82.1,
+    87.6
+   ],
+   "G strict": [
+    22.2,
+    19.4,
+    25.1
+   ],
+   "G n": 32.0,
+   "F": [
+    77.0,
+    73.8,
+    80.3
+   ],
+   "F strict": [
+    22.6,
+    19.7,
+    25.6
+   ],
+   "F n": 34.0,
+   "H-A": [
+    15.9,
+    13.6,
+    18.4
+   ],
+   "H-A strict": [
+    -52.3,
+    -56.4,
+    -48.0
+   ]
+  },
+  "knowledge-update": {
+   "A": 87.5,
+   "H": 97.1,
+   "G": 89.2,
+   "F": 89.5,
+   "A strict": 87.5,
+   "H strict": 27.4,
+   "G strict": 27.4,
+   "F strict": 27.4
+  },
+  "multi-session": {
+   "A": 59.8,
+   "H": 86.8,
+   "G": 80.9,
+   "F": 83.0,
+   "A strict": 59.8,
+   "H strict": 21.5,
+   "G strict": 21.0,
+   "F strict": 21.8
+  },
+  "single-session-assistant": {
+   "A": 94.6,
+   "H": 98.2,
+   "G": 91.1,
+   "F": 7.1,
+   "A strict": 94.6,
+   "H strict": 5.4,
+   "G strict": 3.6,
+   "F strict": 1.8
+  },
+  "single-session-preference": {
+   "A": 66.1,
+   "H": 81.1,
+   "G": 78.9,
+   "F": 86.7,
+   "A strict": 66.1,
+   "H strict": 66.7,
+   "G strict": 67.8,
+   "F strict": 72.2
+  },
+  "single-session-user": {
+   "A": 85.1,
+   "H": 93.7,
+   "G": 84.2,
+   "F": 82.9,
+   "A strict": 85.1,
+   "H strict": 29.2,
+   "G strict": 27.6,
+   "F strict": 28.1
+  },
+  "temporal-reasoning": {
+   "A": 70.4,
+   "H": 88.2,
+   "G": 85.7,
+   "F": 88.0,
+   "A strict": 70.4,
+   "H strict": 14.3,
+   "G strict": 14.9,
+   "F strict": 15.1
+  }
+ },
+ "ConvoMem": {
+  "all": {
+   "A": [
+    81.8,
+    79.5,
+    84.0
+   ],
+   "A strict": [
+    81.8,
+    79.5,
+    84.0
+   ],
+   "A n": 49.0,
+   "H": [
+    81.3,
+    79.0,
+    83.5
+   ],
+   "H strict": [
+    46.3,
+    43.4,
+    49.2
+   ],
+   "H n": 45.0,
+   "G": [
+    75.8,
+    73.2,
+    78.3
+   ],
+   "G strict": [
+    44.2,
+    41.3,
+    47.1
+   ],
+   "G n": 42.0,
+   "F": [
+    56.8,
+    53.8,
+    59.8
+   ],
+   "F strict": [
+    36.9,
+    34.0,
+    39.8
+   ],
+   "F n": 42.0,
+   "H-A": [
+    -0.5,
+    -0.9,
+    -0.1
+   ],
+   "H-A strict": [
+    -35.5,
+    -38.4,
+    -32.5
+   ]
+  },
+  "assistant_facts_evidence": {
+   "A": 96.8,
+   "H": 96.8,
+   "G": 94.3,
+   "F": 0.0,
+   "A strict": 96.8,
+   "H strict": 38.1,
+   "G strict": 37.2,
+   "F strict": 0.0
+  },
+  "changing_evidence": {
+   "A": 84.9,
+   "H": 83.5,
+   "G": 79.2,
+   "F": 82.2,
+   "A strict": 84.9,
+   "H strict": 71.8,
+   "G strict": 68.6,
+   "F strict": 71.2
+  },
+  "implicit_connection_evidence": {
+   "A": 37.0,
+   "H": 37.0,
+   "G": 24.8,
+   "F": 30.9,
+   "A strict": 37.0,
+   "H strict": 13.8,
+   "G strict": 8.9,
+   "F strict": 15.0
+  },
+  "preference_evidence": {
+   "A": 66.5,
+   "H": 66.1,
+   "G": 54.8,
+   "F": 61.7,
+   "A strict": 66.5,
+   "H strict": 16.9,
+   "G strict": 14.5,
+   "F strict": 15.3
+  },
+  "user_evidence": {
+   "A": 94.8,
+   "H": 94.3,
+   "G": 93.0,
+   "F": 93.9,
+   "A strict": 94.8,
+   "H strict": 70.3,
+   "G strict": 69.4,
+   "F strict": 69.9
+  }
+ }
+}
