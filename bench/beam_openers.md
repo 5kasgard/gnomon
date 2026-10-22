@@ -44,3 +44,52 @@ conversations often open with the task too, but that is not shown here.
   B against A. Also reported: every category, so any harm shows.
 - **Not tuned:** the budget, the 60 tokens and the fusion are fixed here
   and run once.
+
+## Result (run once)
+
+Evidence recall at 2,000 tokens; results in `beam_openers_results.json`.
+
+| | A, hybrid | B, openers | C, both |
+|---|---|---|---|
+| **Ordering and summaries, all sizes (388 questions, primary)** | 4.4 [3.4, 5.7] | **16.0 [14.0, 18.2]** | 11.2 [9.4, 13.1] |
+| B − A, paired | | +11.6 [9.7, 13.6] | |
+| Event ordering, 100K / 500K / 1M / 10M | 6.6 / 3.1 / 2.5 / 2.1 | 43.8 / 20.3 / 14.1 / 6.7 | 32.6 / 11.3 / 9.4 / 5.2 |
+| Summaries, 100K / 500K / 1M / 10M | 4.6 / 8.4 / 3.5 / 2.3 | 11.4 / 12.0 / 7.7 / 9.4 | 7.4 / 10.3 / 6.3 / 6.1 |
+| Information extraction | 43.9 | 64.3 | 62.9 |
+| Multi-session reasoning | 29.8 | 60.3 | 57.2 |
+| Knowledge update | 62.5 | 84.6 | 84.3 |
+| Temporal reasoning | 62.6 | 83.8 | 81.1 |
+| Instructions | 11.7 | 42.7 | 32.1 |
+| Preferences | 27.3 | 59.9 | 49.0 |
+
+Event ordering rises about sixfold (3.5 → 21.5 pooled). Summaries roughly
+double. The gain falls with size, as the index outgrows the budget:
+6.7% at 10M.
+
+**Read this carefully.** B gives pointers, not text. An opener line is at
+most 60 tokens, and it counts its whole message as present. A holds
+whole messages, so at 2,000 tokens it holds only a few, mostly long
+assistant replies. Two things follow:
+
+- For ordering, the opener is the useful part: what the person raised,
+  when.
+- For facts, the answer may lie past the first 60 tokens and need
+  `expand`. B's lead on fact categories measures how well it points to
+  the right conversation, not answer text in hand.
+
+What it shows is that navigating by how conversations began reaches far
+more of the right conversations per token than retrieving whole
+messages.
+
+## In the product
+
+`Tiers.openers` and `context` with view `"openers"`. Each recorded
+conversation (episode) contributes its first turn by the person. The
+product scores shared words with the record's sentence frequencies, not
+the openers' own. Rebuilt with one episode per BEAM conversation, it holds
+slightly more than the bench arm:
+
+| | Bench B | Product |
+|---|---|---|
+| Event ordering, 100K / 500K | 43.8 / 20.3 | 46.1 / 22.0 |
+| Summaries, 100K / 500K | 11.4 / 12.0 | 12.5 / 13.2 |
