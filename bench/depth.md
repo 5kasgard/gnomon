@@ -81,3 +81,24 @@ recorded for plain 4K and plain 2K:
 
 Prediction: selection recovers the precision that 4K lost (F1 at least
 2K's) and keeps 4K's recall.
+
+## Result (run once): selection does not restore precision
+
+The same 120 questions, Haiku, 6 sub-agents (`depth_select_results.json`):
+
+| | Answer words in answer | F1 | Mean answer length |
+|---|---|---|---|
+| 2K, plain | 46.0 | **37.6** | 15.8 words |
+| 4K, plain | **50.6** | 35.0 | 18.0 |
+| 4K, select then answer | 50.0 | 29.6 | 20.3 |
+| Select − 4K plain | −0.5 [−3.7, +1.8] | **−5.3 [−8.4, −2.3]** | |
+| Select − 2K plain | +4.0 [+0.1, +8.2] | −7.9 [−11.2, −4.7] | |
+
+The prediction failed. Choosing excerpts first kept 4K's recall but made
+answers longer and less exact, not more. On this layer, with this reader,
+every way of showing more has traded precision for recall: a bigger view,
+and a bigger view read selectively.
+
+The shipped default stays 2K. The knob stays with the caller. A caller
+who wants recall can pass a larger `budget`. A caller who wants precision
+keeps the default.
