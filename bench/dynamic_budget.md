@@ -44,3 +44,37 @@ view dilutes the reader.
   qualify, the one with the larger pooled gain. Otherwise the fixed
   budget stays.
 - **No model is called.** Run once.
+
+## Result (run once): both rules lose to a fixed budget
+
+Gain is answer words in view against the fixed frontier at the same mean
+tokens, on the test half (`dynamic_budget_results.json`). Dev chose
+α = 0.50, the edge of the grid; every α lost on dev (−2.2 to −16.0).
+
+| Record (test n) | Knee: tokens / words | Knee gain | Relative 0.50: tokens / words | Relative gain | Fixed 2,000: tokens / words |
+|---|---|---|---|---|---|
+| BEAM 100K (165) | 477 / 38.3 | −4.0 [−7.0, −0.9] | 1,622 / 56.3 | −1.1 [−3.6, +1.6] | 1,968 / 59.5 |
+| BEAM 1M (262) | 391 / 32.5 | −2.6 [−4.3, −0.9] | 1,758 / 53.2 | −0.6 [−1.5, +0.2] | 1,970 / 55.5 |
+| BEAM 10M (40) | 365 / 29.4 | −5.6 [−13.2, −1.3] | 1,862 / 55.7 | +0.3 [−0.1, +0.5] | 1,967 / 55.9 |
+| LoCoMo (900) | 198 / 15.4 | −13.3 [−15.0, −11.3] | 1,591 / 40.9 | −15.1 [−17.2, −12.5] | 1,977 / 57.9 |
+| LongMemEval-S (227) | 595 / 46.1 | −3.7 [−6.7, −0.7] | 1,053 / 54.5 | −2.6 [−5.5, +0.0] | 1,968 / 63.1 |
+| ConvoMem (596) | 247 / 38.6 | −9.4 [−11.5, −7.2] | 1,524 / 61.2 | −2.5 [−3.6, −1.4] | 1,977 / 65.9 |
+| **Pooled** | | **−6.4 [−7.8, −5.3]** | | **−3.6 [−4.4, −2.8]** | |
+
+Neither rule qualifies, so `--per-message` keeps a fixed budget.
+
+Why it fails here when it works in the papers:
+
+- **The similarity curve does not mark where the evidence ends.** The
+  view is ordered by a fusion of words and meaning, and much of the
+  evidence is found by its words, not its meaning. Cutting on the
+  meaning score drops lines the words had ranked well. LoCoMo, a dialogue
+  where evidence is short replies with little in common with the
+  question's meaning, loses most.
+- **The fixed frontier is nearly straight up to 2,000 tokens.** Each
+  extra token buys about as much as the last (push_scale.md: 500, 1,000
+  and 2,000 tokens give 41.6, 50.7 and 59.2 answer words on BEAM 100K),
+  so there is no cheap knee to find.
+
+So a per-prompt budget that adapts to the prompt has to come from
+somewhere other than the similarity of what was found.
