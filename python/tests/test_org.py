@@ -54,12 +54,19 @@ class Org(unittest.TestCase):
         self.assertEqual(self.m.state(compartments=["other"])["state"]["positions"], {})
 
     def test_a_forged_holds_fact_fails_the_checker(self):
+        import copy
+        from datetime import datetime, timedelta
         q = '?- holds(W, "acme", "Lead").'
         r = self.m.query("john", q)
-        self.m.dismiss("ceo", self.lead, "Restructuring.")
-        # The proof was valid when made; against the log now, the
-        # appointment has ended, so the same proof no longer checks.
-        self.assertTrue(proofs.check(r, q, VIEWS, self.log, require_hashes=True))
+        later = (datetime.strptime(r["as_of"], "%Y-%m-%dT%H:%M:%SZ") + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        self.m.dismiss("ceo", self.lead, "Restructuring.", record_time=later)
+        # A proof describes one moment: a later dismissal does not undo it.
+        self.assertEqual(proofs.check(r, q, VIEWS, self.log, require_hashes=True), [])
+        # Claiming the same proof describes a moment after the dismissal is
+        # a forgery: the dismissal is in that moment but left out.
+        forged = copy.deepcopy(r)
+        forged["as_of"] = later
+        self.assertTrue(proofs.check(forged, q, VIEWS, self.log, require_hashes=True))
 
 
 if __name__ == "__main__":
