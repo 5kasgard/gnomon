@@ -49,3 +49,41 @@ the machine or enters the repository.
      conversations). That is the share of messages that clearly echo
      something said in an earlier conversation.
 - **Not tuned:** the thresholds above are fixed here. Run once.
+
+## Result (run once)
+
+Medians over records (`wild_results.json`):
+
+| | Records | Person's message (tokens) | Other side's | Other side over 60 tokens | Nearest earlier echo within 2 conversations | Same, order shuffled | Locality | Echo cosine | Messages echoing an earlier conversation | Conversations per record |
+|---|---|---|---|---|---|---|---|---|---|---|
+| **WildChat (real)** | 283 | 38 | 318 | 94% | 45% | 22% | **2.06** | 0.56 | 52% | 26 |
+| BEAM 1M | 35 | 35 | 995 | 100% | 8% | 1% | 5.43 | 0.60 | 96% | 928 |
+| LoCoMo | 10 | 27 | 26 | 5% | 23% | 22% | 1.00 | 0.46 | 85% | 29 |
+| LongMemEval-S | 100 | 46 | 420 | 97% | 15% | 15% | 0.98 | 0.30 | 66% | 48 |
+| ConvoMem | 20 | 34 | 39 | 17% | 4% | 4% | 1.09 | 0.40 | 99% | 300 |
+
+Where real use sits:
+
+- **Length: like BEAM and LongMemEval, unlike LoCoMo and ConvoMem.** The
+  assistant's replies are long (median 318 tokens; 94% over 60), and the
+  person's messages are short. Cutting long replies to the part that
+  matters paid in this regime (views.md), so the window default fits
+  real use.
+- **Locality: real, and missing from most benchmarks.** In real
+  histories, the most similar earlier message comes from the last two
+  conversations twice as often as chance (2.06). BEAM has it in excess
+  (5.43). LoCoMo, LongMemEval and ConvoMem have none (about 1.0): their
+  histories are assembled, with conversations mixed among unrelated ones.
+  Those benchmarks cannot reward links through time, but real use would.
+  That is the link reach.md found strongest at scale.
+- **Return: real people echo earlier conversations less than the
+  benchmarks assume.** 52% of messages, against 66 to 99%. The benchmarks
+  are built so that memory matters; real histories are half new.
+
+**Caveats.**
+- A hashed IP can merge several people, or split one person.
+- One shard covers a few weeks of 2023 ChatGPT use, not years of one
+  person's history.
+- These are properties of records, not tests of mechanisms. They say
+  which benchmark results are likely to carry over to real use: the
+  window view and time links. They do not prove it.
