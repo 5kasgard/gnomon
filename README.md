@@ -507,7 +507,11 @@ person's own situation sentences at the start of every Claude Code
 session. `--per-message` adds what the record holds on each prompt.
 In a large memory, the session-start push holds the evidence for few questions (0 to 17% on BEAM, LoCoMo and ConvoMem; 0% at
 10M), against 70 to 96% for `--per-message 2000`, which costs about 2,000
-tokens a prompt (`bench/push_scale.md`).
+tokens a prompt (`bench/push_scale.md`). Within a session it leaves out
+what it already pushed (until the context is compacted), which on real
+histories halves that cost (`bench/session_economy.md`). Cutting each
+push by how similar its lines are, or skipping prompts that resemble
+nothing in the record, both lost evidence (`bench/dynamic_budget.md`).
 Words ask; structure binds. Claude (Haiku) behaves differently: it looked
 in memory unprompted on 12 of 12 probes. Even so, pushed facts were applied
 in 11 of 12 answers, against 8 of 12 when it pulled, by a blinded judge.

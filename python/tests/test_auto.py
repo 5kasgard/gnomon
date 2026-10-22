@@ -110,6 +110,12 @@ class Auto(unittest.TestCase):
         self.assertIn("March 3", json.loads(r.stdout)["hookSpecificOutput"]["additionalContext"])
         self.assertIn("UserPromptSubmit", settings(self.log, "claude", per_message=500)["hooks"])
         self.assertNotIn("UserPromptSubmit", settings(self.log, "claude")["hooks"])
+        # The same span is not pushed twice in a session: the model already holds it.
+        self.assertEqual(run("--per-message", "500").stdout.strip(), "")
+        # After the context is compacted, it may not: it is pushed again.
+        self.hook("PreCompact", session="s-3")
+        r = run("--per-message", "500")
+        self.assertIn("March 3", json.loads(r.stdout)["hookSpecificOutput"]["additionalContext"])
 
     def test_every_turn_is_recorded_once(self):
         self.transcript.write_text(

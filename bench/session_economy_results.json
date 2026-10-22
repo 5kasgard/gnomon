@@ -1,0 +1,40 @@
+{
+ "WildChat": {
+  "histories": 100,
+  "prompts": 4827,
+  "dedupe_saving": 0.4886744507797477,
+  "gate_skip": 0.45970582142117256,
+  "median_history_dedupe": 0.34729657936066927,
+  "median_history_skip": 0.5121212121212121
+ },
+ "BEAM 100K": {
+  "questions": 275,
+  "skipped": 0.31272727272727274,
+  "words": 59.150482666063375,
+  "words_lost": 17.699911322050337
+ },
+ "BEAM 1M": {
+  "questions": 485,
+  "skipped": 0.08453608247422681,
+  "words": 54.95768437526179,
+  "words_lost": 3.7904864751368867
+ },
+ "LoCoMo": {
+  "questions": 1480,
+  "skipped": 0.0472972972972973,
+  "words": 60.33892316328276,
+  "words_lost": 3.084049959049959
+ },
+ "LongMemEval-S": {
+  "questions": 461,
+  "skipped": 0.04121475054229935,
+  "words": 65.23107085508867,
+  "words_lost": 2.992502496298592
+ },
+ "ConvoMem": {
+  "questions": 1058,
+  "skipped": 0.0,
+  "words": 66.42234258432657,
+  "words_lost": 0.0
+ }
+}
