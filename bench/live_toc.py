@@ -16,7 +16,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 sys.path.insert(0, str(HERE.parent / "python"))
 from gnomon.mcp import Server  # noqa: E402
-from live import B_NONE, Provider  # noqa: E402
+from live2 import B_NONE, Provider  # noqa: E402
 from live2 import NATIVE, PUSH2, b_native  # noqa: E402
 from live_probes import AsOf  # noqa: E402
 from situation_reader import STOP  # noqa: E402
