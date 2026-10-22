@@ -23,7 +23,8 @@ code.
 ## Protocol, fixed before running
 
 - **Questions:** LongMemEval-S cleaned (MIT).
-  - all 78 **knowledge-update** questions (primary);
+  - every **knowledge-update** question with answer words: 72 of the 78
+    (primary; the other 6 have no content word outside the question);
   - 80 **temporal-reasoning** questions, drawn with seed 20261022;
   - 40 **single-session-user** questions, drawn with the same seed, as a
     control where time should not matter.
@@ -52,4 +53,51 @@ code.
   worse. Otherwise the view stays as it is.
 - **Cost:** the dates add about 4 tokens per line; the lines are not
   reduced to pay for them, and the added tokens are reported.
+- **Run once.**
+
+## Result (run once): dates help, but the primary test fell short
+
+Haiku read 192 questions in each arm (15 reader agents, about 2.6M
+tokens), then 4 blinded judge agents graded all 576 answers. The dates
+added 87 tokens per view on average (`time_view_results.json`).
+
+| | Arm | Answer words in answer | F1 | Judge: correct | Answer words, vs P | Judge, vs P |
+|---|---|---|---|---|---|---|
+| Knowledge-update (72) | P | 65.4 | 32.0 | 70.8 | | |
+| | D | 74.5 | 34.7 | 83.3 | +9.0 [−2.0, +20.5] | **+12.5 [+1.4, +23.6]** |
+| | T | 59.8 | 34.4 | 68.1 | −5.7 [−17.6, +6.7] | −2.8 [−15.3, +9.7] |
+| Temporal-reasoning (80) | P | 26.6 | 20.3 | 45.0 | | |
+| | D | 40.6 | 26.5 | 65.0 | **+14.0 [+5.4, +22.4]** | **+20.0 [+7.5, +32.5]** |
+| | T | 37.8 | 25.7 | 62.5 | **+11.2 [+2.3, +20.3]** | **+17.5 [+3.8, +31.2]** |
+| Control: single-session-user (40) | P | 85.1 | 50.6 | 90.0 | | |
+| | D | 83.6 | 50.2 | 90.0 | −1.5 [−7.9, +3.7] | +0.0 [−10.0, +10.0] |
+| | T | 78.0 | 43.8 | 87.5 | **−7.2 [−15.4, −1.2]** | −2.5 [−15.0, +7.5] |
+
+- **Dates in rank order (D)** gain on every time-bound measure and cost
+  nothing on the control. On knowledge-update the judge's gain (+12.5)
+  excludes 0, but the primary, judge-free gain (+9.0) does not.
+- **Record order (T)** helps temporal questions about as much as dates
+  alone, but loses on knowledge-update and costs 7 points on the control.
+  Rank order carries information the reader uses; time order throws it
+  away.
+- **The prediction held for D and failed for T** on knowledge-update.
+
+By the rule fixed above, nothing ships from this run: the primary
+interval for knowledge-update includes 0. D is the only candidate, and
+it gets one confirmation on questions this run did not use.
+
+## Confirmation, fixed before running
+
+- **Arms:** P and D only, built as above.
+- **Questions,** none used above:
+  - LongMemEval-S: 80 **multi-session** questions (seed 20261022) and
+    the **23 temporal-reasoning** questions not drawn above;
+  - LoCoMo (evaluation only; nothing is learnt from it): 80
+    **temporal** questions, seed 20261022, dated by their sessions.
+- **Reader, judge and measures:** as above.
+- **Primary:** answer words in the answer, D − P, pooled over all the
+  confirmation questions, bootstrap 95% interval.
+- **Decision:** dates are added to `context`'s view if the pooled
+  interval excludes 0 and neither dataset is more than 3 points worse.
+  Otherwise the view stays as it is.
 - **Run once.**
