@@ -1,9 +1,12 @@
 """Calibrate the view per memory: protocol in views.md ("calibrate the view").
+Also used for reach.md's neighbour arms (--rows, --arms, --default).
 
     python bench/views_calibrate.py
+    python bench/views_calibrate.py --rows reach_view_results.rows.json --arms W W+1 W+2 --default W --json out.json
 """
 from __future__ import annotations
 
+import argparse
 import json
 import random
 from pathlib import Path
@@ -15,7 +18,7 @@ ARMS = ("A", "K", "K'", "S")
 DEFAULT, NS, DRAWS, MIN_OBS, Z = "A", (10, 20, 50), 200, 10, 2.0
 
 
-def choose(Y, obs):
+def choose(Y, obs, ARMS=ARMS, DEFAULT=DEFAULT):
     if len(obs) < MIN_OBS:
         return ARMS.index(DEFAULT)
     d0 = ARMS.index(DEFAULT)
@@ -32,12 +35,18 @@ def choose(Y, obs):
 
 
 def main():
-    rows = json.loads((HERE / "views_forage_results.rows.json").read_text())
-    rows += json.loads((HERE / "views_qasper_results.rows.json").read_text())
+    p = argparse.ArgumentParser()
+    p.add_argument("--rows", nargs="+", default=["views_forage_results.rows.json", "views_qasper_results.rows.json"])
+    p.add_argument("--arms", nargs="+", default=list(ARMS))
+    p.add_argument("--default", default=DEFAULT)
+    p.add_argument("--json", default="views_calibrate_results.json")
+    a = p.parse_args()
+    arms, default = tuple(a.arms), a.default
+    rows = [r for f in a.rows for r in json.loads((HERE / f).read_text())]
     out = {}
-    print(f"{'environment':16s}{'default A':>10s}{'best':>12s}" + "".join(f"{f'n={n}':>9s}" for n in NS))
+    print(f"{'environment':16s}{'default ' + default:>10s}{'best':>12s}" + "".join(f"{f'n={n}':>9s}" for n in NS))
     for name in dict.fromkeys(r["dataset"] for r in rows):
-        Y = np.array([[r[a] for a in ARMS] for r in rows if r["dataset"] == name]) * 100
+        Y = np.array([[r[x] for x in arms] for r in rows if r["dataset"] == name]) * 100
         means = Y.mean(0)
         rng = random.Random(0)
         res = {}
@@ -47,16 +56,16 @@ def main():
                 idx = list(range(len(Y)))
                 rng.shuffle(idx)
                 obs, rest = idx[:n], idx[n:]
-                a = choose(Y, obs)
-                switched += a != ARMS.index(DEFAULT)
-                vals.append(Y[rest, a].mean())
+                c = choose(Y, obs, arms, default)
+                switched += c != arms.index(default)
+                vals.append(Y[rest, c].mean())
             res[n] = {"score": float(np.mean(vals)), "switched": switched / DRAWS}
         best = int(np.argmax(means))
-        out[name] = {"means": dict(zip(ARMS, map(float, means))), "best": ARMS[best], "calibrated": res}
-        print(f"{name:16s}{means[0]:10.1f}{ARMS[best] + f' {means[best]:.1f}':>12s}"
+        out[name] = {"means": dict(zip(arms, map(float, means))), "best": arms[best], "calibrated": res}
+        print(f"{name:16s}{means[arms.index(default)]:10.1f}{arms[best] + f' {means[best]:.1f}':>12s}"
               + "".join(f"{res[n]['score']:9.1f}" for n in NS)
               + "   switched " + ", ".join(f"{100 * res[n]['switched']:.0f}%" for n in NS))
-    (HERE / "views_calibrate_results.json").write_text(json.dumps(out, indent=1), encoding="utf-8")
+    (HERE / a.json).write_text(json.dumps(out, indent=1), encoding="utf-8")
 
 
 if __name__ == "__main__":
