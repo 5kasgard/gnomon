@@ -1,0 +1,1 @@
+{"provider": "workers-ai", "model": "@cf/google/gemma-4-26b-a4b-it", "calls": 120, "tokens_in": 53922, "tokens_out": 15308, "neurons": 894.0181558132172}

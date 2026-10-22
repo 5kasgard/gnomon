@@ -1,0 +1,224 @@
+[
+ {
+  "persona": "Sam",
+  "fact": "veg",
+  "session": 6,
+  "probe": "Can you suggest a couple of dinner ideas for this Friday?",
+  "with_memory": "I'd love to! To give you the best suggestions, do you have a specific craving or any dietary preferences in mind? \n\nAlso, are you looking for something quick and easy for a Friday night, or are you in the mood to spend a little more time cooking something special?",
+  "without": "Since it's Friday, I've suggested one \"fun/relaxed\" option and one \"quick/easy\" option:\n\n1.  **Homemade Pizza Night:** Buy some pre-made dough, a jar of sauce, and your favorite toppings. It\u2019s interactive and feels like a treat to end the week.\n2.  **Sheet Pan Fajitas:** Toss sliced bell peppers, onions, and your choice of protein (chicken, steak, or shrimp) in taco seasoning and oil. Roast them all on one pan and serve with warm tortillas.\n\nDo either of those sound good, or are you looking for something specific like pasta or seafood?",
+  "tool_calls": [],
+  "check": [
+   "vegetarian",
+   "veggie",
+   "meat-free",
+   "plant-based",
+   "meatless",
+   "tofu",
+   "lentil",
+   "chickpea",
+   "halloumi",
+   "paneer"
+  ]
+ },
+ {
+  "persona": "Sam",
+  "fact": "marathon",
+  "session": 6,
+  "probe": "What should I do with my Saturday morning this weekend?",
+  "with_memory": "Since I don't know your usual interests or what your upcoming weekend looks like, I can offer a few different \"vibes\" to choose from. Do any of these sound appealing?\n\n**1. The Productive Start:**\n*   **Coffee & Planning:** Head to a local cafe with a notebook to map out your goals for the next month.\n*   **Deep Clean/Reset:** Spend two hours tackling that one area of your home that\u2019s been bothering you, then reward yourself with a nice brunch.\n\n**2. The Slow & Soulful Start:**\n*   **Nature Immersion:** Find a local trail or park for a long walk without headphones\u2014just listen to the surroundings.\n*   **Reading Marathon:** Set up a cozy nook with tea/coffee and finally dive into that book you've been meaning to start.\n\n**3. The Active & Social Start:**\n*   **Farmers Market:** Wander through a local market, grab some fresh seasonal produce, and maybe pick up a unique pastry.\n*   **Low-Stakes Movement:** Try a morning yoga session, a bike ride, or even just a long stroll through a neighborhood you rarely visit.\n\n**If you tell me a bit more about your mood (e.g., \"I want to be lazy\" or \"I have a lot of energy\"), I can give you a much more tailored suggestion!**",
+  "without": "Since I don't know your mood, here are four different \"vibes\" to choose from:\n\n1.  **The Productive Vibe:** Hit a local farmer's market, grab a fresh coffee, and tackle one small task you\u2019ve been putting off (like organizing a drawer or clearing your inbox).\n2.  **The Low-Key Vibe:** Sleep in, make a fancy breakfast at home, and spend an hour reading a book or listening to a podcast without checking your phone.\n3.  **The Active Vibe:** Go for a long walk, a hike, or a bike ride while the air is still fresh and the temperature is mild.\n4.  **The Social Vibe:** Text a friend to meet up for a quick brunch or a walk in the park.\n\n**What sounds most appealing to you right now?**",
+  "tool_calls": [],
+  "check": [
+   "half marathon",
+   "marathon",
+   "long run",
+   "run",
+   "training"
+  ]
+ },
+ {
+  "persona": "Sam",
+  "fact": "budget",
+  "session": 7,
+  "probe": "I want to do something nice for my team this month. Ideas?",
+  "with_memory": "That's a great idea! To give you the best suggestions, it helps to know a bit about your team's vibe. Are you looking for something low-key and remote-friendly, an in-person activity, or perhaps something more focused on professional development or wellness?\n\nHere are a few broad categories to get your brain moving:\n\n**1. Low-Key & Remote-Friendly:**\n* **Virtual Coffee/Tea Breaks:** Set aside 20 minutes for non-work chat.\n* **Digital Gift Cards:** Small treats like coffee or lunch on the company.\n* **\"Shout-out\" Session:** Dedicate time in a meeting for everyone to recognize a teammate's recent win.\n\n**2. In-Person/Social:**\n* **Team Lunch:** Order in something special or go to a local favorite.\n* **Off-site Activity:** An escape room, bowling, or even just a walk in a local park.\n* **Desk Drops:** Small snacks or useful items left on people's desks.\n\n**3. Wellness & Growth:**\n* **Early Finish Friday:** Letting everyone wrap up an hour or two early.\n* **Learning Stipend/Session:** Bringing in a speaker or providing resources for a topic they're interested in.\n* **Mental Health Day:** Encouraging everyone to take a dedicated recharge day.\n\nDoes one of these directions stand out to you?",
+  "without": "To give you the best idea, it helps to know your budget and if you are remote or in-person. Here are a few quick options for different scenarios:\n\n**If you are in an office:**\n* **Catered Lunch:** A classic for a reason. Get something a little higher-end than usual (like a taco bar or local Mediterranean).\n* **Afternoon Coffee/Treat Run:** Surprise them with a tray of high-quality pastries or a coffee cart.\n* **Early Release:** If things have been hectic, let everyone head out an hour or two early on a Friday.\n\n**If you are remote:**\n* **Digital Gift Cards:** Send $15\u2013$25 for coffee or lunch via email.\n* **Home Delivery:** Send a snack box or a meal delivery voucher (UberEats/DoorDash).\n* **\"No-Meeting\" Afternoon:** Gift them a block of time where no meetings are allowed so they can focus or recharge.\n\n**Low to No Budget:**\n* **Public Shout-outs:** Spend some time in your next meeting highlighting specific wins from each team member.\n* **Personalized Notes:** A quick, sincere Slack message or handwritten note goes a long way.\n* **Skill Swap:** Host a casual \"lunch and learn\" where someone shares a hobby (like photography or cooking) just for fun.",
+  "tool_calls": [],
+  "check": [
+   "budget",
+   "free",
+   "low-cost",
+   "no-cost",
+   "cheap",
+   "frozen",
+   "inexpensive"
+  ]
+ },
+ {
+  "persona": "Sam",
+  "fact": "mornings",
+  "session": 7,
+  "probe": "Help me plan my one-on-ones for next week, I have six people.",
+  "with_memory": "To help you plan effectively, I'll need a little more context. Since you have six people, we can approach this in a few different ways depending on your goal.\n\nTo get started, could you tell me:\n\n1.  **What is the primary goal for these meetings?** (e.g., routine check-ins, performance reviews, project updates, or career development?)\n2.  **How much time do you have allotted for each?**\n3.  **Is there a specific \"vibe\" or theme you want to implement?** (e.g., \"feedback-heavy\" vs. \"supportive/listening.\")\n4.  **Are any of these individuals in a special situation?** (e.g., someone new to the team, someone struggling, or someone due for a promotion?)\n\nOnce I have those details, I can help you draft specific agendas, timing schedules, or even sets of powerful questions to ask.",
+  "without": "To help you plan effectively, I need a little more context. Could you tell me:\n\n1. **The Goal:** Are these routine check-ins, performance reviews, or is there a specific project/crisis you're navigating?\n2. **The Format:** Do you want a structured template for each, or just a way to manage your time/schedule?\n3. **The Vibe:** Are your team members mostly senior (strategic discussions) or junior (tactical/support needs)?\n\n**If you just want a quick starting point, here is a classic \"3-Question\" framework you can use for all six:**\n\n*   **The Past:** What was your biggest win or blocker since we last spoke?\n*   **The Present:** What is your #1 priority right now, and how can I help?\n*   **The Future:** Is there anything we should change about our current workflow or your growth?\n\n**How would you like to proceed?**",
+  "tool_calls": [],
+  "check": [
+   "10",
+   "after ten",
+   "afternoon",
+   "late morning",
+   "not early",
+   "no early"
+  ]
+ },
+ {
+  "persona": "Sam",
+  "fact": "lisbon",
+  "session": 8,
+  "probe": "What's a good day trip I could take next weekend?",
+  "with_memory": "To give you a great recommendation, I'll need a little more information! \n\nAre you looking to stay close to home, or are you willing to drive a few hours? Also, what kind of vibe are you in the mood for\u2014something outdoorsy like hiking or a beach, a cozy small town for shopping and eating, or maybe a cultural trip to a museum or landmark?",
+  "without": "I'd love to give you a recommendation, but I need to know where you are starting from! \n\nIf you tell me your **general location** and what you're in the mood for (nature, a small town, museums, or food), I can give you some specific ideas.",
+  "tool_calls": [],
+  "check": [
+   "lisbon",
+   "sintra",
+   "cascais",
+   "set\u00fabal",
+   "setubal",
+   "arr\u00e1bida",
+   "arrabida",
+   "evora",
+   "\u00e9vora",
+   "\u00f3bidos",
+   "obidos",
+   "portugal"
+  ]
+ },
+ {
+  "persona": "Sam",
+  "fact": "knee",
+  "session": 8,
+  "probe": "Can you suggest a good walking route for a relaxed Sunday?",
+  "with_memory": "I'd love to, but I'll need a little more information to give you a good recommendation! \n\nTo narrow it down, could you tell me:\n\n1. **Where are you located?** (City, neighborhood, or general area)\n2. **What kind of scenery do you prefer?** (e.g., a park with lots of trees, a waterfront stroll, a botanical garden, or perhaps something more urban with shops and cafes?)\n3. **How long of a walk are you looking for?** (A short 30-minute wander or a longer 2-hour trek?)",
+  "without": "To give you the best suggestion, I\u2019ll need to know **which city or area you are in!**\n\nHowever, if you are looking for a \"vibe\" rather than a specific map, here are three classic types of routes that are perfect for a relaxed Sunday:\n\n1.  **The Waterfront Stroll:** Find a local river, lake, or beach path. The open view and sound of water are naturally calming.\n2.  **The Botanical/Park Loop:** Head to the largest public garden or park nearby. These are usually paved, flat, and full of benches for frequent rests.\n3.  **The Neighborhood Wander:** Pick a historic or charming residential area nearby and just wander the side streets. It\u2019s great for window shopping or spotting nice gardens.\n\n**If you tell me your location, I can give you a specific name and direction!**",
+  "tool_calls": [],
+  "check": [
+   "knee",
+   "flat",
+   "level",
+   "gentle",
+   "no hills",
+   "avoid hills",
+   "no stairs",
+   "stairs"
+  ]
+ },
+ {
+  "persona": "Priya",
+  "fact": "nuts",
+  "session": 6,
+  "probe": "Can you give me an easy recipe for a cake for my son's class?",
+  "with_memory": "Since it's for a class, a **Sheet Cake** is usually the best way to go\u2014it's easy to transport, easy to slice into many pieces, and requires minimal decorating.\n\nHere is a foolproof recipe for a \"One-Bowl Vanilla Sheet Cake\" that is moist and kid-friendly.\n\n### **Easy One-Bowl Vanilla Sheet Cake**\n\n**Prep time:** 15 mins | **Bake time:** 30-35 mins | **Servings:** ~24 kids\n\n#### **Ingredients**\n*   **All-purpose flour:** 3 cups\n*   **Sugar:** 2 cups\n*   **Baking powder:** 1 tablespoon\n*   **Salt:** 1 teaspoon\n*   **Milk:** 1 \u00bc cups (room temperature is best)\n*   **Vegetable oil:** \u00bd cup (or melted butter)\n*   **Eggs:** 3 large\n*   **Vanilla extract:** 1 tablespoon\n*   **Hot water:** 1 cup (this is the secret to a moist cake!)\n\n#### **Instructions**\n1.  **Prep:** Preheat your oven to **350\u00b0F (175\u00b0C)**. Grease a 9x13 inch baking pan with butter or cooking spray.\n2.  **Mix Dry:** In a large bowl, whisk together the flour, sugar, baking powder, and salt.\n3.  **Mix Wet:** Add the milk, oil, eggs, and vanilla. Mix with a whisk or electric mixer on medium speed until well combined.\n4.  **The Secret Step:** Carefully pour in the **hot water** and stir by hand. The batter will be very thin/watery\u2014this is normal!\n5.  **Bake:** Pour the batter into the prepared pan. Bake for **30\u201335 minutes**, or until a toothpick inserted into the center comes out clean",
+  "without": "Since you're making this for a class, a **One-Bowl Vanilla Snack Cake** is your best bet. It\u2019s easy to transport, simple to slice, and kids love it.\n\n### **One-Bowl Vanilla Snack Cake**\n\n**Ingredients:**\n*   1 \u00bd cups all-purpose flour\n*   1 cup sugar\n*   1 tsp baking powder\n*   \u00bd tsp baking soda\n*   \u00bd tsp salt\n*   1 cup milk (any kind)\n*   \u00bd cup vegetable oil (or melted butter)\n*   1 large egg\n*   1 tsp vanilla extract\n\n**Instructions:**\n1.  **Prep:** Preheat your oven to 350\u00b0F (175\u00b0C) and grease an 8x8 or 9x9 inch baking pan.\n2.  **Mix:** In one large bowl, whisk together the flour, sugar, baking powder, baking soda, and salt. \n3.  **Combine:** Add the milk, oil, egg, and vanilla. Whisk until the batter is smooth (don't overmix!).\n4.  **Bake:** Pour into the pan and bake for 30\u201335 minutes, or until a toothpick comes out clean.\n5.  **Cool & Top:** Let it cool completely. You can dust it with powdered sugar or spread on some store-bought frosting.\n\n**Quick Tip for School:**\nIf there are allergies in the class, avoid adding nuts. Also, consider cutting the cake into small squares or using a cupcake liner to make it easier for kids to grab!",
+  "tool_calls": [],
+  "check": [
+   "nut-free",
+   "nut free",
+   "allergy",
+   "allergen",
+   "no nuts",
+   "without nuts"
+  ]
+ },
+ {
+  "persona": "Priya",
+  "fact": "nocar",
+  "session": 6,
+  "probe": "What's the best way for me to get to the garden centre on Saturday?",
+  "with_memory": "To give you the best recommendation, could you let me know which garden centre you're heading to and whether you're planning to drive or use public transport?",
+  "without": "To give you the best advice, I'll need a little more information: \n\n1. **Where are you starting from?**\n2. **Which garden centre are you heading to?**\n3. **Do you have a car, or are you looking for public transport?**\n\nOnce I know those, I can check the routes and traffic for you!",
+  "tool_calls": [],
+  "check": [
+   "bike",
+   "cycle",
+   "cycling",
+   "train",
+   "bus",
+   "public transport",
+   "delivery"
+  ]
+ },
+ {
+  "persona": "Priya",
+  "fact": "physics",
+  "session": 7,
+  "probe": "Could you suggest a fun starter activity for my Year 9 class tomorrow?",
+  "with_memory": "I'd love to help! To give you the best suggestion, could you let me know what subject you teach? \n\nAlso, are you looking for something high-energy to wake them up, or something calm to settle them down?",
+  "without": "To give you the best suggestion, **what subject do you teach?**\n\nIn the meantime, here are three \"universal\" starters that work for almost any subject:\n\n1.  **The \"Odd One Out\":** Put four images or words on the board. Three should be related, and one shouldn't. Students have to argue which one is the odd one out (there often isn't one right answer, which encourages debate!).\n2.  **The Retrieval Grid:** A 2x2 grid on the board with four questions: one easy, one medium, one hard, and one \"super challenge.\" It gets their brains moving immediately.\n3.  **The \"What's the Connection?\":** List three seemingly random terms or images related to your lesson. The first student to figure out how they are linked to the topic wins.\n\n**If you let me know your subject, I can give you something much more specific!**",
+  "tool_calls": [],
+  "check": [
+   "physics",
+   "force",
+   "energy",
+   "circuit",
+   "electric",
+   "motion",
+   "magnet",
+   "gravity",
+   "wave",
+   "light",
+   "pendulum"
+  ]
+ },
+ {
+  "persona": "Priya",
+  "fact": "tuesdays",
+  "session": 7,
+  "probe": "When should I schedule the parents' evening prep meeting next week?",
+  "with_memory": "To give you a good recommendation, I'll need to check your calendar or any notes you've made about your availability and the team's schedule for next week. Do you have specific constraints or a preferred time of day in mind?",
+  "without": "I don't have access to your personal calendar or team schedule. To give you the best suggestion, could you let me know:\n\n1.  **Who needs to attend?** (e.g., just you, or a whole teaching team?)\n2.  **What is your general availability?**\n3.  **How long do you think the meeting will take?**\n\nOnce you have those details, I can help you pick the ideal slot!",
+  "tool_calls": [],
+  "check": [
+   "tuesday",
+   "monday",
+   "wednesday",
+   "thursday",
+   "friday",
+   "swimming"
+  ]
+ },
+ {
+  "persona": "Priya",
+  "fact": "glasgow",
+  "session": 8,
+  "probe": "What's a good outdoor plan for half-term with the kids?",
+  "with_memory": "Since \"half-term\" can mean anything from a mild spring breeze to a freezing winter snap depending on where you are, I've broken these down by \"vibe.\" \n\nHere are a few different directions you could take:\n\n### 1. The \"High Energy\" Plan (Burn off steam)\n*   **Nature Scavenger Hunt:** Instead of just walking, give them a list (a pinecone, a yellow leaf, a smooth stone, a feather). It turns a standard walk into a mission.\n*   **Local Adventure Playground:** Skip the standard park and look for \"forest playgrounds\" or those with climbing frames and zip wires.\n*   **Parkour/Obstacle Course:** Head to a local park and challenge them to navigate a route using only logs, stones, and benches.\n\n### 2. The \"Low Prep/Low Cost\" Plan (Easy wins)\n*   **Mud Kitchen/Nature Art:** If you have a garden or a nearby woodland, bring some old containers and let them mix \"mud pies\" or make leaf art. It\u2019s surprisingly absorbing for kids.\n*   **Geocaching:** Download a free Geocaching app. It\u2019s essentially a global treasure hunt using GPS. It makes a walk feel like an adventure.\n*   **Cloud Watching/Picnic:** Even if it's just sandwiches in the park, the change of scenery makes a huge difference.\n\n### 3. The \"Structured/Educational\" Plan (If they need a focus)\n*   **Local Wildlife Centers or Farms:** Many farms run seasonal activities during half-terms (feeding animals, etc.).\n*   **Outdoor Museums/Sculpture Parks:** These are great because there is plenty to look at, but they are still outdoors and offer space to move around.\n*   **Tree Identification:** Download an app like *Seek* or *PictureThis*. You can turn a walk into",
+  "without": "It really depends on the age of your kids and the weather, but here are a few solid ideas:\n\n*   **Nature Scavenger Hunt:** Head to a local park or woodland. Give them a list of things to find (a jagged leaf, a smooth stone, something yellow) to keep them engaged.\n*   **Outdoor \"Cinema\" or Picnic:** Even if it\u2019s just a midday picnic in the garden or park, it feels like a treat. If it\u2019s evening, a backyard movie night with blankets and fairy lights is always a winner.\n*   **Obstacle Courses:** Use sticks, stones, and even old cardboard boxes to build a course in the garden or a clearing.\n*   **Local Exploration:** Visit a nearby farm park, a botanical garden, or a coastal path. These usually have plenty of space for kids to run off energy.\n\nHow old are the kids? I can give you more specific ideas if I know their age range!",
+  "tool_calls": [],
+  "check": [
+   "glasgow",
+   "scotland",
+   "loch",
+   "highlands",
+   "edinburgh",
+   "arran",
+   "trossachs",
+   "rain"
+  ]
+ },
+ {
+  "persona": "Priya",
+  "fact": "piano",
+  "session": 8,
+  "probe": "Can you recommend some pieces for me to practise this month?",
+  "with_memory": "I'd love to! To give you the best recommendations, could you tell me a little bit about what you're looking for?\n\nFor example:\n* **What is your current level?** (Beginner, intermediate, advanced?)\n* **What instrument do you play?**\n* **What genres or styles are you in the mood for?** (Classical, jazz, pop, something technical, or something more lyrical?)\n* **How much time do you want to spend on them?** (Short character pieces or longer, more complex works?)",
+  "without": "I\u2019d love to! To give you the best recommendations, could you tell me a little more about your playing?\n\nSpecifically:\n1. **What instrument do you play?**\n2. **What is your current level?** (Beginner, intermediate, advanced?)\n3. **What genres or styles do you enjoy?** (Classical, jazz, pop, film scores, etc.)\n4. **Are you looking for something challenging or something more relaxing?**",
+  "tool_calls": [],
+  "check": [
+   "keyboard",
+   "61",
+   "keys",
+   "range"
+  ]
+ }
+]

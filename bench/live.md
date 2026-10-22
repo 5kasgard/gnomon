@@ -32,3 +32,49 @@ costs, and whether it applies what comes back.
     Cloudflare Access service token, so no API token is needed.
   - The model is Gemma 4 26B, with thinking turned off.
   - The proxy, its Access app and the token are deleted after the run.
+
+## Pilot result (Workers AI, Gemma 4 26B, thinking off)
+
+The run took 120 model calls for 16 sessions, about 69K tokens and 894
+neurons. The three-condition probes took 36 more calls and 460 neurons.
+In all, about 14% of one day's free allocation. Results are in
+`live_results/`.
+
+**1. Pull fails: the model never used its memory.** Across 16 sessions
+and 12 probes, B made 0 tool calls. That was every chance it had, even
+with the instruction to use memory whenever earlier conversations could
+matter. This model, under a text protocol, does not reach for memory on
+its own. That is one model and one protocol, but it is a warning: a
+memory that waits to be asked may never be asked.
+
+**2. The simulated person did not always plant its facts.** Priya never
+mentioned 3 of her 6 facts (the nut allergy, the sold car, Tuesdays).
+Those probes test nothing and are set aside below. The harness must
+check that each fact was actually said, and prompt again if not.
+
+**3. Push helps on the probes that were planted** (9; judge-free check
+words). The pull condition is left out: it made no tool calls, so it
+answered without memory and only measures noise.
+
+| | Applied the fact |
+|---|---|
+| No memory | 3 / 9 |
+| Memory pushed into the prompt (situation + context, about 1,100–2,900 tokens) | **6 / 9** |
+| Push better / worse / same, paired | 5 / 2 / 2 |
+
+The two "worse" cases look like check-word noise. A generic answer
+without memory happened to mention running, or Scotland. With 9 probes
+this is a pilot, not a result.
+
+**What changes in the design:** the standing parts of memory should be
+pushed, not left to be pulled. The `situation` model and the standing
+instructions change only when the person says something new, so they
+can sit in a cached prefix of every conversation. Gnomon's Claude Code
+hook (`gnomon.hook`) is the place for that. Pull stays for the rest.
+
+**Next run:**
+- verify that each fact is planted;
+- use native function calling where the model has it;
+- run Claude through the Anthropic API, since whether Claude pulls is
+  the question that matters for Claude users;
+- use a blinded judge as a second measure alongside the check words.
