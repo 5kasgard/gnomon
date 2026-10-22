@@ -109,3 +109,50 @@ know your preferences…", and no call.
     planted facts only;
   - tokens of memory read.
 - **Same model:** Gemma 4 26B on Workers AI, thinking off.
+
+## Run 2 result
+
+The run took 176 model calls, about 125K tokens and 1,464 neurons
+(`live_results/run2_*`). Every fact was planted this time: the reminder
+fired for Priya. Applied means the planted fact shows up in the answer
+(check words, 12 probes).
+
+| Condition | Called memory | Applied the fact | Memory read |
+|---|---|---|---|
+| None | 0 / 12 | 5 / 12 | — |
+| Native tools, `auto` | 1 / 12 | 5 / 12 | 1.4K tokens |
+| Native + salience note | 1 / 12 | 4 / 12 | 1.1K |
+| Forced first call | 11 / 12 | 6 / 12 | 10.8K |
+| **Push** | (none needed) | **10 / 12** | about 2–3K per probe, in the prompt |
+
+What it shows:
+
+- **Offering tools, even native ones, does not get them used.** One call
+  in 12, with or without a line saying there is a history. The text cue
+  changed nothing. That is the owner's point in numbers: words ask,
+  structure binds.
+- **Forcing a call gets a call, not the right one.**
+  - Where the model chose `situation`, which holds the facts, it
+    applied them about half the time.
+  - Three times it called `expand` with no pointer.
+  - Five times it called `context` with a query aimed off target. For
+    the walking route it asked for "location, preferred walking routes",
+    which misses the knee. For half-term it asked about the kids'
+    interests, which misses Glasgow.
+
+  The unknown unknown moves from "should I look" to "what should I look
+  for". The model cannot ask for what it does not know is there.
+- **Push wins: 10 of 12, against 5 with no memory.** The harness hands
+  over the person's situation and what bears on the message, and the
+  model applies it. The two misses were the 10am meetings and Glasgow,
+  where the answers did not use the words checked.
+
+The check words are generous to "none": generic answers often mention
+running, budgets or weekdays. So the gap between push and the rest is
+likely larger than shown.
+
+**Design consequence.** For the person's standing situation, memory
+must be pushed by structure: a hook or harness that puts it in a
+cached prefix. Tools stay for depth: expanding a pointer, or a search
+the model knows it needs. The next condition to test is the middle
+path: push a short table of contents, and leave the details to pull.
