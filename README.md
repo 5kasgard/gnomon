@@ -352,21 +352,14 @@ than retuned on the held-out data. Covering order and summary questions by
 taking the best turn from each part of the record was tried and did
 nothing (the evidence is not among the top 200 by words to begin with).
 
-**Openers: navigating by how conversations began.** People raise a topic
-at the start of a conversation. On BEAM, every conversation holding
-event-ordering evidence opens with it. `context` with view `"openers"`
-gives, for the conversations that bear on a question, the person's first
-turn (at most 60 tokens), dated, with a pointer, oldest first. At 2,000
-tokens (pre-registered, run once, `bench/beam_openers.md`):
-
-| Evidence in view | Whole messages (hybrid) | Openers |
-|---|---|---|
-| Ordering and summaries, 4 sizes | 4.4 | **16.0** (+11.6 [9.7, 13.6]) |
-| Event ordering, 100K / 500K / 1M / 10M | 6.6 / 3.1 / 2.5 / 2.1 | 43.8 / 20.3 / 14.1 / 6.7 |
-
-These are pointers, not text: a fact past the first 60 tokens still needs
-`expand`. The shipped version scores 46.1 / 22.0 on ordering at
-100K / 500K.
+**Openers, and what they turned out to be.** `context` with view
+`"openers"` shows how each relevant conversation began: the person's first
+turn, at most 60 tokens, dated, oldest first. On BEAM it raised
+event-ordering evidence in view from 3.5% to 21.5% at 2,000 tokens
+(`bench/beam_openers.md`). A later control showed why: every message by the
+person, cut to the same 60 tokens, scores the same (20.7). The gain is
+short lines in place of whole messages, not openings. Openers fail outside
+BEAM (`bench/boundaries.md`).
 
 **A meaning layer.** Next to word ranking, Gnomon can rank by meaning
 using static embeddings (model2vec potion-retrieval-32M). That is a lookup
@@ -557,6 +550,35 @@ its budget unused.
 
 In a spot check, the cited message held the answer's numbers in 44 of 49
 questions, so BEAM's evidence ids are close to, not exactly, right.
+
+**Which view, across 8 environments.** BEAM is where cutting long
+messages pays most. Measured judge-free across BEAM's 4 sizes, LoCoMo,
+LongMemEval, ConvoMem and QASPER's scientific papers, no one way of
+showing retrieved turns is best (`bench/views.md`). The measure is the
+answer's words in a 2,000-token view, with every view using the same
+ranking:
+
+| View | Mean | Largest loss to the best fixed view |
+|---|---|---|
+| Short turns whole, long ones as the 60 tokens around the question's words | **61.4** | −5.8 |
+| Whole turns | 58.6 | −8.6 |
+| Best sentences across turns (the previous default) | 58.0 | −11.8 |
+
+The first is now `context`'s default, chosen after the fact over all 8
+environments. It was also chosen in advance over 7 of them and then lost
+to whole turns on QASPER, data none of these choices had seen. The other
+views stay available.
+
+Choosing the view per memory from use, by the same gated rule as ranking,
+recovers 60–90% of the best view's gain within 50 uses where cutting pays.
+Elsewhere it costs at most 0.1. The product still needs a signal of
+whether the text shown sufficed; that is open.
+
+**Boundaries were not the answer.** Event segmentation theory suggested
+indexing a record where prediction fails (high surprise). Tested across
+all 7 test environments, surprise-chosen lines lost to plain short lines by
+31 to 62 points. The openers' gain on BEAM turned out to be line length
+(`bench/boundaries.md`).
 
 **Answers at 1M tokens.** Claude Haiku answered 100 questions from 10
 random 1M conversations (80 with a gold answer: facts, updated values,

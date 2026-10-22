@@ -83,6 +83,23 @@ class TieredContext(unittest.TestCase):
         self.assertIn("DNS cutover", o["text"].splitlines()[-2])
         self.assertTrue(o["text"].index("plan the hosting") < o["text"].index("DNS cutover"))
 
+    def test_window_view_shows_long_turns_around_the_question(self):
+        filler = " ".join(f"Line {i} talks about nothing much." for i in range(80))
+        record_messages(self.m, "owner", [
+            ("user", "Tell me about the warehouse."),
+            ("assistant", filler + " The warehouse lease ends on 9 September 2025. " + filler),
+        ], compartment="chat", record_time="2024-02-01T00:00:00Z")
+        c = self.t.context("When does the warehouse lease end?", budget=400)
+        long = [v for v in c["view"] if "lease ends" in v["text"]]
+        self.assertTrue(long)
+        self.assertLessEqual(len(long[0]["text"]), 240)
+        ep = self.m.state()["state"]["episodes"][long[0]["pointer"].rpartition("#")[0]]["body"]["content"]
+        self.assertEqual(ep[long[0]["start"]:long[0]["end"]], long[0]["text"])  # the record's own characters
+        whole = self.t.context("When does the warehouse lease end?", budget=4000, view="whole")
+        self.assertTrue(any(len(v["text"]) > 1000 for v in whole["view"]))
+        with self.assertRaises(ValueError):
+            self.t.context("x", view="nonsense")
+
     def test_warm_tier_points_at_the_exact_words(self):
         c = self.t.context("What is the deploy deadline?", budget=200)
         self.assertTrue(c["view"])
