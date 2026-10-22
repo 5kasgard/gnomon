@@ -605,6 +605,29 @@ on BEAM. So the time link is a step the reader takes: `expand` with
 `around` returns the turns said just before and after a pointer it already
 holds.
 
+**Which statement is the latest: dates, in rank order.** People update what
+they said (a new personal best, a moved date), and Gnomon keeps both
+statements exactly as said. Superseding one is a judgement about meaning,
+so the reader makes it, and it can only do so if it can see which came
+later. On LongMemEval's knowledge-update questions, both values were in the
+view 97% of the time, but the view showed no dates, and the stale value
+was ranked first half the time. Each line of `context`'s view now carries
+its date (about 4 tokens) and keeps its rank order. In a pre-registered
+test, Claude Haiku answered 192 questions, with a blinded judge grading the
+answers; the dates were then confirmed on 183 held-out questions
+(`bench/time_view.md`):
+
+| Questions | Without dates (judge) | With dates (judge) | Answer words, change |
+|---|---|---|---|
+| Knowledge-update (72) | 70.8% | **83.3%** | +9.0 [−2.0, +20.5] |
+| Temporal reasoning (80) | 45.0% | **65.0%** | +14.0 [+5.4, +22.4] |
+| Control, single-session (40) | 90.0% | 90.0% | −1.5 [−7.9, +3.7] |
+| Held out: LongMemEval multi-session and temporal (103) | 63.1% | 68.0% | −0.7 [−7.3, +5.8] |
+| Held out: LoCoMo "when" questions (80) | 7.5% | **66.2%** | +61.3 [+52.9, +69.4] |
+
+Showing the lines in time order instead loses the ranking, and with it
+7 points on the control questions.
+
 **Answers at 1M tokens.** Claude Haiku answered 100 questions from 10
 random 1M conversations (80 with a gold answer: facts, updated values,
 dates, cross-session counts; 20 about things never said) from Gnomon's top

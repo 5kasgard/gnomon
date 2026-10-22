@@ -267,7 +267,10 @@ class Tiers:
             lines += [f"[{d['source']}] {d['speaker']}: {d['text']}" for d in hot]
             lines.append("")
         lines.append(f"From the record, for: {query}")
-        lines += [f"[{s['pointer']}] {s['speaker']}: {s['text']}" for s in warm]
+        # Dated, in rank order: the reader can tell which statement is the
+        # latest without losing the ranking (bench/time_view.md).
+        lines += [f"[{s['pointer']}] {(s.get('time') or '')[:10]} {s['speaker']}: {s['text']}".replace("]  ", "] ")
+                  for s in warm]
         lines.append("(Each [pointer] can be expanded to its whole turn, exactly as recorded.)")
         text = "\n".join(lines)
         return {"standing": hot, "view": warm, "text": text,

@@ -100,6 +100,17 @@ class TieredContext(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.t.context("x", view="nonsense")
 
+    def test_view_lines_are_dated_in_rank_order(self):
+        record_messages(self.m, "owner", [("user", "My personal best for the 5K is 27:12.")],
+                        compartment="chat", record_time="2025-05-23T13:01:00Z")
+        record_messages(self.m, "owner", [("user", "I want to beat my 5K personal best of 25:50.")],
+                        compartment="chat", record_time="2025-05-30T13:53:00Z")
+        c = self.t.context("What is my 5K personal best?", budget=400)
+        lines = [l for l in c["text"].split("From the record")[1].splitlines() if l.startswith("[") and "personal best" in l]
+        self.assertEqual(len(lines), 2, c["text"])
+        self.assertTrue(any("] 2025-05-23 user: " in l and "27:12" in l for l in lines))
+        self.assertTrue(any("] 2025-05-30 user: " in l and "25:50" in l for l in lines))
+
     def test_warm_tier_points_at_the_exact_words(self):
         c = self.t.context("What is the deploy deadline?", budget=200)
         self.assertTrue(c["view"])

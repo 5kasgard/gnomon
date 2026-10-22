@@ -59,7 +59,7 @@ class Ranker:
         self.weights = dict(WEIGHTS if weights is None else weights)
         self.own = own or (lambda speaker: speaker.lower() not in _ASSISTANTS)
         self._at = None
-        self._start = {}
+        self._start, self._time = {}, {}
         self._hits, self._scores, self.last_orders, self._turns = {}, {}, {}, {}
         self.calibration: Optional["Calibration"] = None
 
@@ -77,6 +77,7 @@ class Ranker:
             for n, t in enumerate(ep["body"]["turns"]):
                 turns.append((f"{eid}#{n}", t["speaker"], content[t["start"]:t["end"]]))
                 self._start[f"{eid}#{n}"] = t["start"]
+                self._time[f"{eid}#{n}"] = ep.get("record_time")
         order = [t[0] for t in turns]
         old_order = getattr(self, "_order", [])
         # The log only grows: earlier turns keep their vectors and their
@@ -162,11 +163,13 @@ class Ranker:
             h = self._hits[p]
             speaker, text = h["speaker"], h["text"]
         start = self._start.get(p, self._hits[p]["start"] if p in self._hits else 0)
-        return {"pointer": p, "speaker": speaker, "text": text, "start": start, "score": round(score, 4)}
+        when = self._time.get(p, self._hits[p].get("time") if p in self._hits else None)
+        return {"pointer": p, "speaker": speaker, "text": text, "start": start, "time": when,
+                "score": round(score, 4)}
 
     def rank(self, query: str, k: int = 10, as_of: Optional[str] = None, arm: Optional[str] = None,
              **recall_opts) -> list:
-        """[{"pointer", "speaker", "text", "start", "score"}], best first
+        """[{"pointer", "speaker", "text", "start", "time", "score"}], best first
         (start: the turn's code-point offset in its episode). `arm` picks the
         mechanism (default: the calibrated choice, else invariant)."""
         orders = self.arms(query, as_of=as_of, **recall_opts)
