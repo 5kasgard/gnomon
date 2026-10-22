@@ -30,3 +30,36 @@ measures the text itself.
   paired K − A and K − H with cluster bootstrap intervals.
 - **Not tuned:** 60 tokens, 2,000 tokens and the window rule are fixed
   here, and everything is run once.
+
+## Next, fixed before running: foraging
+
+Information foraging theory (Pirolli and Card) treats a reader as a
+forager. Each item shown is a patch. The marginal value theorem says to
+stay in a patch only while its yield per unit of effort beats the
+environment's average, then move on. Under a token budget, that means
+each piece of text should be worth its tokens wherever it comes from.
+Whole messages overstay in long patches. A fixed 60-token cut leaves
+short ones early, or cuts the wrong part.
+
+Gnomon's `context` already does something close: it ranks sentences from
+the top 50 messages by rare words shared with the question, discounted by
+the message's rank, and spends the budget on the best sentences
+(`select_sentences`). It was measured on BEAM by reader F1
+(beam_compress.md), never across datasets.
+
+- **Arms,** one ranking (hybrid), 2,000 tokens:
+  - **A:** whole messages.
+  - **K:** keyword in context, as above.
+  - **K′, length-aware:** the whole message if it is at most 60 tokens,
+    otherwise K's window, moved back so it is a full 60 tokens.
+  - **S:** Gnomon's sentence view (`select_sentences` over the top 50,
+    with the record's sentence frequencies).
+- **Measures:** answer words in view (primary) and evidence recall, as
+  above.
+- **Choice and confirmation:** the arm with the highest mean answer
+  words, over the 7 rows (4 BEAM sizes, LoCoMo, LongMemEval-S,
+  ConvoMem, each weighted equally), is then tested once against A on
+  data never used in this project. That is QASPER's test split (CC BY 4.0;
+  questions on scientific papers, the paper's paragraphs as the record,
+  the hybrid of paragraph meaning and words as the ranking, and the
+  annotated answers).

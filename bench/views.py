@@ -59,7 +59,7 @@ def run(name, loader, cache_file, rows):
             c = next(it)
             assert c["ev"] == ev, (name, conv)
             qw = terms(q["question"])
-            gold = {w for w in terms(q.get("answer", "")) if w not in STOP} - qw
+            gold = {w for w in terms(q.get("answer") or q.get("rubric") or "") if w not in STOP} - qw
             if not gold:
                 continue
             row = {"dataset": name, "conv": conv, "category": q["category"]}
