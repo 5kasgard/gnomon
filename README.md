@@ -505,7 +505,9 @@ times, against 10 with no memory. The person's situation alone got 17,
 from about 1,000 cacheable tokens. So auto mode's hook now places the
 person's own situation sentences at the start of every Claude Code
 session. `--per-message` adds what the record holds on each prompt.
-Words ask; structure binds.
+Words ask; structure binds. Claude (Haiku) behaves differently: it looked
+in memory unprompted on 12 of 12 probes. Even so, pushed facts were applied
+in 11 of 12 answers, against 8 of 12 when it pulled, by a blinded judge.
 
 **In the product: `situation`.** The MCP tool returns the person's own
 sentences about their situation, exact, with pointers, oldest first, and

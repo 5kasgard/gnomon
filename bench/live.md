@@ -224,3 +224,36 @@ recorded histories, each limited to what was recorded before its session.
 
 Measured: whether the tool was used, and whether the planted fact was
 applied (check words).
+
+## Run 4 result: Claude pulls, and push still applies more
+
+The run took 25 Haiku sub-agents plus 1 blinded judge, about 2.4M tokens
+in this session (`live_results/run4_*`).
+
+**Claude reached for memory on its own every time:** 12 of 12. Each
+agent ran `situation` first. Five also ran a targeted `context` query,
+for example "knee physio stairs hills walking running". Gemma, told in
+the same way that a history and a tool existed, did so 1 time in 12
+(run 2). Whether a model pulls depends on the model.
+
+The check words were too generous here: Claude's longer answers name
+many options, so "none" scored 8 of 12. The blinded judge (a separate
+Haiku agent seeing each answer with the fact, the condition hidden, in
+shuffled order) is the better measure:
+
+| | Check words | Blinded judge: takes the fact into account |
+|---|---|---|
+| None | 8 / 12 | 5 / 12 |
+| Pull (Claude chose to look) | 10 / 12 | 8 / 12 |
+| **Push** | 11 / 12 | **11 / 12** |
+
+Even when Claude looked, the facts it fetched were not always applied:
+the half marathon, mornings before 10 and the keyboard were missed after
+a `situation` call. Pushed, the same facts were applied in 11 of 12
+answers.
+
+**Design, confirmed for Claude:**
+- Push the situation. It wins whether or not the model would have pulled.
+- For a model like Gemma, push is the only thing that works.
+- For Claude, pull is a real second channel: it searches with good
+  targeted queries. The tools stay.
