@@ -78,3 +78,34 @@ hook (`gnomon.hook`) is the place for that. Pull stays for the rest.
 - run Claude through the Anthropic API, since whether Claude pulls is
   the question that matters for Claude users;
 - use a blinded judge as a second measure alongside the check words.
+
+## Run 2, fixed before running: making memory unmistakable
+
+The pilot's model never pulled memory under a text protocol. The owner's
+point: a memory has to bind, or be so apparent that it is the obvious
+move. Each session starts fresh and short, so nothing in the model's
+context says there is a history to check. A one-call check with native
+tools and `tool_choice: auto` already shows the reflex: "Since I don't
+know your preferences…", and no call.
+
+- **History:** the same cards and sessions. Planting is now verified:
+  after A's turns, if a fact's key word is missing from what A said, A
+  gets up to two extra turns with an explicit reminder. B in the
+  sessions uses native tools with the salience note (below).
+- **Probe conditions,** each on the same message, with memory as
+  recorded up to that session:
+  - **none:** no memory.
+  - **native:** the model's own function calling, `tool_choice: auto`.
+  - **salient:** native, plus one line in the system prompt saying how
+    many earlier conversations there were, when the last one was, and
+    how many of the person's statements memory holds.
+  - **forced:** native, with `tool_choice: required` on the first step,
+    so the model must consult memory before answering.
+  - **push:** situation and context placed into the system prompt by
+    the harness.
+- **Measured:**
+  - how often each condition calls a tool;
+  - whether the answer applies the planted fact (check words), on
+    planted facts only;
+  - tokens of memory read.
+- **Same model:** Gemma 4 26B on Workers AI, thinking off.
