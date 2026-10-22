@@ -1,0 +1,16 @@
+{
+ "questions": 202,
+ "lme_share": 0.1735,
+ "LME-trained, LME share (primary)": {
+  "evidence_kept": 0.4900990099009901,
+  "mean_tokens": 29552
+ },
+ "LME-trained, ConvoMem share": {
+  "evidence_kept": 0.6089108910891089,
+  "mean_tokens": 41793
+ },
+ "ConvoMem-trained (reference)": {
+  "evidence_kept": 0.8168316831683168,
+  "mean_tokens": 48420
+ }
+}
