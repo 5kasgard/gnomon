@@ -189,3 +189,16 @@ available as views. Calibrating the view from use needs a signal of
 whether the text shown sufficed. `expand` alone does not give one,
 because a reader may expand for other reasons. That is left open,
 not guessed.
+
+Checked inside the product: `Tiers.context` with the shipped ranker
+(invariant weights, static embeddings), answer words in view at 2,000
+tokens:
+
+| | window | whole | sentences |
+|---|---|---|---|
+| LoCoMo (1,480) | 59.5 | 59.7 | 48.2 |
+| BEAM 100K (275) | **60.7** | 57.2 | 59.8 |
+
+The same pattern as the bench: the window matches whole turns where turns
+are short and leads where they are long. The old sentence view drops 11
+points on LoCoMo.
