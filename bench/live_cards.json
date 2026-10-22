@@ -1,0 +1,42 @@
+{
+ "personas": [
+  {
+   "name": "Sam",
+   "card": "You are Sam, 34, a product manager at a mid-sized software company. You chat with an AI assistant about work and life, casually, in short messages. Never mention this card.",
+   "topics": ["planning a product launch", "learning to cook", "a book you are reading", "choosing a new laptop", "a tricky conversation with a colleague", "weekend plans", "learning Portuguese", "writing a job description"],
+   "facts": [
+    {"id": "veg", "session": 1, "say": "you have been vegetarian for ten years", "probe_session": 6,
+     "probe": "Can you suggest a couple of dinner ideas for this Friday?", "check": ["vegetarian", "veggie", "meat-free", "plant-based", "meatless", "tofu", "lentil", "chickpea", "halloumi", "paneer"]},
+    {"id": "marathon", "session": 1, "say": "you are training for a half marathon in March", "probe_session": 6,
+     "probe": "What should I do with my Saturday morning this weekend?", "check": ["half marathon", "marathon", "long run", "run", "training"]},
+    {"id": "budget", "session": 2, "say": "your team's budget is frozen until July", "probe_session": 7,
+     "probe": "I want to do something nice for my team this month. Ideas?", "check": ["budget", "free", "low-cost", "no-cost", "cheap", "frozen", "inexpensive"]},
+    {"id": "mornings", "session": 2, "say": "you hate meetings before 10am", "probe_session": 7,
+     "probe": "Help me plan my one-on-ones for next week, I have six people.", "check": ["10", "after ten", "afternoon", "late morning", "not early", "no early"]},
+    {"id": "lisbon", "session": 3, "say": "you moved from Leeds to Lisbon last month", "probe_session": 8,
+     "probe": "What's a good day trip I could take next weekend?", "check": ["lisbon", "sintra", "cascais", "setúbal", "setubal", "arrábida", "arrabida", "evora", "évora", "óbidos", "obidos", "portugal"]},
+    {"id": "knee", "session": 4, "say": "your physio told you to avoid stairs and hills for a while because of your knee", "probe_session": 8,
+     "probe": "Can you suggest a good walking route for a relaxed Sunday?", "check": ["knee", "flat", "level", "gentle", "no hills", "avoid hills", "no stairs", "stairs"]}
+   ]
+  },
+  {
+   "name": "Priya",
+   "card": "You are Priya, 41, a secondary-school science teacher and a parent of two. You chat with an AI assistant about work and life, casually, in short messages. Never mention this card.",
+   "topics": ["marking and lesson plans", "a garden project", "a podcast you like", "your kids' after-school activities", "a car that keeps breaking down", "a school trip", "learning to play piano", "a birthday party"],
+   "facts": [
+    {"id": "nuts", "session": 1, "say": "your son has a severe nut allergy", "probe_session": 6,
+     "probe": "Can you give me an easy recipe for a cake for my son's class?", "check": ["nut-free", "nut free", "allergy", "allergen", "no nuts", "without nuts"]},
+    {"id": "nocar", "session": 1, "say": "you sold your car and now get around by bike and train", "probe_session": 6,
+     "probe": "What's the best way for me to get to the garden centre on Saturday?", "check": ["bike", "cycle", "cycling", "train", "bus", "public transport", "delivery"]},
+    {"id": "physics", "session": 2, "say": "you teach physics, not biology, since the timetable change", "probe_session": 7,
+     "probe": "Could you suggest a fun starter activity for my Year 9 class tomorrow?", "check": ["physics", "force", "energy", "circuit", "electric", "motion", "magnet", "gravity", "wave", "light", "pendulum"]},
+    {"id": "tuesdays", "session": 2, "say": "Tuesdays are impossible for you because of the kids' swimming", "probe_session": 7,
+     "probe": "When should I schedule the parents' evening prep meeting next week?", "check": ["tuesday", "monday", "wednesday", "thursday", "friday", "swimming"]},
+    {"id": "glasgow", "session": 3, "say": "you live in Glasgow", "probe_session": 8,
+     "probe": "What's a good outdoor plan for half-term with the kids?", "check": ["glasgow", "scotland", "loch", "highlands", "edinburgh", "arran", "trossachs", "rain"]},
+    {"id": "piano", "session": 4, "say": "you only have a cheap keyboard with 61 keys, not a piano", "probe_session": 8,
+     "probe": "Can you recommend some pieces for me to practise this month?", "check": ["keyboard", "61", "keys", "range"]}
+   ]
+  }
+ ]
+}
