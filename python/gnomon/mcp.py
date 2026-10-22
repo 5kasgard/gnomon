@@ -234,9 +234,9 @@ TOOLS: list[dict] = [
             "Read it before advising: the question often won't mention what matters (\"suggest a team "
             "offsite\" when they said months ago that the budget is frozen). Pick the lines that should "
             "change your answer, then answer applying them. It changes only when the person says something "
-            "new, so keep it early in the context where a prompt cache can hold it. Until this memory has "
-            "learnt which sentences matter it keeps all of them; to teach it once (needs --meaning), call "
-            "with mode \"sample\", follow the instructions returned, then call with mode \"learn\"."
+            "new, so keep it early in the context where a prompt cache can hold it. It keeps every such "
+            "sentence; if that is too large for the context, it can learn to keep about a third (losing "
+            "some): call with mode \"sample\", follow the instructions, then mode \"learn\" (needs --meaning)."
         ),
         "inputSchema": _schema({
             "mode": {"type": "string", "enum": ["model", "sample", "learn"],

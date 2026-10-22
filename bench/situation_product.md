@@ -68,10 +68,8 @@ same: learn it per memory.
   1,000 numbered candidate sentences and the labelling prompt. The
   client's model (Claude, in a session) picks the lines; mode "learn"
   fits the weights and saves them beside the log. Gnomon itself calls no
-  model. From the subsampling above, 1,000 labels keep about 78% of the
-  evidence at a quarter of the size. Those labels came from another
-  history of the same dataset; labels of the person's own history should
-  fit at least as well, but that is untested.
+  model. With labels of a history's own sample this kept 63-72% of the
+  evidence at about a third of the size (below).
 - The model is the person's exact sentences with pointers, oldest first,
   with the select-then-answer instruction (B2).
 
@@ -79,3 +77,46 @@ Checked end to end: `gnomon.situation`, given weights learnt with its own
 `train` from the ConvoMem dev labels, keeps the evidence for 81.7% of the
 202 test questions, and its candidates for 96.5%: the same as the bench,
 to the question.
+
+## Next: labels of the person's own history, fixed before running
+
+The product labels a sample of the memory's own history; the bench so far
+trained on another history. Haiku already labelled every candidate of the 4
+test histories (situation.md), so no new model tokens are needed:
+
+- **Own:** for each test history, 1,000 of its candidates drawn at random
+  (seeds 0-2) with Haiku's labels; train; keep the share labelled.
+- **Other:** 1,000 drawn from the dev history's labels, same seeds.
+- **Measured:** evidence kept on the 202 questions; also on the questions
+  none of whose evidence sentences were in the labelled sample (the
+  selector's generalisation, not its memory of labels).
+- **Product rule tested alongside:** keep the labelled-kept sentences
+  outright and use the selector for the rest.
+
+## Result: own labels did worse than another history's
+
+| Labels (1,000 sentences, 3 seeds) | Evidence kept | Questions with unlabelled evidence | Mean tokens |
+|---|---|---|---|
+| Another history's (dev) | 76.2-79.2% | 74.0-78.3% | 43-49K |
+| The history's own | 62.9-70.3% | 58.4-68.4% | about 40K |
+| Own, labelled-kept sentences kept outright | 63.9-72.3% | 58.4-68.4% | about 40K |
+
+The own labels also kept a smaller share (19.9-26.2% against the dev
+history's 25.3%). Held to the dev share as a check (not pre-registered),
+they still kept only 68.8-71.3%. So the gap is in the labels, not the
+budget. A likely reason: the labelling prompt was tuned on that dev
+history (situation.md), so its labels fit the evidence better than the
+same prompt's labels elsewhere. Keeping the labelled sentences outright
+adds at most 2 points.
+
+What this means for the product:
+
+- **What the selector is worth depends on the labels.** With the labels a
+  model gives a person's own history under this prompt, expect about
+  two-thirds of the evidence, at about a third of the size of keeping
+  every candidate (96.5%).
+- **Keeping every candidate stays the default.** Learning is an option for
+  memories too large to load whole, not an improvement in evidence.
+- **The better lever is label quality** (the prompt, or a stronger
+  labeller). It needs a fresh development history to tune on and a
+  separate one to test.

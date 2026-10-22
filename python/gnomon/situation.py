@@ -29,8 +29,10 @@ for weights learnt from one ConvoMem history (bench/situation_product.md).
 So no weights ship. Each memory learns its own, once: a model reads a
 sample of about 1,000 of the person's candidate sentences and picks those
 that could change advice later (`sample`, `LABEL_PROMPT`); `train` fits the
-weights, saved beside the log (`<log>.situation.json`). Until then every
-candidate is kept: the most evidence, about four times the size.
+weights, saved beside the log (`<log>.situation.json`). With a model's
+labels of a history's own sample that kept 63-72% of the evidence at
+about a third of the size; keeping every candidate (the default) kept
+96.5%. So learning is for memories too large to load whole.
 """
 
 from __future__ import annotations

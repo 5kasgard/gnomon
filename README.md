@@ -494,10 +494,13 @@ only when the person says something new, so a prompt cache holds it.
 Which sentences matter does not transfer between datasets: a selector
 learnt from LongMemEval labels kept 49% of ConvoMem's evidence, against
 82% for one learnt on ConvoMem (`bench/situation_product.md`). So each
-memory learns its own, once. The client's model labels a sample of about
+memory can learn its own: the client's model labels a sample of about
 1,000 sentences (`situation` mode "sample", then "learn"), and Gnomon
-calls no model itself. Until then it keeps every candidate sentence. On the
-benchmark, the product path matches the bench exactly (81.7% and 96.5%).
+calls no model itself. By default it keeps every candidate sentence (96.5%
+of the evidence). With a model's labels of a history's own sample, the
+learnt selector kept 63-72% at about a third of the size. So learning is
+for memories too large to load whole. On the benchmark, the product path
+matches the bench exactly.
 
 **Compartments: the right mechanism depends on the record.** Within a
 dataset, choosing the method by question type gains 0.3-2.2 points. Across
