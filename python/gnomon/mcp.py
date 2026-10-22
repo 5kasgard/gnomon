@@ -200,18 +200,19 @@ TOOLS: list[dict] = [
             "What to read before answering, within a token budget: first the user's standing "
             "instructions and preferences (\"Always...\", \"Never...\", \"I prefer...\"), which apply "
             "whatever the question is about and change rarely, so keep them at the front where a prompt "
-            "cache can hold them; then the sentences of the record that bear on the question, each with "
-            "a [pointer] to its turn. On BEAM conversations of a million tokens, sentences carry more of "
-            "the facts an answer needs per token than whole messages. Use `expand` on a pointer to read "
-            "the whole turn exactly as recorded. For questions about order or progress across conversations "
+            "cache can hold them; then the turns of the record that bear on the question, each with a "
+            "[pointer]: short turns whole, long ones as the part around the question's words. Use `expand` "
+            "on a pointer to read the whole turn exactly as recorded. For questions about order or progress across conversations "
             "(\"in what order did I...\", \"how has X evolved\"), use view \"openers\": how each relevant "
             "conversation began, dated, oldest first."
         ),
         "inputSchema": _schema({
             "query": {"type": "string", "description": "The question being answered."},
-            "view": {"type": "string", "enum": ["sentences", "openers"],
-                     "description": "sentences (default): standing instructions, then sentences; openers: how "
-                                    "the relevant conversations began, in order."},
+            "view": {"type": "string", "enum": ["window", "whole", "sentences", "openers"],
+                     "description": "How retrieved turns are shown after the standing instructions. window "
+                                    "(default): whole if short, else the part around the question's words; "
+                                    "whole; sentences: the best sentences across turns; openers: how the "
+                                    "relevant conversations began, in order."},
             "budget": {"type": "integer", "minimum": 100, "maximum": 20000,
                        "description": "Tokens for the sentences from the record (default 2000)."},
             "directive_budget": {"type": "integer", "minimum": 0, "maximum": 10000,
@@ -733,7 +734,8 @@ class Server:
             return o["text"], {"openers": [x["pointer"] for x in o["openers"]], "tokens": o["tokens"]}
         opts = {"now": a["now"]} if "now" in a else {}
         c = self._tiers().context(a["query"], budget=a.get("budget", 2000),
-                                  directive_budget=a.get("directive_budget", 1500), as_of=a.get("as_of"), **opts)
+                                  directive_budget=a.get("directive_budget", 1500), as_of=a.get("as_of"),
+                                  view=a.get("view", "window"), **opts)
         return c["text"], {"standing": [d["source"] for d in c["standing"]],
                            "view": [{k: s[k] for k in ("pointer", "start", "end")} for s in c["view"]],
                            "tokens": c["tokens"]}

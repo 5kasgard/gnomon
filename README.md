@@ -551,6 +551,35 @@ its budget unused.
 In a spot check, the cited message held the answer's numbers in 44 of 49
 questions, so BEAM's evidence ids are close to, not exactly, right.
 
+**Which view, across 8 environments.** BEAM is where cutting long
+messages pays most. Measured judge-free across BEAM's 4 sizes, LoCoMo,
+LongMemEval, ConvoMem and QASPER's scientific papers, no one way of
+showing retrieved turns is best (`bench/views.md`). The measure is the
+answer's words in a 2,000-token view, with every view using the same
+ranking:
+
+| View | Mean | Largest loss to the best fixed view |
+|---|---|---|
+| Short turns whole, long ones as the 60 tokens around the question's words | **61.4** | −5.8 |
+| Whole turns | 58.6 | −8.6 |
+| Best sentences across turns (the previous default) | 58.0 | −11.8 |
+
+The first is now `context`'s default, chosen after the fact over all 8
+environments. It was also chosen in advance over 7 of them and then lost
+to whole turns on QASPER, data none of these choices had seen. The other
+views stay available.
+
+Choosing the view per memory from use, by the same gated rule as ranking,
+recovers 60–90% of the best view's gain within 50 uses where cutting pays.
+Elsewhere it costs at most 0.1. The product still needs a signal of
+whether the text shown sufficed; that is open.
+
+**Boundaries were not the answer.** Event segmentation theory suggested
+indexing a record where prediction fails (high surprise). Tested across
+all 7 test environments, surprise-chosen lines lost to plain short lines by
+31 to 62 points. The openers' gain on BEAM turned out to be line length
+(`bench/boundaries.md`).
+
 **Answers at 1M tokens.** Claude Haiku answered 100 questions from 10
 random 1M conversations (80 with a gold answer: facts, updated values,
 dates, cross-session counts; 20 about things never said) from Gnomon's top

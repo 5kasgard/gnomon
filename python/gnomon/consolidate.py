@@ -151,6 +151,39 @@ def select_sentences(question: str, hits: list, df: Counter, n_sent: int, budget
     return out
 
 
+def select_windows(question: str, hits: list, df: Counter, n_sent: int, budget: int,
+                   line: Optional[int] = 60) -> list:
+    """`hits` best first; each shown, in that order while the budget lasts,
+    whole if it is at most `line` tokens (or `line` is None), otherwise as
+    the `line`-token window starting at its sentence sharing the most rare
+    words with the question, moved back to fill `line` tokens. Returns
+    [{"pointer", "start", "end", "text", ...}] with code-point offsets in
+    the hit's episode. Across 8 test environments this held the most
+    answer text on average and lost least where it lost
+    (bench/views.md)."""
+    qw = {w for w in _terms(question) if w not in STOP and len(w) > 2}
+    out, spent = [], 0
+    for h in hits:
+        text = h["text"]
+        a, b = 0, len(text)
+        if line is not None and tokens(text) > line:
+            best, at = 0.0, 0
+            for s0, _, body in sentences(text):
+                w = sum(math.log(n_sent / (1 + df[x])) for x in qw & set(_terms(body)))
+                if w > best:
+                    best, at = w, s0
+            a = max(0, min(at, len(text) - 4 * line))
+            b = a + 4 * line
+        body = text[a:b]
+        cost = tokens(f"[{h['pointer']}] {body}\n")
+        if spent + cost > budget:
+            break
+        out.append({"pointer": h["pointer"], "speaker": h.get("speaker"), "time": h.get("time"),
+                    "start": h.get("start", 0) + a, "end": h.get("start", 0) + a + len(body), "text": body})
+        spent += cost
+    return out
+
+
 # ----------------------------------------------------------------- the record
 class Tiers:
     """The hot and warm tiers over a Memory, for one reader. What the slow
@@ -207,11 +240,15 @@ class Tiers:
         self.found, self.df, self.n_sent, self._openers, self._at = found, df, max(n, 1), openers, key
 
     def context(self, query: str, *, budget: int = 2000, directive_budget: int = 1500,
-                as_of: Optional[str] = None, **recall_opts) -> dict:
+                as_of: Optional[str] = None, view: str = "window", **recall_opts) -> dict:
         """The hot and warm tiers for `query`: {"standing": [...], "view":
         [...], "text": both rendered, "tokens": {...}}. The standing part
         comes first and changes only when a new directive is recorded, so a
-        prompt cache can hold it."""
+        prompt cache can hold it. `view` is how each retrieved turn is shown:
+        "window" (whole if short, else the 60 tokens around the question's
+        words), "whole", or "sentences" (the best sentences across turns)."""
+        if view not in ("window", "whole", "sentences"):
+            raise ValueError(f"unknown view {view!r}")
         self._refresh(as_of)
         hot = standing(self.found, query, directive_budget)
         if self.ranker is not None:
@@ -220,7 +257,10 @@ class Tiers:
             r = self.memory.recall(self.reader, query, k=50, kinds=["turns"], as_of=as_of, **recall_opts)
             hits = [{"pointer": f"{h['episode']}#{h['turn']}", "text": h["text"], "start": h["start"],
                      "speaker": h["speaker"], "time": h["time"]} for h in r["hits"] if "episode" in h]
-        warm = select_sentences(query, hits, self.df, self.n_sent, budget)
+        if view == "sentences":
+            warm = select_sentences(query, hits, self.df, self.n_sent, budget)
+        else:
+            warm = select_windows(query, hits, self.df, self.n_sent, budget, None if view == "whole" else 60)
         lines = []
         if hot:
             lines.append("Standing instructions and preferences (in force unless replaced later):")
