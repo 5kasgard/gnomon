@@ -83,6 +83,14 @@ class Model(unittest.TestCase):
                         compartment="chat", record_time="2024-01-03T00:00:00Z")
         self.assertEqual(s.model()[-1]["text"], "We moved to Lisbon last week.")
 
+    def test_a_sentence_said_again_is_kept_once_where_last_said(self):
+        record_messages(self.m, "owner", [("user", "My team budget is frozen until July.")],
+                        compartment="chat", record_time="2024-01-05T00:00:00Z")
+        lines = Situation(self.m, "owner").model()
+        same = [c for c in lines if c["text"] == "My team budget is frozen until July."]
+        self.assertEqual(len(same), 1)
+        self.assertEqual(same[0]["time"], "2024-01-05T00:00:00Z")
+
     @unittest.skipIf(np is None, "numpy not installed")
     def test_learnt_weights_keep_the_top_share(self):
         from gnomon.situation import train

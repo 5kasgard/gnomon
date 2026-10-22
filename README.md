@@ -495,6 +495,18 @@ loses: the profile kept the evidence for 44% of questions, the reader used
 it less even where kept, and it distracted where it missed. As with facts,
 selecting exact text beats rewriting it.
 
+**Pushed, not offered.** A live test had a simulated person with planted
+facts and an assistant that knew them only through Gnomon, over 8
+sessions each (`bench/live.md`, run on Workers AI). Memory offered as tools
+was used on 1 of 12 probes, even with native function calling and a
+note that there was a history. Forced to call, the model asked for the
+wrong thing. Pushed into the prompt, the facts were applied 19 of 24
+times, against 10 with no memory. The person's situation alone got 17,
+from about 1,000 cacheable tokens. So auto mode's hook now places the
+person's own situation sentences at the start of every Claude Code
+session. `--per-message` adds what the record holds on each prompt.
+Words ask; structure binds.
+
 **In the product: `situation`.** The MCP tool returns the person's own
 sentences about their situation, exact, with pointers, oldest first, and
 asks the reader to pick the lines that apply before answering. It changes

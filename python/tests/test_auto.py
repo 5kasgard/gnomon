@@ -17,7 +17,7 @@ sys.path.insert(0, str(PKG))
 sys.path.insert(0, str(HERE))
 
 from gnomon import Memory, claim  # noqa: E402
-from gnomon.hook import read_turns  # noqa: E402
+from gnomon.hook import read_turns, settings  # noqa: E402
 from test_mcp import Proc  # noqa: E402
 
 
@@ -82,6 +82,34 @@ class Auto(unittest.TestCase):
         # The same session, resumed later, keeps its writer.
         self.hook("SessionStart", source="resume")
         self.assertEqual([k for k, v in self.writers().items() if v.get("session") == "s-1"], w)
+
+    def test_the_persons_situation_is_pushed_at_session_start(self):
+        self.transcript.write_text(
+            line("user", "Our team budget is frozen until July. Can you plan an offsite?") +
+            line("assistant", "I can plan a low-cost one. I think a park picnic works."))
+        self.assertEqual(self.hook("Stop").returncode, 0)
+        r = self.hook("SessionStart", session="s-2", source="startup")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        ctx = json.loads(r.stdout)["hookSpecificOutput"]["additionalContext"]
+        part = ctx.split("What the person has said about their own situation")[1].split("Resuming")[0]
+        self.assertEqual(part.count("Our team budget is frozen until July."), 1)  # their words, once
+        self.assertNotIn("park picnic", part)  # not the assistant's
+        self.assertNotIn("Can you plan", part)  # not their requests
+
+    def test_per_message_context_is_opt_in(self):
+        self.transcript.write_text(line("user", "The deploy deadline is March 3.") + line("assistant", "Noted."))
+        self.hook("Stop")
+        payload = {"hook_event_name": "UserPromptSubmit", "session_id": "s-3", "prompt": "When is the deploy deadline?",
+                   "transcript_path": str(self.transcript), "cwd": self.dir.name}
+        run = lambda *extra: subprocess.run(  # noqa: E731
+            [sys.executable, "-m", "gnomon.hook", "--log", self.log, "--writer", "claude", *extra],
+            input=json.dumps(payload), capture_output=True, text=True, timeout=60,
+            env=dict(os.environ, PYTHONPATH=str(PKG)))
+        self.assertEqual(run().stdout.strip(), "")
+        r = run("--per-message", "500")
+        self.assertIn("March 3", json.loads(r.stdout)["hookSpecificOutput"]["additionalContext"])
+        self.assertIn("UserPromptSubmit", settings(self.log, "claude", per_message=500)["hooks"])
+        self.assertNotIn("UserPromptSubmit", settings(self.log, "claude")["hooks"])
 
     def test_every_turn_is_recorded_once(self):
         self.transcript.write_text(

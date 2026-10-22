@@ -61,13 +61,15 @@ def main(argv=None) -> int:
     h = sub.add_parser("hooks", help="print Claude Code settings for auto mode (records every conversation)")
     h.add_argument("--log", required=True)
     h.add_argument("--writer", required=True, help="a model writer with 'spawn'; each session is an instance")
+    h.add_argument("--per-message", type=int, default=0, metavar="TOKENS",
+                   help="also add what the record holds on each prompt, up to this many tokens (default 0: off)")
 
     a = p.parse_args(argv)
     if a.cmd == "hooks":
         from .hook import settings
         log = str(Path(a.log).expanduser().resolve())
-        print(json.dumps(settings(log, a.writer, sys.executable, str(Path(__file__).resolve().parent.parent)),
-                         indent=2))
+        print(json.dumps(settings(log, a.writer, sys.executable, str(Path(__file__).resolve().parent.parent),
+                                  per_message=a.per_message), indent=2))
         print("\nAdd this to ~/.claude/settings.json (or .claude/settings.json in a project), and start the "
               "MCP server with --per-session.", file=sys.stderr)
         return 0
