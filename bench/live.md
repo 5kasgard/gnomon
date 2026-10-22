@@ -176,3 +176,33 @@ see run-to-run noise:
   they were said.
 
 Measured: applied the fact (check words), tool calls, tokens pushed.
+
+## Run 3 result
+
+Two runs of each of the 12 probes (24 answers per condition): 96 calls,
+1,150 neurons (`live_results/run3_probes.json`).
+
+| Condition | Applied the fact | Tool calls | Pushed |
+|---|---|---|---|
+| None | 10 / 24 | — | 0 |
+| **Push, full** (situation + context for the message) | **19 / 24** | — | about 2,250 tokens |
+| **Push, situation only** (the cacheable prefix) | **17 / 24** | — | about 1,060 tokens |
+| Table of contents + tools | 7 / 24 | **0 / 24** | about 90 tokens |
+
+- **The table of contents fails.** Even told which topics memory holds,
+  and that they should be looked up when they matter, the model made no
+  call at all. It applied fewer facts than with no memory. A hint is
+  still text asking to be acted on.
+- **Push replicates** (19/24, against 10/12 in run 2).
+- **Most of the gain is in the cacheable part.** Situation only reaches
+  17 of 24 at half the tokens. It is the same for every message until the
+  person says something new, so a prompt cache holds it. Adding the
+  message's own context gains 2 more.
+
+**Design, settled by runs 1–3:**
+- a hook pushes the person's situation, with standing instructions, as
+  a cached prefix at the start of every conversation;
+- a per-message hook may add `context` for the message;
+- tools stay for going deeper.
+
+What the model must apply is placed in front of it, not offered.
