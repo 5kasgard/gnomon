@@ -93,3 +93,12 @@ slightly more than the bench arm:
 |---|---|---|
 | Event ordering, 100K / 500K | 43.8 / 20.3 | 46.1 / 22.0 |
 | Summaries, 100K / 500K | 11.4 / 12.0 | 12.5 / 13.2 |
+
+## Correction (boundaries.md)
+
+A control this test lacked changes the reading. The control is every
+message by the person, cut to the same 60 tokens and ranked the same way.
+On BEAM event ordering it scores 20.7 against the openers' 21.4
+(difference +0.7 [−0.1, 1.6]). The gain came from showing short lines
+instead of whole messages, not from where in a conversation they sit.
+Outside BEAM, openers fail badly (LoCoMo 10.3, ConvoMem 0.0).
