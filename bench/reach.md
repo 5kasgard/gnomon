@@ -86,3 +86,33 @@ per-memory choice. The fused arm is the safest default: never far
 behind except on LoCoMo (−4.5 [−18.1, 7.5]), and best where links matter
 most. Time alone is the strongest single link at the scale where reach
 matters.
+
+## Next, fixed before running: does reach put more answer in view?
+
+Reaching evidence into the candidates is not the same as putting it in
+front of the reader. This test is end to end. The view is the shipped
+one (length-aware windows, 2,000 tokens) over the hybrid order. The
+only change is which turns go into it:
+
+- **W:** the hybrid order, as shipped.
+- **W+1:** after each of the top 10 hits, the turns just before and after
+  it in the record, if not already in, placed right after the hit. The
+  rest of the order follows.
+- **W+2:** the same with two turns either side.
+
+The neighbours cost tokens and push lower-ranked hits out. So the
+prediction follows locality:
+- gains where the record has it (BEAM, and QASPER's papers, where
+  related paragraphs sit together);
+- losses where it does not (LoCoMo, LongMemEval, ConvoMem; wild.md
+  measured about 1.0 there).
+
+Real use measured 2.06 (wild.md).
+
+**Measured:**
+- answer words in view (primary) and evidence recall;
+- per environment, paired against W, with cluster bootstrap intervals;
+- then the per-memory calibration simulation (views_calibrate.py's
+  rule), with W as the default.
+
+The 8 environments are the 7 of views.md plus QASPER. Run once.
