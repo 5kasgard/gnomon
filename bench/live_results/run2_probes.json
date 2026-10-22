@@ -1,0 +1,473 @@
+[
+ {
+  "persona": "Sam",
+  "fact": "veg",
+  "session": 6,
+  "probe": "Can you suggest a couple of dinner ideas for this Friday?",
+  "check": [
+   "vegetarian",
+   "veggie",
+   "meat-free",
+   "plant-based",
+   "meatless",
+   "tofu",
+   "lentil",
+   "chickpea",
+   "halloumi",
+   "paneer"
+  ],
+  "planted": true,
+  "answers": {
+   "none": "Since it's Friday, do you want something cozy or something a bit more fun? Here are two different vibes:\n\n1.  **\"Easy & Fun\" Night:** **Homemade Pizza or Taco Bar.** It\u2019s interactive, great if you\u2019re watching a movie, and easy to customize with whatever you have in the fridge.\n2.  **\"Cozy & Relaxing\" Night:** **Creamy Pasta with Garlic Butter Shrimp or Chicken.** It feels a little fancy and indulgent to celebrate the end of the week, but it's actually very quick to make.\n\nDo either of those sound good, or are you looking for something else (like something lighter or healthier)?",
+   "native": "To give you the best suggestions, are you looking for something quick and easy, or do you feel like cooking something a bit more involved? Also, let me know if you have any specific cravings or dietary preferences!",
+   "salient": "To give you the best suggestions, are you looking to cook something at home, or were you thinking of ordering in or going out? Also, let me know if you're in the mood for anything specific!",
+   "forced": "Since you're looking to avoid a mountain of dishes and keep things vegetarian, how about one of these?\n\n*   **Sheet Pan Gnocchi:** You can toss shelf-stable or refrigerated gnocchi with cherry tomatoes, bell peppers, zucchini, and some garlic/olive oil. Roast it all together until the veggies are tender and the gnocchi is slightly crispy. It's super low effort and only uses one pan.\n*   **Thai-inspired Coconut Curry:** Since you usually like Thai, you could make a quick veggie curry with chickpeas or tofu, coconut milk, and whatever vegetables you have on hand. You can serve it over rice or even just eat it as a hearty stew to keep it light.\n\nDo either of those sound good, or were you leaning more towards something like a pasta dish?",
+   "push": "Since you mentioned you like Italian and Thai, and want to keep the dishes minimal, how about these two?\n\n1. **Sheet Pan Gnocchi:** Toss store-bought gnocchi with cherry tomatoes, bell peppers, red onion, and some garlic/olive oil. Roast it all together until the veggies are soft and the gnocchi is slightly crispy. Very little cleanup!\n2. **Thai-inspired Sheet Pan Salmon (or Tofu):** Roast some protein with broccoli and snap peas on a single pan, seasoned with a bit of ginger, garlic, and soy sauce. You can serve it as is or over some quick rice.\n\nBoth are budget-friendly and shouldn't leave you with a mountain of dishes!"
+  },
+  "calls": {
+   "none": [],
+   "native": [],
+   "salient": [],
+   "forced": [
+    {
+     "name": "situation",
+     "args": {},
+     "result_tokens": 902
+    }
+   ],
+   "push": []
+  }
+ },
+ {
+  "persona": "Sam",
+  "fact": "marathon",
+  "session": 6,
+  "probe": "What should I do with my Saturday morning this weekend?",
+  "check": [
+   "half marathon",
+   "marathon",
+   "long run",
+   "run",
+   "training"
+  ],
+  "planted": true,
+  "answers": {
+   "none": "Since I don't know your mood, here are four different \"vibes\" to choose from:\n\n*   **The Productive Route:** Head to a local coffee shop to knock out a personal project or plan your upcoming week.\n*   **The Relaxing Route:** Sleep in, make a slow breakfast, and spend an hour reading a book or listening to a podcast without any distractions.\n*   **The Active Route:** Hit a local hiking trail, go for a long bike ride, or check out a morning yoga class.\n*   **The Social/Exploratory Route:** Visit a local farmer's market or find a new brunch spot you've never tried before.\n\n**Which one sounds most appealing to you right now?**",
+   "native": "That depends on what kind of mood you're in! Are you looking to be productive, relax, or go on an adventure? \n\nIf you give me a hint about your energy level or whether you want to stay in or head out, I can give you some better suggestions.",
+   "salient": "That depends on the vibe you're looking for! Are you leaning towards something productive, or are you in the mood to just relax and recharge?",
+   "forced": "Since you're still nursing that knee and need to avoid hills, maybe a slow morning finding a new local coffee spot in Lisbon? \n\nYou could grab a coffee, find a comfortable place to sit, and make some progress on that book you started. It sounds like a nice, low-impact way to relax after a stressful week with Mike.",
+   "push": "Since you've been putting in those 15-20 miles a week, maybe a nice long run? Or, if your knee is still acting up and you need to follow the physio's advice to avoid hills, you could just find a cozy local coffee spot in Lisbon and do some reading."
+  },
+  "calls": {
+   "none": [],
+   "native": [],
+   "salient": [],
+   "forced": [
+    {
+     "name": "situation",
+     "args": {},
+     "result_tokens": 902
+    }
+   ],
+   "push": []
+  }
+ },
+ {
+  "persona": "Sam",
+  "fact": "budget",
+  "session": 7,
+  "probe": "I want to do something nice for my team this month. Ideas?",
+  "check": [
+   "budget",
+   "free",
+   "low-cost",
+   "no-cost",
+   "cheap",
+   "frozen",
+   "inexpensive"
+  ],
+  "planted": true,
+  "answers": {
+   "none": "That\u2019s a great idea! To give you the best suggestion, it helps to know your budget and if your team is in-person or remote. Here are a few quick ideas for both:\n\n**If you are in-person:**\n* **Team Lunch:** Order in from a local favorite or take them out.\n* **Early Dismissal:** Let everyone head off an hour or two early on a Friday.\n* **Snack Attack:** Stock the breakroom with high-quality treats or a coffee bar.\n\n**If you are remote:**\n* **Digital Gift Cards:** Send a small amount for coffee or lunch via email.\n* **Home Delivery:** Send a snack box or a treat via a service like DoorDash or SnackMagic.\n* **\"Meeting-Free\" Day:** Gift them a full day with zero scheduled meetings to focus or recharge.\n\n**Low to No Budget:**\n* **Public Shout-outs:** Start your next meeting by highlighting specific wins from each person.\n* **Handwritten Notes:** A simple \"thank you\" card goes a long way.\n\nWhich direction sounds most like your team?",
+   "native": "That's a great idea! To give you the best suggestions, it helps to know a little more about your team's vibe. For example:\n\n*   **What is your budget like?** (Small gestures vs. something bigger)\n*   **Is your team remote, in-person, or hybrid?**\n*   **What\u2019s their general energy lately?** (Are they burnt out and needing rest, or high-energy and looking for fun?)\n\nIn the meantime, here are a few broad categories:\n\n**Low to No Cost:**\n*   **Early release:** Let everyone log off an hour or two early on a Friday.\n*   **Shout-out session:** Dedicate time in a meeting specifically to peer-to-peer recognition.\n*   **\"No-Meeting\" Day:** Declare a day where everyone can focus on deep work without interruptions.\n\n**Medium Budget:**\n*   **Team Lunch:** Order in from a local favorite.\n*   **Coffee/Treat Delivery:** Send digital gift cards for coffee or have a box of pastries delivered.\n*   **Activity/Workshop:** A quick, fun virtual or in-person workshop (like a guided tasting or a creative class).\n\n**Higher Budget:**\n*   **Experience-based:** A team outing like escape rooms, bowling, or a cooking class.\n*   **Care Packages:** Sending high-quality wellness or snack kits to their homes.",
+   "salient": "That's a great idea. To give you the best suggestions, it helps to know the \"vibe\" of your team. Are you looking for something low-key and remote-friendly, or something more hands-on and in-person?\n\nHere are a few different directions we could take:\n\n**Low Effort / High Impact (Great for busy months):**\n* **\"Early Release\" Friday:** Give everyone a few hours back on a Friday afternoon.\n* **Coffee/Treat Delivery:** Send digital gift cards for coffee or have a box of local pastries delivered to the office.\n* **Meeting-Free Day:** Declare a specific day as a \"deep work\" day with zero internal meetings.\n\n**Social / Connection Focused:**\n* **Team Lunch:** A classic for a reason. If remote, send everyone a DoorDash voucher for a synchronized lunch.\n* **Low-Stakes Activity:** An online trivia session, a quick escape room, or even just a \"show and tell\" during a casual meeting.\n* **Skill Share:** Invite someone to teach a non-work skill (like basic cooking, photography, or a hobby).\n\n**Recognition Focused:**\n* **Kudos Wall:** A digital or physical space where teammates can publicly shout out each other's wins.\n* **Personalized Notes:** A handwritten note or a thoughtful Slack message acknowledging a specific contribution.\n\n**Do any of those categories resonate with what you're feeling, or should we pivot to something else?**",
+   "forced": "Since your budget is frozen until July, maybe you could go for something low-cost but high-impact? \n\nDepending on the team's vibe, you could try:\n\n* **A \"No-Meeting\" Afternoon:** Giving everyone back a few hours of focused time is usually a huge gift for a busy team.\n* **Shout-out Session:** Dedicating a bit of time in a meeting for people to publicly recognize each other's wins.\n* **Curated Playlist:** If you all listen to music while working, putting together a collaborative team playlist can be a fun, free way to bond.\n* **Coffee/Treat Run:** If you're in a physical office (or using delivery credits), a small gesture like bringing in some nice pastries or coffee can go a long way.\n\nDo any of those feel like they'd fit the current mood of the team?",
+   "push": "Since your budget is frozen until July, you might want to focus on things that don't cost much but still boost morale. \n\nMaybe you could organize a team coffee break or a low-key \"no-meeting\" afternoon to give everyone some breathing room? Or, if you want to do something more social, you could try a themed lunch where everyone brings in something simple, or even just a little shout-out session to celebrate recent wins."
+  },
+  "calls": {
+   "none": [],
+   "native": [],
+   "salient": [],
+   "forced": [
+    {
+     "name": "expand",
+     "args": {},
+     "result_tokens": 17
+    },
+    {
+     "name": "situation",
+     "args": {},
+     "result_tokens": 1001
+    }
+   ],
+   "push": []
+  }
+ },
+ {
+  "persona": "Sam",
+  "fact": "mornings",
+  "session": 7,
+  "probe": "Help me plan my one-on-ones for next week, I have six people.",
+  "check": [
+   "10",
+   "after ten",
+   "afternoon",
+   "late morning",
+   "not early",
+   "no early"
+  ],
+  "planted": true,
+  "answers": {
+   "none": "To help you plan effectively, I need a little more context. Since you have six people, you'll want to balance your time so you don't burn out.\n\n**Could you tell me:**\n\n1.  **The Goal:** Are these standard weekly check-ins, performance reviews, or are you addressing specific issues?\n2.  **The Format:** Do you prefer a set structure (e.g., 15 mins tactical, 15 mins career) or a casual conversation?\n3.  **The Vibe:** Is your team feeling high-energy, or is morale low and they need more support?\n\n**Once you give me those details, I can provide:**\n*   A suggested weekly schedule/template.\n*   Specific questions to ask for each person.\n*   A way to track action items so you don't forget between meetings.",
+   "native": "I can certainly help with that! To make the planning as effective as possible, it helps to have a bit of structure. \n\nDo you want to follow a specific theme for all of them (like career growth, feedback, or project updates), or are you looking to tailor each one differently?\n\nAlso, if you tell me a little bit about the \"vibe\" of each person\u2014for example, if someone is struggling, someone is ready for a promotion, or someone is just cruising\u2014we can build specific agendas for each.",
+   "salient": "I'd love to help. To make these as productive as possible, it helps if we structure them. \n\nHow would you like to approach this? We could:\n\n1.  **Create a template:** Develop a consistent structure (e.g., wins, blockers, growth, feedback) for all six.\n2.  **Tailor them individually:** If you give me some context on each person's current focus or vibe, we can draft specific questions for each.\n3.  **Prioritize themes:** If there's a specific goal for next week (like project wrap-ups or performance reviews), we can build the agenda around that.\n\nDo you have a specific goal for these meetings, or should we start with a general template?",
+   "forced": "I'd love to help. To make these as effective as possible, could you tell me a bit more about the context? \n\nFor example:\n*   **Are these recurring check-ins, or do they have a specific theme** (like performance reviews, project updates, or career development)?\n*   **What is the general vibe of the team right now?** (Are things high-pressure, or is it a period of growth/transition?)\n*   **Is there anything specific you're worried about** with any of the six people?\n\nOnce I have a sense of the goal, we can structure an agenda for you.",
+   "push": "To help you prep, here\u2019s a breakdown of what\u2019s going on with each of your six people based on our recent chats:\n\n1. **The Marathon Runner:** They are balancing a heavy workload with intense training for a half marathon in March. They\u2019re hitting 15-20 miles a week and are very disciplined with their vegetarian diet for recovery.\n2. **The Transitioner:** This person is dealing with the chaos of moving from brainstorming features to the grind of launch dates and documentation. They rely heavily on a strict routine and running to stay sane.\n3. **The New Lisbon Resident:** They just moved from Leeds to Lisbon last month. They\u2019ve been in a reflective headspace thinking about \"what if\" scenarios and are currently busy navigating the local coffee scene and tram system.\n4. **The Multitasker (on couch duty):** They are currently working from a couch or recliner due to a knee injury (per their physio). They are also in the middle of researching a new laptop, prioritizing high RAM and portability.\n5. **The Aspiring Chef:** They are trying to pivot away from takeout (Italian/Thai) to cooking at home to save money, as their team's budget is frozen until July. They\u2019re starting with basic pasta dishes and sheet pan meals.\n6. **The Stressed Manager:** They are currently feeling a lot of friction with a developer named Mike, who is pushing back on requirements due to perfectionism. They are feeling hesitant to even assign new tickets to him.\n\nWould you like to dive into specific agendas or talking points for any of them?"
+  },
+  "calls": {
+   "none": [],
+   "native": [],
+   "salient": [],
+   "forced": [
+    {
+     "name": "expand",
+     "args": {},
+     "result_tokens": 18
+    }
+   ],
+   "push": []
+  }
+ },
+ {
+  "persona": "Sam",
+  "fact": "lisbon",
+  "session": 8,
+  "probe": "What's a good day trip I could take next weekend?",
+  "check": [
+   "lisbon",
+   "sintra",
+   "cascais",
+   "set\u00fabal",
+   "setubal",
+   "arr\u00e1bida",
+   "arrabida",
+   "evora",
+   "\u00e9vora",
+   "\u00f3bidos",
+   "obidos",
+   "portugal"
+  ],
+  "planted": true,
+  "answers": {
+   "none": "To give you a great recommendation, I\u2019ll need a little more info! \n\n**Where are you starting from?** (City/State)\n\nAlso, what kind of vibe are you looking for?\n*   **Nature/Outdoors** (Hiking, lakes, or parks)\n*   **City/Culture** (Museums, shopping, or food tours)\n*   **Relaxation** (Spas, small towns, or beaches)\n*   **Adventure** (Theme parks, zoos, or quirky roadside attractions)",
+   "native": "To give you a good recommendation, I'd love to know a little more: \n\n* **Where are you starting from?** (Or generally what region?)\n* **What kind of vibe are you looking for?** (Nature/hiking, a quaint small town, museums/culture, or maybe something foodie-focused?)\n* **How much driving are you up for?**",
+   "salient": "To give you a good recommendation, I'd love to know a little more about what you're in the mood for! \n\nAre you looking for something active like a hike, a relaxing day in a small town, or maybe something cultural like museums or art galleries? Also, let me know if you're looking to stay relatively close to home or if you don't mind a bit of a drive.",
+   "forced": "To give you a good recommendation, I'll need a little more info:\n\n1. **Where are you starting from?** (Knowing your general area helps with driving distance).\n2. **What kind of vibe are you looking for?** Are you thinking more of a nature hike, a museum/culture day, or maybe something involving good food and wandering a new town?\n\nSince you mentioned wanting to visit Lisbon or Brazil someday, maybe something with a bit of a coastal or international flair would be fun!",
+   "push": "Since you're in Lisbon, a day trip to **Sintra** is a classic for a reason\u2014the palaces and hills are stunning, though your physio might suggest sticking to the flatter paths if your knee is still acting up! \n\nAlternatively, if you want something even more relaxed, you could head to **Cascais**. It's a beautiful coastal town that's easy to reach by train, and it's perfect for a slow stroll by the ocean or finding a nice spot to sit and people-watch."
+  },
+  "calls": {
+   "none": [],
+   "native": [],
+   "salient": [],
+   "forced": [
+    {
+     "name": "context",
+     "args": {
+      "query": "travel preferences, hobbies, interests, location, driving distance"
+     },
+     "result_tokens": 482
+    }
+   ],
+   "push": []
+  }
+ },
+ {
+  "persona": "Sam",
+  "fact": "knee",
+  "session": 8,
+  "probe": "Can you suggest a good walking route for a relaxed Sunday?",
+  "check": [
+   "knee",
+   "flat",
+   "level",
+   "gentle",
+   "no hills",
+   "avoid hills",
+   "no stairs",
+   "stairs"
+  ],
+  "planted": true,
+  "answers": {
+   "none": "I'd love to! However, I need to know **which city or neighborhood you are in** to give you a specific recommendation.\n\nIn the meantime, if you are looking for general inspiration, a \"relaxed Sunday\" route usually works best if it follows one of these:\n\n1.  **A Waterfront Path:** Rivers, lakes, or coasts usually have flat, scenic paths with plenty of benches.\n2.  **A Botanical Garden or Large Park:** These offer beautiful scenery and a sense of escape from the city noise.\n3.  **A Historic Neighborhood:** Walking through streets with interesting architecture allows you to stop and look at things without feeling like you're \"power walking.\"\n\n**Tell me your location, and I'll give you a real route!**",
+   "native": "I'd love to, but I'll need a little more information to give you a good recommendation! \n\nCould you tell me:\n1. **Where are you located** (or what area are you looking to explore)?\n2. **What kind of scenery do you prefer?** (e.g., nature trails, city streets, waterfronts, or parks?)\n3. **How long** would you like the walk to be?",
+   "salient": "I'd love to, but I'll need a little more info to give you a good recommendation! \n\nAre you looking for something in a specific city or neighborhood? Also, do you prefer something nature-focused like a park or trail, or something more urban with cafes and shops to stop at along the way?",
+   "forced": "I'd love to give you a specific recommendation, but I'm not sure where you're located! If you tell me your city or neighborhood, I can find something nice. \n\nAlso, since you mentioned wanting to keep your brain sharp and listening to podcasts while walking, are you looking for a route with a lot of scenery to zone out to, or something more urban where you can people-watch?",
+   "push": "Since your physio mentioned avoiding stairs and hills for your knee, I'd suggest sticking to flat, paved paths rather than anything more rugged.\n\nDepending on where you're looking, a scenic waterfront promenade or a well-maintained park trail would be ideal. They tend to be much easier on the joints and allow you to keep a steady, relaxed pace without the risk of a sudden incline. \n\nDo you have a specific park or area in mind, or are you looking for something in a particular part of the city?"
+  },
+  "calls": {
+   "none": [],
+   "native": [],
+   "salient": [],
+   "forced": [
+    {
+     "name": "context",
+     "args": {
+      "query": "location, preferred walking routes, preferences for walking"
+     },
+     "result_tokens": 238
+    }
+   ],
+   "push": []
+  }
+ },
+ {
+  "persona": "Priya",
+  "fact": "nuts",
+  "session": 6,
+  "probe": "Can you give me an easy recipe for a cake for my son's class?",
+  "check": [
+   "nut-free",
+   "nut free",
+   "allergy",
+   "allergen",
+   "no nuts",
+   "without nuts"
+  ],
+  "planted": true,
+  "answers": {
+   "none": "Since it's for a class, a **Sheet Cake** is your best bet\u2014it's easy to transport, easy to slice, and feeds a crowd. \n\nHere is a super simple \"One-Bowl Vanilla Sheet Cake\" recipe:\n\n### **Ingredients**\n*   **Dry:** 2 cups all-purpose flour, 1 \u00bd cups sugar, 1 tsp baking powder, \u00bd tsp baking soda, \u00bd tsp salt.\n*   **Wet:** 1 cup milk, \u00bd cup vegetable oil, 1 large egg, 1 tsp vanilla extract.\n*   **Topping:** Store-bought frosting and colorful sprinkles.\n\n### **Instructions**\n1.  **Prep:** Preheat your oven to 350\u00b0F (175\u00b0C) and grease a 9x13 inch baking pan.\n2.  **Mix:** In a large bowl, whisk all the dry ingredients together. Add the milk, oil, egg, and vanilla. Whisk until smooth (don't overmix!).\n3.  **Bake:** Pour the batter into the pan and bake for 30\u201335 minutes, or until a toothpick comes out clean.\n4.  **Cool & Decorate:** Let the cake cool **completely** in the pan. Spread frosting over the top and go heavy on the sprinkles!\n\n### **Pro-Tips for School:**\n*   **Allergy Check:** Before baking, double-check if any kids in the class have **nut or dairy allergies**. If they do, you can easily swap milk for almond/soy milk or use a nut-free frosting.\n*   **Pre-cut:** If you want to make it extra easy for the teacher, you can lightly score the cake with a knife before frosting so the slices are even.",
+   "native": "Since this is for a class, I'd recommend a **Sheet Cake**. They are much easier to transport, serve more people at once, and don't require fancy layering.\n\nHere is a super simple \"One-Bowl Vanilla Sheet Cake\" recipe:\n\n### **Ingredients**\n*   **Dry:** 2 cups all-purpose flour, 1 \u00bd cups sugar, 1 tsp baking powder, \u00bd tsp baking soda, \u00bd tsp salt.\n*   **Wet:** 1 cup milk, \u00bd cup vegetable oil (or melted butter), 1 large egg, 2 tsp vanilla extract.\n*   **Frosting:** Store-bought frosting is honestly the easiest for school settings!\n\n### **Instructions**\n1.  **Prep:** Preheat your oven to 350\u00b0F (175\u00b0C). Grease a 9x13 inch baking pan.\n2.  **Mix:** In one large bowl, whisk together all the dry ingredients. Add the milk, oil, egg, and vanilla. Whisk until smooth (don't overmix!).\n3.  **Bake:** Pour the batter into the pan and bake for 30\u201335 minutes, or until a toothpick inserted in the center comes out clean.\n4.  **Cool & Frost:** Let the cake cool **completely** in the pan before adding frosting. If you frost it while warm, the frosting will melt into a mess.\n\n### **A few tips for school:**\n*   **Allergy Check:** It\u2019s always a good idea to double-check with the teacher if there are any **nut allergies** in the class. This recipe is nut-free, but keep that in mind if you decide to add toppings.\n*   **Decorating:** Since it's for a kid's class, you can make it \"fun\" easily by throwing some colorful sprinkles on top of the frosting.\n*",
+   "salient": "Since it's for a classroom, a **Sheet Cake** is usually the best way to go\u2014it's easy to transport, simple to slice into many pieces, and much less finicky than a layer cake.\n\nHere is a recipe for a **Classic Vanilla Sheet Cake** that is very forgiving:\n\n### **Easy Vanilla Sheet Cake**\n*Yields: One 9x13 inch cake (about 15-20 servings)*\n\n**Ingredients:**\n*   **Dry:** 2 \u00bd cups all-purpose flour, 1 \u00bd cups sugar, 1 tsp baking powder, \u00bd tsp baking soda, \u00bd tsp salt.\n*   **Wet:** \u00be cup milk (room temp), \u00bd cup vegetable oil (or melted butter), 2 large eggs, 1 tbsp vanilla extract, 1 cup boiling water (this makes it super moist!).\n\n**Instructions:**\n1.  **Prep:** Preheat oven to 350\u00b0F (175\u00b0C). Grease a 9x13 inch baking pan.\n2.  **Mix Dry:** In a large bowl, whisk together the flour, sugar, baking powder, baking soda, and salt.\n3.  **Add Wet:** Add the milk, oil, eggs, and vanilla. Mix with a whisk or hand mixer until smooth.\n4.  **The Secret Step:** Carefully stir in the boiling water by hand. The batter will be very thin\u2014this is normal!\n5.  **Bake:** Pour into the pan and bake for 30\u201335 minutes, or until a toothpick comes out clean.\n6.  **Cool:** Let it cool **completely** in the pan before frosting.\n\n**Simple Frosting Idea:**\nIf you want to keep it \"easy mode,\" just whip up some store-bought vanilla frosting or a quick buttercream (powdered sugar, a splash of milk, and vanilla).\n\n**",
+   "forced": "Since it's for a school class, a **Sheet Cake** is usually the easiest because it's simple to transport and easy to slice into many portions. A classic Vanilla Sheet Cake is always a crowd-pleaser.\n\n### Easy Vanilla Sheet Cake\n\n**Ingredients:**\n*   **Cake:**\n    *   3 cups all-purpose flour\n    *   2 cups sugar\n    *   1 tbsp baking powder\n    *   1 tsp salt\n    *   1 cup milk (room temperature)\n    *   1/2 cup vegetable oil\n    *   2 large eggs\n    *   1 tbsp vanilla extract\n    *   1 cup boiling water (this makes it extra moist!)\n*   **Quick Frosting:**\n    *   1 tub of store-bought vanilla frosting (saves time!) OR \n    *   **Simple Glaze:** 2 cups powdered sugar + 2-3 tbsp milk + 1/2 tsp vanilla.\n\n**Instructions:**\n1.  **Prep:** Preheat your oven to 350\u00b0F (175\u00b0C). Grease a 9x13 inch baking pan.\n2.  **Mix Dry:** In a large bowl, whisk together flour, sugar, baking powder, and salt.\n3.  **Mix Wet:** Add the milk, oil, eggs, and vanilla. Beat with a mixer on medium speed for about 2 minutes.\n4.  **The Secret Step:** Stir in the boiling water by hand (the batter will be very thin\u2014this is normal!).\n5.  **Bake:** Pour into the pan and bake for 30-35 minutes, or until a toothpick comes out clean.\n6.  **Cool & Frost:** Let it cool **completely** in the pan before adding frosting, otherwise, it will melt!\n\n**A quick tip for school:** Check if there are any specific nut allergies in",
+   "push": "Since you have to be so careful with his nut allergy, I'd recommend a simple **Lemon Drizzle Cake**. It\u2019s easy, delicious, and naturally nut-free if you check your flour and baking powder labels!\n\n**Ingredients:**\n*   225g self-raising flour\n*   225g caster sugar\n*   225g softened butter\n*   4 eggs\n*   Zest of 2 lemons\n*   Juice of 2 lemons + 100g extra sugar (for the drizzle)\n\n**Method:**\n1.  Preheat oven to 180\u00b0C.\n2.  Beat the butter, sugar, eggs, flour, and lemon zest together until smooth.\n3.  Pour into a lined loaf tin and bake for about 45\u201350 minutes.\n4.  While warm, mix the lemon juice and extra sugar, then pour it over the cake.\n\n**Important:** Just double-check all packaging for \"may contain nuts\" warnings to keep him safe!"
+  },
+  "calls": {
+   "none": [],
+   "native": [],
+   "salient": [],
+   "forced": [],
+   "push": []
+  }
+ },
+ {
+  "persona": "Priya",
+  "fact": "nocar",
+  "session": 6,
+  "probe": "What's the best way for me to get to the garden centre on Saturday?",
+  "check": [
+   "bike",
+   "cycle",
+   "cycling",
+   "train",
+   "bus",
+   "public transport",
+   "delivery"
+  ],
+  "planted": true,
+  "answers": {
+   "none": "Since I don't know your current location or which garden centre you're heading to, I can't give you specific directions. \n\nHowever, if you tell me **where you are starting from** and **which garden centre** you're visiting, I can check the best routes for you! \n\nGenerally, for a Saturday trip, driving is usually easiest if you're buying plants, but check for local traffic or event closures beforehand.",
+   "native": "To give you the best advice, I'll need to know a little more. Are you looking for the quickest route by car, or are you hoping to use public transport? Also, which garden centre are you heading to?",
+   "salient": "To give you the best advice, are you planning on driving, or would you prefer to use public transport? Also, do you have a specific garden centre in mind?",
+   "forced": "Since you've ditched the car recently, you'll probably want to stick to your bike or the train. \n\nIf you're planning on picking up those raised beds for your vegetable patch, though, you might find the bike a bit tricky for the trip back! You might want to check if the train goes nearby, or maybe see if you can hitch a ride with someone if you're buying heavy stuff.",
+   "push": "Since you've ditched the car and are sticking to your bike and the train, you could try cycling there if it's close enough, or take the train if there's a station nearby. Just make sure you've planned your timing well so you don't run into any scheduling hiccups!"
+  },
+  "calls": {
+   "none": [],
+   "native": [],
+   "salient": [],
+   "forced": [
+    {
+     "name": "situation",
+     "args": {},
+     "result_tokens": 882
+    }
+   ],
+   "push": []
+  }
+ },
+ {
+  "persona": "Priya",
+  "fact": "physics",
+  "session": 7,
+  "probe": "Could you suggest a fun starter activity for my Year 9 class tomorrow?",
+  "check": [
+   "physics",
+   "force",
+   "energy",
+   "circuit",
+   "electric",
+   "motion",
+   "magnet",
+   "gravity",
+   "wave",
+   "light",
+   "pendulum"
+  ],
+  "planted": true,
+  "answers": {
+   "none": "To give you the best suggestion, **what subject do you teach?**\n\nIn the meantime, here are three \"universal\" starters that work for almost any subject:\n\n1.  **The \"Odd One Out\":** Display four items (words, numbers, images, or concepts). Students must argue which one doesn't belong. There is no single right answer, as long as they can justify their logic.\n2.  **Retrieval Race:** Give them 2 minutes to write down everything they remember from the last lesson. The person with the most accurate points wins a small prize or house point.\n3.  **The \"Wrong Answer Only\" Challenge:** Show a picture or a concept related to your topic and ask them to provide the most creative *incorrect* explanation possible. It gets them laughing and thinking about the actual facts.",
+   "native": "To give you the best suggestion, could you let me know what subject you teach? \n\nIn the meantime, here are three \"universal\" starters that work for almost any subject:\n\n1.  **The \"Odd One Out\":** Display four images or words (e.g., three related to a topic and one that is slightly different). Students have to argue which one is the odd one out. There is no single right answer, as long as they justify their reasoning!\n2.  **Retrieval Grid:** A quick 4-square grid on the board with questions ranging from \"very easy\" to \"challenging\" based on what you covered in the last lesson.\n3.  **The Prediction Game:** Show a provocative image, a strange headline, or a short video clip related to your upcoming topic and ask them to write down three things they think will happen or one question they have.\n\n**If you tell me your subject, I can give you something much more specific!**",
+   "salient": "To give you the best suggestion, could you let me know what subject you're teaching? \n\nAlso, are you looking for something high-energy to wake them up, or something calmer to help them settle into a lesson?",
+   "forced": "Since you're a science teacher, how about something that leans into that \"Science Vs\" vibe you enjoy? \n\nHere are two quick options depending on how much time you have:\n\n1.  **\"Fact or Fiction\" (The Hype Check):** Put a popular science \"myth\" on the board (e.g., \"We only use 10% of our brains\" or \"Goldfish have a 3-second memory\"). Have them vote with a thumbs up or thumbs down, then give them 2 minutes to discuss with a partner *why* they think it's true or false before you reveal the data.\n2.  **The \"Mystery Substance\":** If you have access to the lab, put a common substance (like cornstarch and water, aka Oobleck) in a bowl. Let them observe it for a minute and ask them to write down three adjectives to describe its state of matter. It's a great way to settle a chaotic class and get them thinking scientifically immediately.\n\nAre you teaching them something specific tomorrow, or is it a general lesson?",
+   "push": "Since you're a physics teacher, maybe a \"Physics in the Real World\" quick-fire round? You could show a 30-second clip of something chaotic (like a stunt or a weird machine) and have them race to identify the forces at play.\n\nOr, if you want something lower energy to help them settle, you could do a \"Predict the Result\" demo\u2014something simple like dropping different objects or showing a quick reaction\u2014to get them focused on the data before you dive into the main lesson."
+  },
+  "calls": {
+   "none": [],
+   "native": [],
+   "salient": [],
+   "forced": [
+    {
+     "name": "expand",
+     "args": {},
+     "result_tokens": 17
+    },
+    {
+     "name": "context",
+     "args": {
+      "query": "What subject does this person teach?"
+     },
+     "result_tokens": 510
+    }
+   ],
+   "push": []
+  }
+ },
+ {
+  "persona": "Priya",
+  "fact": "tuesdays",
+  "session": 7,
+  "probe": "When should I schedule the parents' evening prep meeting next week?",
+  "check": [
+   "tuesday",
+   "monday",
+   "wednesday",
+   "thursday",
+   "friday",
+   "swimming"
+  ],
+  "planted": true,
+  "answers": {
+   "none": "I don't have access to your personal calendar or team schedule. To give you the best suggestion, could you let me know:\n\n1. **Who needs to attend?** (Just you, or a whole department?)\n2. **What is your preferred time of day?** (Morning for energy, or afternoon to wrap up the week?)\n3. **Are there any specific deadlines** you're working toward?\n\nOnce you check your availability, a mid-week slot (Tuesday or Wednesday) is usually best for prep!",
+   "native": "To give you the best suggestion, I'd need to know your current availability or if you have any other specific constraints for next week.\n\nBased on what we've talked about before, I know:\n* **Tuesdays** are \"absolutely impossible\" for you because of the kids' swimming lessons.\n* Your oldest has **football on Tuesday and Wednesday** afternoons.\n* Leo has his **music lesson on Thursday** afternoons.\n\nWould you like to look at Monday or Friday, or perhaps a morning slot during the week?",
+   "salient": "Since you mentioned Tuesdays are impossible due to the kids' swimming lessons, and Leo has his music lesson on Thursday afternoon, you might want to aim for Wednesday. \n\nDoes that work with your school trip prep, or is your schedule looking too packed then?",
+   "forced": "Since you mentioned Tuesdays are impossible because of the kids' swimming lessons, and Leo has his music lesson on Thursday afternoons, you might want to look at Monday, Wednesday, or Friday. \n\nWednesday could be tricky too if your oldest has football, so maybe aim for a window where you aren't juggling too many logistics!",
+   "push": "Based on your schedule, Tuesdays and Wednesdays are looking pretty hectic with your oldest having football and the kids' swimming lessons. Thursday afternoons are also busy with Leo's music lesson.\n\nMonday or Friday might be your best bets for finding a slot that doesn't clash with everything!"
+  },
+  "calls": {
+   "none": [],
+   "native": [
+    {
+     "name": "context",
+     "args": {
+      "query": "parents' evening prep meeting schedule next week"
+     },
+     "result_tokens": 1374
+    }
+   ],
+   "salient": [
+    {
+     "name": "situation",
+     "args": {},
+     "result_tokens": 1068
+    }
+   ],
+   "forced": [
+    {
+     "name": "situation",
+     "args": {},
+     "result_tokens": 1068
+    }
+   ],
+   "push": []
+  }
+ },
+ {
+  "persona": "Priya",
+  "fact": "glasgow",
+  "session": 8,
+  "probe": "What's a good outdoor plan for half-term with the kids?",
+  "check": [
+   "glasgow",
+   "scotland",
+   "loch",
+   "highlands",
+   "edinburgh",
+   "arran",
+   "trossachs",
+   "rain"
+  ],
+  "planted": true,
+  "answers": {
+   "none": "Since \"good\" depends on your kids' ages and the weather, here are a few different vibes to choose from:\n\n**1. The \"Low Key\" Plan: Nature Scavenger Hunt**\nHead to a local woodland or park. Print out a quick list (a pinecone, a yellow leaf, a smooth stone, a feather) and let them hunt. It keeps them busy for an hour and requires zero prep.\n\n**2. The \"Active\" Plan: Adventure Parks or Forest Trails**\nFind a local \"Gruffalo\" trail or a dedicated adventure playground. If you want something bigger, a bike ride through a country park is a classic winner.\n\n**3. The \"Creative\" Plan: Outdoor Art/Mud Kitchen**\nIf it\u2019s a bit warmer, take some old paints or chalk to a driveway/pavement, or if they are younger, pack a \"mud kitchen\" kit (old pots, spoons, and water) to a muddy patch in the garden or park.\n\n**4. The \"Wild\" Plan: Campfire/Picnic**\nEven if it's chilly, a thermos of hot chocolate and a picnic in the park feels like a huge event. If you have a garden, a small fire pit for toasted marshmallows is the ultimate half-term win.\n\n**Quick Tip:** Always check the weather forecast and pack the \"emergency\" layers and snacks\u2014half-term adventures usually run longer than expected!",
+   "native": "That depends a bit on how old the kids are and what the weather is doing! Here are a few different vibes to consider:\n\n**If you want something active:**\n* **Nature Scavenger Hunt:** Head to a local woodland or park. You can print out lists (leaves, specific stones, animal tracks) to keep them engaged while walking.\n* **Adventure Playgrounds:** Look for parks with climbing frames or zip lines\u2014they usually burn off more energy than a standard playground.\n\n**If you want something a bit more relaxed:**\n* **Picnic & Kite Flying:** If it's a bit windy, a field is perfect for kites. Even if the wind dies down, a picnic is always a winner.\n* **Outdoor Art Session:** Take some sketchbooks or even just some chalk to a park and let them draw what they see.\n\n**If the weather looks iffy:**\n* **\"Wild\" Exploring:** If it's just drizzling, getting stuck in a bit of mud can actually be a huge hit with kids (just have the wellies and towels ready!).\n\nHow old are the kids? I can give you more specific ideas if I know their age range.",
+   "salient": "That depends a bit on how much energy you want to expend and what the weather is doing! Since you've got the kids with you, here are a few different vibes:\n\n*   **Low Key:** A local nature trail or a woodland walk. It's great for letting them run around without a strict schedule, and you can always pack a thermos and some snacks for a picnic.\n*   **High Energy:** An adventure playground or a local climbing center/outdoor ropes course if they need to burn off some steam.\n*   **Educational/Interactive:** A visit to a farm park or a botanical garden. It keeps them engaged with seeing animals or exploring different plants.\n*   **The \"Wild\" Option:** A scavenger hunt in a local park. You can make a quick list (a yellow leaf, a smooth stone, a feather) to keep them focused while you enjoy the fresh air.\n\nAre you looking to stay relatively local, or are you thinking of making a bit of a trip out of it?",
+   "forced": "Since you've been working so hard on the garden lately, maybe something low-key like a nature scavenger hunt or a trip to a local woodland park would be nice? \n\nIf you want something more active, you could look for a local farm park\u2014since the kids are already into football, they might enjoy running around there. Or, if you're feeling like staying closer to home, you could even set up a little \"outdoor classroom\" or a mini obstacle course in the garden to burn off some energy!\n\nDo you have a particular vibe in mind, or are you looking to get them away from the house entirely?",
+   "push": "Since you've got the kids' football in the afternoons, maybe aim for some morning activities to avoid the chaos! \n\nYou could try a trip to a local park or a nature walk, or even head to a garden centre if you want to make a day of it (though maybe not while you're lugging around heavy compost!). If the weather holds up, getting some time in the fresh air before their matches could be a nice way to decompress."
+  },
+  "calls": {
+   "none": [],
+   "native": [],
+   "salient": [],
+   "forced": [
+    {
+     "name": "context",
+     "args": {
+      "query": "kids, children, age of children, interests of kids"
+     },
+     "result_tokens": 1395
+    }
+   ],
+   "push": []
+  }
+ },
+ {
+  "persona": "Priya",
+  "fact": "piano",
+  "session": 8,
+  "probe": "Can you recommend some pieces for me to practise this month?",
+  "check": [
+   "keyboard",
+   "61",
+   "keys",
+   "range"
+  ],
+  "planted": true,
+  "answers": {
+   "none": "I'd love to help! To give you a good recommendation, I just need a little more information:\n\n1.  **What instrument do you play?**\n2.  **What is your current level?** (Beginner, intermediate, or advanced?)\n3.  **What style do you enjoy?** (Classical, Jazz, Pop, Film scores, etc.)\n4.  **What is your goal this month?** (Technical speed, expression/emotion, learning a specific genre, or preparing for a performance?)",
+   "native": "I'd love to! To give you the best recommendations, could you tell me a bit about:\n\n1. **Your current level** (e.g., beginner, intermediate, advanced)?\n2. **What instrument** you play?\n3. **What style or mood** you're in the mood for (e.g., something technical and fast, something lyrical and expressive, or maybe something contemporary)?\n4. **How much time** you're looking to dedicate to a new piece this month?",
+   "salient": "I'd love to! To give you the best suggestions, could you let me know what kind of mood you're in or if there's a specific technical area (like scales, expression, or a certain genre) you want to focus on this month?",
+   "forced": "Since you're looking for something low-pressure and just want to be able to play a simple melody to de-stress, I'd suggest starting with pieces that focus on relaxation rather than technical difficulty.\n\nSince you're using a 61-key keyboard for now, here are a few ideas:\n\n1.  **\"Gymnop\u00e9die No. 1\" by Erik Satie**: This is the ultimate \"de-stress\" piece. It's very slow, atmospheric, and doesn't require fast fingerwork. It's perfect for just sitting down after a chaotic day of marking or lesson planning.\n2.  **\"Prelude in C Major\" by J.S. Bach**: It\u2019s essentially a series of beautiful, flowing arpeggios. It feels very structured (which might appeal to your physics brain!) but is quite repetitive and soothing once you get the pattern down.\n3.  **Simple Folk Songs or Melodies**: Sometimes just picking up a well-known melody\u2014something like *Greensleeves* or even a simple pop ballad you like\u2014is the best way to get that \"quick win\" you mentioned wanting in other hobbies.\n\nDo you have a specific genre you usually gravitate toward when you're listening to music, or should we stick to the classical/peaceful route?",
+   "push": "Since you're using a 61-key keyboard for now, I'd suggest sticking to pieces that don't require a massive range or complex pedal work. \n\nMaybe some simplified arrangements of contemporary pop songs or classic movie themes? They're usually quite rewarding to play and a great way to keep things low-pressure while you're deciding on a proper piano!"
+  },
+  "calls": {
+   "none": [],
+   "native": [],
+   "salient": [],
+   "forced": [
+    {
+     "name": "situation",
+     "args": {},
+     "result_tokens": 1282
+    },
+    {
+     "name": "context",
+     "args": {
+      "query": "What kind of music or piano pieces does the user like or play?"
+     },
+     "result_tokens": 2069
+    }
+   ],
+   "push": []
+  }
+ }
+]
