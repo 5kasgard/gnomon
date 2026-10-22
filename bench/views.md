@@ -149,3 +149,43 @@ the arm whose mean paired advantage over the default is above 2 standard
 errors. After n = 10, 20 and 50 observations (200 random orders), score
 the chosen view on the environment's other questions, against the
 default and against the best arm in hindsight.
+
+## Result: calibrating the view per memory works
+
+Answer words in view on each environment's other questions after n
+observations (200 random orders, `views_calibrate_results.json`):
+
+| | Default (A) | Best in hindsight | n = 10 | n = 20 | n = 50 | Switched at 10 / 20 / 50 |
+|---|---|---|---|---|---|---|
+| BEAM 100K | 52.4 | K′ 59.2 | 54.5 | 55.0 | 56.8 | 33% / 40% / 72% |
+| BEAM 500K | 51.0 | K 58.5 | 53.3 | 54.4 | 56.8 | 38% / 54% / 88% |
+| BEAM 1M | 46.4 | K 55.0 | 49.7 | 52.2 | 54.0 | 42% / 74% / 96% |
+| BEAM 10M | 44.9 | K′ 51.7 | 46.5 | 47.8 | 49.9 | 25% / 49% / 88% |
+| LoCoMo | 60.5 | A 60.5 | 60.5 | 60.5 | 60.5 | 0% |
+| LongMemEval-S | 65.5 | S 65.8 | 65.5 | 65.5 | 65.5 | 2–4% |
+| ConvoMem | 67.4 | A 67.4 | 67.5 | 67.4 | 67.5 | 0% |
+| QASPER | 80.7 | A 80.7 | 80.6 | 80.7 | 80.7 | 0% |
+
+Where cutting pays, the gated rule finds it: by 50 observations it
+recovers 60 to 90% of the gain. Where it does not, it almost never
+switches, and costs at most 0.1. This is the second time the same shape
+appears: no mechanism is best everywhere, nothing in the question
+predicts which is, and a cautious per-memory choice from use captures
+most of the difference without harm.
+
+## What changes in the product (post hoc, stated as such)
+
+Over all 8 environments, mean answer words in view are:
+
+| View | Mean | Largest loss to the best fixed view |
+|---|---|---|
+| K′ (length-aware window) | **61.4** | −5.8 (QASPER) |
+| A (whole messages) | 58.6 | −8.6 (BEAM 1M) |
+| S (the current sentence view) | 58.0 | −11.8 (QASPER) |
+
+K′ has both the highest mean and the smallest worst-case loss, so it
+becomes `context`'s default view. Whole messages and sentences stay
+available as views. Calibrating the view from use needs a signal of
+whether the text shown sufficed. `expand` alone does not give one,
+because a reader may expand for other reasons. That is left open,
+not guessed.
