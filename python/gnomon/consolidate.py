@@ -185,6 +185,11 @@ def select_windows(question: str, hits: list, df: Counter, n_sent: int, budget: 
 
 
 # ----------------------------------------------------------------- the record
+def span_key(item: dict) -> str:
+    """The exact span a view line shows: pointer and character offsets."""
+    return f"{item['pointer']}@{item.get('start', 0)}:{item.get('end', 0)}"
+
+
 class Tiers:
     """The hot and warm tiers over a Memory, for one reader. What the slow
     part needs (every turn's directives, sentence counts for idf) is worked
@@ -240,13 +245,15 @@ class Tiers:
         self.found, self.df, self.n_sent, self._openers, self._at = found, df, max(n, 1), openers, key
 
     def context(self, query: str, *, budget: int = 2000, directive_budget: int = 1500,
-                as_of: Optional[str] = None, view: str = "window", **recall_opts) -> dict:
+                as_of: Optional[str] = None, view: str = "window", exclude=(), **recall_opts) -> dict:
         """The hot and warm tiers for `query`: {"standing": [...], "view":
         [...], "text": both rendered, "tokens": {...}}. The standing part
         comes first and changes only when a new directive is recorded, so a
         prompt cache can hold it. `view` is how each retrieved turn is shown:
         "window" (whole if short, else the 60 tokens around the question's
-        words), "whole", or "sentences" (the best sentences across turns)."""
+        words), "whole", or "sentences" (the best sentences across turns).
+        `exclude`: span keys (`span_key`) to leave out, because the reader
+        already holds them."""
         if view not in ("window", "whole", "sentences"):
             raise ValueError(f"unknown view {view!r}")
         self._refresh(as_of)
@@ -261,6 +268,8 @@ class Tiers:
             warm = select_sentences(query, hits, self.df, self.n_sent, budget)
         else:
             warm = select_windows(query, hits, self.df, self.n_sent, budget, None if view == "whole" else 60)
+        if exclude:  # spans the reader already holds (bench/session_economy.md)
+            warm = [w for w in warm if span_key(w) not in exclude]
         lines = []
         if hot:
             lines.append("Standing instructions and preferences (in force unless replaced later):")

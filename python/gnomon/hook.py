@@ -83,6 +83,37 @@ def _mark_compaction(log: str, session: str) -> None:
     os.utime(p)
 
 
+def _pushed(log: str, session: str) -> set:
+    """Spans already pushed into this session's context since it was last
+    compacted: pushing them again adds tokens and nothing else (on real
+    histories, about half of what would be pushed; bench/session_economy.md)."""
+    p = _state_path(log, session).with_suffix(".pushed")
+    try:
+        held = json.loads(p.read_text(encoding="utf-8"))
+        c = compaction_mark(log, session)
+        if c.exists() and c.stat().st_mtime >= held["since"]:
+            return set()
+        return set(held["spans"])
+    except (OSError, ValueError, KeyError, TypeError):
+        return set()
+
+
+def _save_pushed(log: str, session: str, spans: set) -> None:
+    import time
+    p = _state_path(log, session).with_suffix(".pushed")
+    p.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        since = json.loads(p.read_text(encoding="utf-8"))["since"]
+        c = compaction_mark(log, session)
+        if c.exists() and c.stat().st_mtime >= since:
+            since = time.time()
+    except (OSError, ValueError, KeyError, TypeError):
+        since = time.time()
+    tmp = p.with_suffix(".pushed.tmp")
+    tmp.write_text(json.dumps({"since": since, "spans": sorted(spans)}), encoding="utf-8")
+    os.replace(tmp, p)
+
+
 @contextlib.contextmanager
 def _locked(log: str, session: str):
     """One recorder per session at a time: overlapping hooks wait."""
@@ -333,9 +364,12 @@ def main(argv: Optional[list] = None) -> int:
             ctx = start_context(memory, a.log, writer, a.frame, max(200, a.budget), a.situation_budget)
             print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": ctx}}))
         elif name == "UserPromptSubmit" and a.per_message > 0 and (event.get("prompt") or "").strip():
-            from .consolidate import Tiers
-            c = Tiers(memory, writer).context(event["prompt"], budget=a.per_message, directive_budget=0)
+            from .consolidate import Tiers, span_key
+            held = _pushed(a.log, session)
+            c = Tiers(memory, writer).context(event["prompt"], budget=a.per_message, directive_budget=0,
+                                              exclude=held)
             if c["view"]:
+                _save_pushed(a.log, session, held | {span_key(v) for v in c["view"]})
                 print(json.dumps({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit",
                                                          "additionalContext": c["text"]}}))
     except Exception as e:  # a hook must never break the session it serves
