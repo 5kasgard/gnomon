@@ -592,6 +592,17 @@ all 7 test environments, surprise-chosen lines lost to plain short lines by
 31 to 62 points. The openers' gain on BEAM turned out to be line length
 (`bench/boundaries.md`).
 
+**Reach: what the question cannot find.** In a large record, much of the
+evidence is not among anything the question's words or meaning retrieve:
+22% at BEAM 1M and 42% at 10M. What was said near found evidence reaches
+1.8 to 2.7 times as much of it as going deeper in the ranking
+(`bench/reach.md`). Real histories have that locality too, at about twice
+chance (`bench/wild.md`). But pushed into a fixed 2,000-token view,
+neighbouring turns displace better hits, and the view loses 1 to 2 points
+on BEAM. So the time link is a step the reader takes: `expand` with
+`around` returns the turns said just before and after a pointer it already
+holds.
+
 **Answers at 1M tokens.** Claude Haiku answered 100 questions from 10
 random 1M conversations (80 with a gold answer: facts, updated values,
 dates, cross-session counts; 20 about things never said) from Gnomon's top

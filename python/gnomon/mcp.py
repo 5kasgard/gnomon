@@ -225,9 +225,13 @@ TOOLS: list[dict] = [
     {
         "name": "expand",
         "title": "Expand a pointer",
-        "description": "The whole turn a [pointer] from `context` or `recall` names, exactly as recorded.",
+        "description": ("The whole turn a [pointer] from `context`, `recall` or `situation` names, exactly as "
+                        "recorded. With `around`, also the turns said just before and after it: what belongs "
+                        "with a found turn was usually said near it."),
         "inputSchema": _schema({
             "pointer": {"type": "string", "description": "e.g. owner/12#3"},
+            "around": {"type": "integer", "minimum": 0, "maximum": 5,
+                       "description": "Turns on each side to include (default 0)."},
         }, ["pointer"]),
         "annotations": {"readOnlyHint": True, "openWorldHint": False},
     },
@@ -748,7 +752,22 @@ class Server:
                 ranker.calibration.observe(ranker.last_orders, [a["pointer"]])
         except (KeyError, IndexError, ValueError) as e:
             raise ToolError(f"cannot expand {a['pointer']!r}: {e}")
-        return f"{_ts(t['time'])} {_line(t['speaker'])}: {t['text']}", {k: t[k] for k in ("pointer", "start", "end")}
+        around = int(a.get("around", 0) or 0)
+        if not around:
+            return f"{_ts(t['time'])} {_line(t['speaker'])}: {t['text']}", {k: t[k] for k in ("pointer", "start", "end")}
+        eid, _, n = a["pointer"].rpartition("#")
+        lines, pointers = [], []
+        for k in range(int(n) - around, int(n) + around + 1):
+            if k < 0:
+                continue
+            try:
+                u = self._tiers().expand(f"{eid}#{k}")
+            except (KeyError, IndexError, ValueError):
+                continue
+            mark = ">" if k == int(n) else " "
+            lines.append(f"{mark}[{u['pointer']}] {_ts(u['time'])} {_line(u['speaker'])}: {u['text']}")
+            pointers.append(u["pointer"])
+        return "\n".join(lines), {"pointer": t["pointer"], "turns": pointers}
 
     def t_situation(self, a: dict) -> tuple[str, Any]:
         if getattr(self, "_situation", None) is None:
