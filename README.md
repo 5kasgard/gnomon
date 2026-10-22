@@ -505,6 +505,9 @@ times, against 10 with no memory. The person's situation alone got 17,
 from about 1,000 cacheable tokens. So auto mode's hook now places the
 person's own situation sentences at the start of every Claude Code
 session. `--per-message` adds what the record holds on each prompt.
+In a large memory, the session-start push holds the evidence for few questions (0 to 17% on BEAM, LoCoMo and ConvoMem; 0% at
+10M), against 70 to 96% for `--per-message 2000`, which costs about 2,000
+tokens a prompt (`bench/push_scale.md`).
 Words ask; structure binds. Claude (Haiku) behaves differently: it looked
 in memory unprompted on 12 of 12 probes. Even so, pushed facts were applied
 in 11 of 12 answers, against 8 of 12 when it pulled, by a blinded judge.
