@@ -1,0 +1,62 @@
+{
+ "WildChat (real)": {
+  "user_len": 38.5,
+  "other_len": 318.0,
+  "other_over_60": 0.9411764705882353,
+  "within2": 0.44680851063829785,
+  "within2_shuffled": 0.2237295136707446,
+  "return_cos": 0.5608007907867432,
+  "echo": 0.5175879396984925,
+  "conversations": 26.0,
+  "locality": 2.0575081418013688,
+  "n": 283
+ },
+ "BEAM 1M": {
+  "user_len": 35.0,
+  "other_len": 995.0,
+  "other_over_60": 1.0,
+  "within2": 0.07813798836242726,
+  "within2_shuffled": 0.014649033570701932,
+  "return_cos": 0.6031971573829651,
+  "echo": 0.9604415823367065,
+  "conversations": 928.0,
+  "locality": 5.425094957689172,
+  "n": 35
+ },
+ "LoCoMo": {
+  "user_len": 27.25,
+  "other_len": 25.5,
+  "other_over_60": 0.05438348416289593,
+  "within2": 0.22833083029392834,
+  "within2_shuffled": 0.2238278978675956,
+  "return_cos": 0.4568251520395279,
+  "echo": 0.8482730661245038,
+  "conversations": 29.0,
+  "locality": 0.9998213009472641,
+  "n": 10
+ },
+ "LongMemEval-S": {
+  "user_len": 46.0,
+  "other_len": 419.5,
+  "other_over_60": 0.9703368526897939,
+  "within2": 0.14761387444711727,
+  "within2_shuffled": 0.1486167181728716,
+  "return_cos": 0.301205113530159,
+  "echo": 0.6551704914986527,
+  "conversations": 48.0,
+  "locality": 0.979847586051641,
+  "n": 100
+ },
+ "ConvoMem": {
+  "user_len": 34.0,
+  "other_len": 39.0,
+  "other_over_60": 0.16598297011313282,
+  "within2": 0.03919237232191082,
+  "within2_shuffled": 0.03546563015521366,
+  "return_cos": 0.40466994047164917,
+  "echo": 0.9905339523169641,
+  "conversations": 300.0,
+  "locality": 1.0945084746897762,
+  "n": 20
+ }
+}
