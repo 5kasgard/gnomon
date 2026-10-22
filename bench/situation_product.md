@@ -79,3 +79,18 @@ Checked end to end: `gnomon.situation`, given weights learnt with its own
 `train` from the ConvoMem dev labels, keeps the evidence for 81.7% of the
 202 test questions, and its candidates for 96.5%: the same as the bench,
 to the question.
+
+## Next: labels of the person's own history, fixed before running
+
+The product labels a sample of the memory's own history; the bench so far
+trained on another history. Haiku already labelled every candidate of the 4
+test histories (situation.md), so no new model tokens are needed:
+
+- **Own:** for each test history, 1,000 of its candidates drawn at random
+  (seeds 0-2) with Haiku's labels; train; keep the share labelled.
+- **Other:** 1,000 drawn from the dev history's labels, same seeds.
+- **Measured:** evidence kept on the 202 questions; also on the questions
+  none of whose evidence sentences were in the labelled sample (the
+  selector's generalisation, not its memory of labels).
+- **Product rule tested alongside:** keep the labelled-kept sentences
+  outright and use the selector for the rest.
