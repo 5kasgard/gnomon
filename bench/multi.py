@@ -42,7 +42,8 @@ def load_beam(root: Path, size: str):
         for cat, ql in json.loads(qf.read_text(encoding="utf-8")).items():
             for q in ql:
                 ev, _ = evidence(q)
-                qs.append({"question": q["question"], "category": cat, "ev": ev})
+                qs.append({"question": q["question"], "category": cat, "ev": ev,
+                           "answer": str(q.get("answer") or q.get("ideal_answer") or q.get("ideal_summary") or "")})
         yield f"beam-{size}/{d.name}", batches(chat), qs
 
 
@@ -79,7 +80,8 @@ def load_lme(path: Path, limit: int = 0):
                     if sid in ans:
                         ev.add(m["id"])
         question = q["question"] + (f" (asked on {q['question_date']})" if q.get("question_date") else "")
-        yield f"lme/{q['question_id']}", bs, [{"question": question, "category": q["question_type"], "ev": ev}]
+        yield f"lme/{q['question_id']}", bs, [{"question": question, "category": q["question_type"], "ev": ev,
+                                               "answer": str(q.get("answer", ""))}]
 
 
 def load_locomo(path: Path):
@@ -110,7 +112,8 @@ def load_locomo(path: Path):
                 for part in re.findall(r"D\d+:\d+", str(e)):
                     if part in ids:
                         ev.add(ids[part])
-            qs.append({"question": q["question"], "category": cats.get(q.get("category"), "other"), "ev": ev})
+            qs.append({"question": q["question"], "category": cats.get(q.get("category"), "other"), "ev": ev,
+                       "answer": str(q.get("answer", ""))})
         yield f"locomo/{ci}", bs, qs
 
 
