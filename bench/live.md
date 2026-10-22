@@ -156,3 +156,23 @@ must be pushed by structure: a hook or harness that puts it in a
 cached prefix. Tools stay for depth: expanding a pointer, or a search
 the model knows it needs. The next condition to test is the middle
 path: push a short table of contents, and leave the details to pull.
+
+## Run 3, fixed before running: what should the hook push?
+
+Push won run 2. A hook can push two things: what never changes between
+messages (the situation, cacheable as a prefix), or what depends on the
+message (`context` for it). The cheapest option would be a table of
+contents. The probes re-use run 2's recorded histories, each limited to
+what was recorded before its session. Each condition runs twice, to
+see run-to-run noise:
+
+- **none:** no memory (the noise floor);
+- **push, full:** situation + context for the message (run 2's push,
+  replicated);
+- **push, situation only:** the cacheable prefix alone;
+- **table of contents + tools:** a line listing the distinctive words
+  of the person's situation sentences, plus native tools (`auto`). Up
+  to 30 words: each sentence's two rarest content words, in the order
+  they were said.
+
+Measured: applied the fact (check words), tool calls, tokens pushed.
