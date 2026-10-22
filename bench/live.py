@@ -48,6 +48,7 @@ class Provider:
             self.model = model or "@cf/google/gemma-4-26b-a4b-it"
             self.url = os.environ["PROXY_URL"]
             self.headers = {"x-key": os.environ["PROXY_KEY"], "Content-Type": "application/json",
+                            "User-Agent": "gnomon-live/1.0",  # Cloudflare refuses urllib's default agent
                             "CF-Access-Client-Id": os.environ.get("CF_ACCESS_ID", ""),
                             "CF-Access-Client-Secret": os.environ.get("CF_ACCESS_SECRET", "")}
         elif kind == "anthropic":
