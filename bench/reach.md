@@ -86,3 +86,70 @@ per-memory choice. The fused arm is the safest default: never far
 behind except on LoCoMo (−4.5 [−18.1, 7.5]), and best where links matter
 most. Time alone is the strongest single link at the scale where reach
 matters.
+
+## Next, fixed before running: does reach put more answer in view?
+
+Reaching evidence into the candidates is not the same as putting it in
+front of the reader. This test is end to end. The view is the shipped
+one (length-aware windows, 2,000 tokens) over the hybrid order. The
+only change is which turns go into it:
+
+- **W:** the hybrid order, as shipped.
+- **W+1:** after each of the top 10 hits, the turns just before and after
+  it in the record, if not already in, placed right after the hit. The
+  rest of the order follows.
+- **W+2:** the same with two turns either side.
+
+The neighbours cost tokens and push lower-ranked hits out. So the
+prediction follows locality:
+- gains where the record has it (BEAM, and QASPER's papers, where
+  related paragraphs sit together);
+- losses where it does not (LoCoMo, LongMemEval, ConvoMem; wild.md
+  measured about 1.0 there).
+
+Real use measured 2.06 (wild.md).
+
+**Measured:**
+- answer words in view (primary) and evidence recall;
+- per environment, paired against W, with cluster bootstrap intervals;
+- then the per-memory calibration simulation (views_calibrate.py's
+  rule), with W as the default.
+
+The 8 environments are the 7 of views.md plus QASPER. Run once.
+
+## Result (run once): at a fixed budget, neighbours cost more than they bring
+
+Answer words in view at 2,000 tokens (evidence recall), from
+`reach_view_results.json`:
+
+| | W (shipped) | W+1 | W+2 | W+1 − W |
+|---|---|---|---|---|
+| BEAM 100K | 59.2 (69.6) | 59.1 (68.5) | 58.3 (65.7) | −0.1 [−1.0, 0.7] |
+| BEAM 500K | 58.2 (64.1) | 56.8 (62.3) | 55.5 (57.5) | −1.3 [−2.6, −0.2] |
+| BEAM 1M | 55.0 (53.9) | 53.4 (51.9) | 51.6 (47.6) | −1.5 [−2.6, −0.6] |
+| BEAM 10M | 51.7 (43.9) | 49.4 (41.9) | 47.3 (37.8) | −2.3 [−4.4, −0.3] |
+| LoCoMo | 60.3 (76.6) | **62.2** (80.0) | 62.3 (79.7) | **+1.8 [0.4, 3.5]** |
+| LongMemEval-S | 65.2 (90.1) | 65.1 (89.9) | 64.2 (87.7) | −0.1 [−1.1, 0.9] |
+| ConvoMem | 66.4 (81.2) | 66.6 (80.7) | 66.1 (78.7) | +0.1 [−0.4, 0.7] |
+| QASPER | 74.9 (92.3) | 74.9 (92.7) | 74.7 (92.4) | −0.0 [−0.5, 0.5] |
+
+The prediction failed both ways. Neighbours hurt BEAM, where the time link
+reached most, and helped LoCoMo, where the record has no locality. Two
+things explain it:
+
+- **The turns next to a hit are mostly its own exchange,** not the
+  missing evidence. In BEAM they are the assistant's long replies. In
+  LoCoMo, a two-person dialogue, the next turn is often the other person's
+  answer, which is evidence.
+
+  The reach test added up to 100 messages from wider windows around 10
+  seeds. At a 2,000-token view, even ±1 neighbours push out hits the
+  ranking had placed higher.
+- **Calibration declines it almost everywhere.** It switched in at most
+  10% of draws, and only on LoCoMo, for +0.2 at 50 observations
+  (`reach_view_calibrate_results.json`).
+
+So reach is not a thing to push. The time link reaches what the question
+cannot, but only something that has already found a pointer can follow
+it profitably. Following a time link is a step for the reader, on demand:
+from a pointer it holds, read what was said around it.

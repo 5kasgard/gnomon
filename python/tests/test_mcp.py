@@ -168,6 +168,10 @@ class Modern(Fixture):
         self.assertIn("March 3", r["content"][0]["text"])
         r = self.s.call("expand", {"pointer": "nobody/1#0"})
         self.assertTrue(r["isError"])
+        r = self.s.call("expand", {"pointer": sc["view"][0]["pointer"].rpartition("#")[0] + "#0", "around": 1})
+        self.assertFalse(r["isError"], r)
+        self.assertEqual(len(r["structuredContent"]["turns"]), 2)  # turn 0 and the one after it
+        self.assertIn("Shipping is set for March 3", r["content"][0]["text"])
         r = self.s.call("context", {"query": "when do we ship", "view": "openers"})
         self.assertFalse(r["isError"], r)
         self.assertIn("John: Always give times in 24-hour format.", r["content"][0]["text"])
