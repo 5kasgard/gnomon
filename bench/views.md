@@ -202,3 +202,25 @@ tokens:
 The same pattern as the bench: the window matches whole turns where turns
 are short and leads where they are long. The old sentence view drops 11
 points on LoCoMo.
+
+## Next, fixed before running: does the proxy predict answers?
+
+Every result above uses answer words in view, which is a proxy for what a
+reader can answer. Two contrasts are large enough to check with a reader:
+
+- **LoCoMo:** window against sentences, with the proxy at +11.3 (product
+  check).
+- **QASPER:** whole against window, with the proxy at +5.8.
+
+**Setup:**
+- 60 questions per dataset, drawn with seed 20261022 from those with
+  answer words. The views are built as in the product check (LoCoMo) and
+  in views_qasper.py (QASPER), at 2,000 tokens.
+- Haiku answers each question from one view only, in one short sentence.
+  Each condition is a separate agent that never sees the other view.
+- **Primary measure:** the answer's words (as defined above) found in
+  the reader's answer.
+- **Secondary:** token F1 against the gold answer.
+- **Prediction:** the sign of each paired difference matches the
+  proxy's. If either flips, the proxy does not hold, and the view default
+  is reopened.
