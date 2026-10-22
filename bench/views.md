@@ -85,4 +85,7 @@ Answer words in view at 2,000 tokens (`views_results.json`):
   tokens (K − H +13.9 [10.5, 17.2]), drawing level with whole messages.
 - **K has a flaw on short messages.** For a message shorter than its
   window, K starts at the best sentence and drops what came before it.
-  The foraging arm K′ fixes that, and was fixed before seeing this.
+  The foraging arm K′ fixes that. It was designed after seeing this
+  run's results for every dataset but ConvoMem, so it is not a clean
+  test on these datasets. That is why the chosen arm is confirmed on
+  QASPER, which no step has seen.
