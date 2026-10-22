@@ -8,7 +8,14 @@ settings). With it:
   id, so a resumed session keeps its writer. The model is told who it is
   on record and given a single-use token to `attach` the Gnomon MCP tools to
   that same writer. It also gets the resume packet of the work it is most
-  likely continuing.
+  likely continuing, and what the person has said about their own
+  situation (constraints, plans, preferences), in their words: placed in
+  front of the model rather than offered as a tool, because a model that
+  must choose to look rarely does (bench/live.md: tools offered were
+  used on 1 of 12 probes; pushed, the fact was applied 17-19 of 24 times
+  against 10 without memory).
+* Optionally (--per-message), before each prompt (UserPromptSubmit), what
+  the record holds that bears on that prompt.
 * After every reply (Stop), before the context is compacted (PreCompact)
   and when the session ends (SessionEnd), the new turns of the conversation
   are recorded from the host's transcript as an episode. The model's turns
@@ -256,8 +263,18 @@ def record(memory: Memory, log: str, writer: str, session: str, transcript: str,
     return episodes
 
 
+def situation_context(memory: Memory, writer: str, budget_tokens: int = 1500) -> str:
+    """The person's own sentences about their situation, most recent within
+    the budget; '' when there are none. Their turns are recorded as "User"."""
+    from .situation import Situation
+    if budget_tokens <= 0:
+        return ""
+    r = Situation(memory, writer, own=lambda speaker: speaker == "User").render(budget=budget_tokens)
+    return r["text"] if r["lines"] else ""
+
+
 def start_context(memory: Memory, log: str, writer: str, frame: Optional[str] = None,
-                  budget_tokens: int = 2000) -> str:
+                  budget_tokens: int = 2000, situation_tokens: int = 1500) -> str:
     """What the model is told at the start of a session."""
     from .mcp import render_resume
     writers = memory.writers()
@@ -272,6 +289,9 @@ def start_context(memory: Memory, log: str, writer: str, frame: Optional[str] = 
         "can continue exactly where you left off.",
         "",
     ]
+    sit = situation_context(memory, writer, situation_tokens)
+    if sit:
+        lines += [sit, ""]
     try:
         lines.append(render_resume(memory.resume(writer, frame), budget_tokens))
     except GateError as e:
@@ -288,6 +308,10 @@ def main(argv: Optional[list] = None) -> int:
     p.add_argument("--with-tools", action="store_true", help="note tool calls in the recorded conversation")
     p.add_argument("--budget", type=int, default=2000,
                    help="about how many tokens of context to give a new session (default 2000)")
+    p.add_argument("--situation-budget", type=int, default=1500,
+                   help="tokens of the person's own situation to give a new session (default 1500; 0: none)")
+    p.add_argument("--per-message", type=int, default=0, metavar="TOKENS",
+                   help="before each prompt, add up to this many tokens of what the record holds on it (default 0: off)")
     a = p.parse_args(argv)
     try:
         event = json.loads(sys.stdin.read() or "{}")
@@ -306,19 +330,29 @@ def main(argv: Optional[list] = None) -> int:
         elif name == "SessionStart":
             if transcript:  # a resumed session: catch up on anything unrecorded
                 record(memory, a.log, writer, session, transcript, compartment, a.with_tools)
-            ctx = start_context(memory, a.log, writer, a.frame, max(200, a.budget))
+            ctx = start_context(memory, a.log, writer, a.frame, max(200, a.budget), a.situation_budget)
             print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": ctx}}))
+        elif name == "UserPromptSubmit" and a.per_message > 0 and (event.get("prompt") or "").strip():
+            from .consolidate import Tiers
+            c = Tiers(memory, writer).context(event["prompt"], budget=a.per_message, directive_budget=0)
+            if c["view"]:
+                print(json.dumps({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit",
+                                                         "additionalContext": c["text"]}}))
     except Exception as e:  # a hook must never break the session it serves
         print(f"gnomon hook: {type(e).__name__}: {e}", file=sys.stderr)
     return 0
 
 
-def settings(log: str, writer: str, python: str = "python3", pythonpath: Optional[str] = None) -> dict:
+def settings(log: str, writer: str, python: str = "python3", pythonpath: Optional[str] = None,
+             per_message: int = 0) -> dict:
     """The Claude Code settings that turn auto mode on."""
     env = f"PYTHONPATH={shlex.quote(pythonpath)} " if pythonpath else ""
     cmd = f"{env}{shlex.quote(python)} -m gnomon.hook --log {shlex.quote(str(log))} --writer {shlex.quote(writer)}"
+    if per_message:
+        cmd += f" --per-message {int(per_message)}"
     hook = [{"hooks": [{"type": "command", "command": cmd, "timeout": 30}]}]
-    return {"hooks": {k: hook for k in ("SessionStart", "Stop", "PreCompact", "SessionEnd")}}
+    events = ("SessionStart", "Stop", "PreCompact", "SessionEnd") + (("UserPromptSubmit",) if per_message else ())
+    return {"hooks": {k: hook for k in events}}
 
 
 if __name__ == "__main__":

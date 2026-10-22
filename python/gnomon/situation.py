@@ -198,9 +198,14 @@ class Situation:
         return self.weights
 
     def model(self, as_of: Optional[str] = None) -> list:
-        """[{"pointer", "start", "end", "speaker", "time", "text"}], oldest first."""
+        """[{"pointer", "start", "end", "speaker", "time", "text"}], oldest first.
+        A sentence said again word for word is kept once, where it was last said."""
         self._refresh(as_of)
-        return self.lines
+        last = {}
+        for i, c in enumerate(self.lines):
+            last[" ".join(c["text"].lower().split())] = i
+        keep = set(last.values())
+        return [c for i, c in enumerate(self.lines) if i in keep]
 
     def render(self, as_of: Optional[str] = None, budget: Optional[int] = None) -> dict:
         """{"text", "lines", "tokens"}. With `budget` (tokens), the most
