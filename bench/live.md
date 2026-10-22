@@ -206,3 +206,21 @@ Two runs of each of the 12 probes (24 answers per condition): 96 calls,
 - tools stay for going deeper.
 
 What the model must apply is placed in front of it, not offered.
+
+## Run 4, fixed before running: does Claude pull memory on its own?
+
+Runs 1 to 3 used Gemma 4. The question for Gnomon's users is how Claude
+behaves. Claude Haiku runs as sub-agents in this session, which costs
+nothing beyond the session itself. The probes are the same 12, on run 2's
+recorded histories, each limited to what was recorded before its session.
+
+- **none:** one agent answers all 12 probes with no memory.
+- **pull:** one fresh agent per probe. It is told it has spoken with the
+  person before, and that it has a memory tool it can run from the shell
+  (`bench/live_memtool.py`: situation, context, expand). It is not told to
+  use it. Every call is logged.
+- **push:** one fresh agent per probe, with the memory block in its prompt
+  (situation + context for the message, as in run 3's "push, full").
+
+Measured: whether the tool was used, and whether the planted fact was
+applied (check words).
