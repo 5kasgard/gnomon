@@ -70,7 +70,8 @@ class FutureWrites(unittest.TestCase):
                "record_time": "2099-01-01T00:00:00Z", "prev": last["hash"], "kind": "claim",
                "body": g.claim("from the future", speaker="r1", frame="f", compartment="w")}
         env["hash"] = g.sha256_hex(g.canonicalize(env).encode())
-        Path(path).write_text("\n".join(lines + [g.canonicalize(env)]) + "\n")
+        # Exact bytes: write_text would turn "\n" into "\r\n" on Windows, which is not canonical.
+        Path(path).write_bytes(("\n".join(lines + [g.canonicalize(env)]) + "\n").encode())
         self.assertTrue(g.Memory(path).verify()["ok"])
 
 
