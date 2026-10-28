@@ -723,146 +723,14 @@ the last 20 results, and resets when the host compacts the session's
 context, since the model may no longer have it then. `repeat=true` shows it
 again in full.
 
-### The firm pilot: real work, graded by the computer
+### Teams of models: now Polymechania
 
-Twenty-four Python tasks with exact specifications went to Claude
-sub-agents, one task per agent. Half were routine (slugs, Roman numerals,
-intervals, an LRU cache) and half hard (a linear-time regex engine, a
-Sudoku solver for minimal puzzles, exact linear algebra, UTF-8 decoding
-with maximal-subpart replacement, maximum flow, best rational
-approximation to 10^18). Hidden tests, checked against reference
-solutions, graded each result (`bench/firm_pilot`).
-
-| | Routine | Hard | Median time |
-|---|---|---|---|
-| Claude Haiku 5.5 | 12/12 | 12/12 | 22 s |
-| Claude Sonnet 5.5 | 12/12 | 12/12 | 12 s |
-
-On work this well specified, and checkable this exactly, the cheapest
-model did everything right, at a fortieth of Opus's price per token. The
-firm's job here is not to pay for more model than the work needs. Every
-result and verdict is recorded in a memory as the firm's books, and
-`plan_team` then plans from them (`python bench/firm_pilot/run.py`).
-For 24 more such parts, it expects Haiku staff with exact checks and
-escalation to cost $0.38 in tokens, against $0.92 for one Sonnet agent
-and $1.84 for one Opus agent.
-
-What the pilot does not show yet is where escalation earns its keep: no
-task here defeated Haiku. That needs longer, vaguer, multi-step work, and
-it is the next measurement.
-
-### The floor: many cheap workers, measured
-
-Can lots of very cheap workers do the grunt work instead of one capable
-model? Measured on three real, human-labelled workloads (`bench/floor`,
-protocol fixed in advance in `bench/floor/PROTOCOL.md`): 5,574 SMS
-messages (spam or not), 10,000 Yelp reviews (which star rating, 1-5), and
-the same reviews as positive or negative. The cheap workers: a program
-written once from general knowledge, naive Bayes (every word a dumb
-voter), a swarm of 300 boosted one-question stumps, Mycel's dumb nuclei
-(github.com/5kasgard/mycel, in the configuration its own protocol froze),
-and a linear model. The capable worker: Claude Haiku, reading and judging
-300 items of each. Cheap workers are scored on 2,600-4,800 items none of
-them trained on.
-
-| | Spam | Stars (exact) | Sentiment | Cost per million items |
-|---|---|---|---|---|
-| Program, no labels | 98.5% | 37.4% | 86.1% | under 1 cent (12,000-100,000 items per CPU-second) |
-| Swarm of 300 stumps, all labels | 97.2% | 45.1% | 87.9% | under 1 cent |
-| Mycel, all labels | 97.4% | 44.3% | 86.9% | under 1 cent |
-| Linear model, 1,000 human labels | 98.7% | 48.8% | 90.5% | about 1 cent |
-| Linear model trained on 300 Haiku labels only | 97.9% | 44.6% | 85.4% | about 1 cent, plus under 1 cent of labelling |
-| Claude Haiku, every item | 99.7% (98.1-99.9) | 66.0% (60.5-71.1) | 92.5% (88.6-95.2) | $9.81 spam, $23.09 reviews (Opus: $392, $924) |
-| **Floor**, escalation share chosen on half the probe, scored on the other | 99.7%, nothing escalated | no saving: it escalates everything | 92.5% at $3.46 | |
-
-What this says, and how sure it is:
-- **Narrow, easy work: the floor wins outright.** On spam the linear model
-  alone matched Haiku on the probe for almost nothing (on the larger
-  evaluation set it scored a point lower, so the probe flatters it a
-  little).
-- **Fuzzy work: no free lunch.** On star ratings no cheap worker came close,
-  and the floor's choice, made out of sample, was to send everything up.
-- **In between, it depends on details.** On sentiment the floor matched
-  Haiku at a seventh of the cost, but Haiku was asked for stars and said
-  "3" on 18 of the 254 items; counted as wrong, that lowers Haiku to 92.5%.
-  Read as positive, Haiku scores 98.0% and the floor falls short (96.1% at
-  $8.08); read as negative, they tie (94.1% and 94.5% at $4.62). An
-  independent review caught this; all three readings are in
-  `results.json`.
-- **Many dumb nodes do not beat one simple model on text.** The swarm of
-  stumps and Mycel's nuclei landed together, a point or more below one
-  linear model. A first Mycel configuration of our own choosing barely
-  learnt at all (it is still reported, as `mycel-1st`); Mycel's own frozen
-  configuration did far better, so how it is set up matters more than
-  anything here. Mycel was built for numeric streams, not text.
-- **Cautions.** 300 items per probe gives intervals of ±2-5 points; the
-  spam program was written by a model that may have seen this dataset;
-  Haiku's price makes per-item calls already cheap, so the floor's case is
-  strongest against higher tiers and at very large volume.
-
-The 2026 literature says the same at larger scale: an agent that builds a
-cheap artifact for a workload can keep 95% of its quality at 889x lower
-cost, but most agents lost a quarter or more and many lost to a naive
-distilled 0.6B model (arXiv 2610.08775); a small model running an adapter
-compiled by a bigger one beat prompting a 32B model per input
-(2607.02512); two tiers beat one by 2-8 points but a third adds nothing
-(2605.06350); batching 25-100 items per request cuts cost by 80% for under
-2 points (2604.03684).
-
-So the firm now has a toolmaker, a floor and batching among its forms
-(`T`, `F`, `N`): for a workload, build the cheap worker once, check it on a
-probe the model labels, let it answer what it is sure of, and send the rest
-to one capable tier in batches. `design_team` proposes this whenever there
-are thousands of items under one instruction.
-
-### Agents are not people
-
-Organisation science was written for people. Models have different
-strengths and weaknesses, and the forms follow the measurements, not the
-analogy:
-
-| Cheap for models | Hard for models | So the firm |
-|---|---|---|
-| Cloning a worker, instantly, any number | Copies of one model are not independent: they fail together | draws on several model families, and counts copies of one model once |
-| Changing role mid-task (no retraining) | Judging their own work: self-critique lost to simply sampling again at equal cost | never lets a worker grade itself; counts votes, runs a check, or asks someone outside |
-| Writing a program for a repetitive job | Knowing when they are wrong (confidence is a weak signal) | builds the cheap worker, then measures it on a probe before trusting it |
-| Reading fast, working in parallel without fatigue | Deferring to an expert: teams average the expert away | routes to the expert instead of holding a meeting |
-| Starting fresh, without fatigue or grudges | Remembering anything between sessions | keeps its memory in the record |
-
-### Forms: an alphabet, not one org chart
-
-How a team should be organised depends on the work, and 2026's controlled
-studies of model teams say a good deal about when each arrangement helps.
-`gnomon.forms` turns that into nineteen letters (divide, assign, propose
-independently, select by a check, route to the expert, take turns,
-aggregate, critique, debate, bid, coordinate through the record, evolve,
-floors, escalate, independent assurance, solo, and for workloads a toolmaker, a floor of cheap workers, and batching), each with when it helps,
-when it hurts, and its evidence. A task's profile and five dials (effort,
-breadth, scrutiny, speed, thrift) spell a word:
-
-```
-exact check, 24 parallel parts, 3 model families:
-  C·D[16]·P[3]·V·K·X·I    assign up front; 16 at once (Amdahl's knee); 3 independent attempts
-                          across families; the tests pick; one repair if a test names the fault;
-                          cheapest tier first; assurance outside the workers' group
-open-ended design, Opus available:
-  Q[4]·A·I                four agents in turn, each reading the others' finished work and
-                          choosing its own role or abstaining; a draft from another family
-                          merged in; one independent reviewer
-six tightly coupled steps, Opus, reviewed:
-  S·P[2]·X·I[3]           one context (splitting loses detail a strong model would use);
-                          two attempts; three reviewers from distinct groups, majority rule
-```
-
-Each choice names the finding behind it, and the design lists what it
-rejected: no debate when there is an exact check (reading each other's
-full solutions erased model diversity within one round), no deliberation
-around a known expert (teams fell 6-41% short of their best member), no
-more than four voices, no self-claiming of work. The rules are priors: a
-contextual bandit (`Learner`) chooses among a short list of candidate
-forms and moves off the prior as the firm's record shows another paying
-better. Sources and the full rules are in the
-[spec, section 15.1](spec/claim-protocol-v0.1.md).
+Planning teams of models and tools (the firm pilot, the floor of cheap
+workers, the forms alphabet and companies) has moved to its own project,
+[Polymechania](https://github.com/5kasgard/polymechania), with its history,
+tests and measurements. It keeps its books here: work orders, results and
+verdicts are claims in a Gnomon record, and organisation charts use the
+`position`, `appoint` and `dismiss` events below.
 
 ## What's in it
 
@@ -878,9 +746,7 @@ better. Sources and the full rules are in the
 | **Queries** | Datalog with recursion and stratified negation, under hard limits. Every answer has a proof down to log events, re-checked by an independent checker. Proofs are content-addressed: each rule is named by a hash of its text and each step by a hash of what it rests on. |
 | **Recall** | Ranked search with provenance on every hit, and dates resolved by the calendar. Every weight is tunable and every boost is explained on the hit. |
 | **Checkers** | Arithmetic with exact fractions and dates against the real calendar, acting as verifiers under the same rules as everyone else. |
-| **Teams of models** | `plan_team` shapes a firm for work that can be split: Haiku staff, Sonnet managers, an Opus executive, exact checks before reviewers, escalation on failure, the Batch API for work that can wait. Each option is priced as tokens plus expected loss from errors, from published prices and the verdicts on record, against one Opus agent doing it alone with the same checks. The assumptions behind the comparison are stated; real runs are next. |
-| **Forms** | An alphabet of nineteen organisational forms with dials (`gnomon.forms`, `design_team`): each letter carries when it helps, when it hurts and its evidence (measured in 2026 studies of model teams, or classic theory), and a contextual bandit learns from the record which form pays for which work. |
-| **Companies** | Organisation charts in the verified record: positions, appointments and dismissals, with authority checked by the gate (only those above may hire or fire; assurance answers to the owners alone). `gnomon.company` founds a firm with its powers kept apart, hires model instances into titles, takes a client's goal down through the levels, and reviews staff from independently judged results. |
+| **Organisations** | Organisation charts in the verified record: positions, appointments and dismissals, with authority checked by the gate (only those above may hire or fire; assurance answers to the owners alone). [Polymechania](https://github.com/5kasgard/polymechania) runs organisations of models and tools on them. |
 | **MCP server** | Standard library only, for current and older MCP clients. It is fuzzed, and tested in CI with the official MCP SDK. |
 
 The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
@@ -901,7 +767,7 @@ The full rules are in the [claim protocol spec](spec/claim-protocol-v0.1.md).
 - **The MCP server is tested hard.** It is fuzzed with thousands of
   malformed messages and driven in CI by the official MCP Python SDK.
 - **Recall was tested on data it was never tuned on.**
-- **Every platform:** 198 Rust tests and 238 Python tests run on Linux,
+- **Every platform:** 198 Rust tests and 242 Python tests run on Linux,
   macOS and Windows on every change.
 
 ```bash
@@ -925,14 +791,9 @@ bash scripts/build.sh && python3 -m unittest discover -s python/tests
   proofs.
 - [x] **M8, continuity:** handoff and resume across sessions, models and
   apps; auto mode for Claude Code; resume fitted to a token budget.
-- [ ] **M9, the firm:** teams of models shaped to the work by price and
-  track record (`plan_team`): Haiku staff, Sonnet managers and an Opus
-  executive, floors by span of control, exact checks first, escalation on
-  failure, and hiring that follows the verdicts on record. Planning,
-  organisation charts in the record, and an evidence-backed alphabet of
-  forms with a learner (`design_team`) are done. Next: running a real
-  multi-step goal through the company and measuring forms against single
-  agents.
+- [x] **M9, organisations in the record:** positions, appointments and
+  dismissals with authority checked by the gate. Teams of models moved to
+  [Polymechania](https://github.com/5kasgard/polymechania).
 - [ ] **M10, storage that scales:** the log in immutable segments, synced to
   object storage (S3, Backblaze B2, Cloudflare R2), with private
   compartments encrypted before they leave your device.

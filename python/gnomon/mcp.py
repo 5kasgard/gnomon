@@ -411,71 +411,6 @@ TOOLS: list[dict] = [
         "inputSchema": {"type": "object", "additionalProperties": False},
         "annotations": {"readOnlyHint": True, "openWorldHint": False},
     },
-    {
-        "name": "plan_team",
-        "title": "Plan a team of models for a piece of work",
-        "description": (
-            "Shape a team for work you could split across agents: which model does each part (Haiku, Sonnet, "
-            "Opus), what checks it, who escalates, how many managers, and the expected cost and risk against one "
-            "Opus agent doing it alone. Priced from published prices and the track record on file: record each "
-            "finished part as a claim in frame `firm/<kind>`, and have someone else judge it with give_verdict."
-        ),
-        "inputSchema": _schema({
-            "kind": {"type": "string", "description": "The kind of work (e.g. code, extract, summarise, design)."},
-            "input_tokens": {"type": "integer", "minimum": 0, "maximum": 10_000_000,
-                             "description": "Prompt size of one part."},
-            "output_tokens": {"type": "integer", "minimum": 0, "maximum": 1_000_000,
-                              "description": "Output size of one part."},
-            "stakes_usd": {"type": "number", "minimum": 0, "maximum": 1e9,
-                           "description": "What a wrong part that goes unnoticed costs, in USD."},
-            "detected_usd": {"type": "number", "minimum": 0, "maximum": 1e9,
-                             "description": "What a part known not to be done costs (e.g. a person redoes it), "
-                                            "in USD (default: stakes_usd)."},
-            "check": {"type": "string", "enum": ["exact", "review", "none"],
-                      "description": "exact: the computer can check it (tests, arithmetic); review: another "
-                                     "model must; none."},
-            "parts": {"type": "integer", "minimum": 1, "maximum": 100000, "description": "Independent parts (default 1)."},
-            "urgent": {"type": "boolean", "description": "False allows the half-price Batch API (default true)."},
-            "step_usd": {"type": "number", "minimum": 0, "maximum": 1e6,
-                         "description": "What waiting for one more attempt costs, in USD (default 0)."},
-        }, ["kind", "input_tokens", "output_tokens", "stakes_usd"]),
-        "annotations": {"readOnlyHint": True, "openWorldHint": False},
-    },
-    {
-        "name": "design_team",
-        "title": "Choose an organisational form for a piece of work",
-        "description": (
-            "Spell how a team should be organised for this work from an alphabet of forms (split, assign, "
-            "propose independently, select by a check, route to the expert, take turns, aggregate, critique, "
-            "build a cheap program or model for a workload, a floor of cheap workers that escalates its doubts, "
-            "batch, escalate, review independently, ...), each chosen by a stated rule with the research it rests on "
-            "and the alternatives weighed. Dials from 0 to 1 set effort, breadth (model diversity), scrutiny, "
-            "speed and thrift. Use plan_team to price which models fill the form."
-        ),
-        "inputSchema": _schema({
-            "parts": {"type": "integer", "minimum": 1, "maximum": 1000000, "description": "Independent parts."},
-            "parallel": {"type": "number", "minimum": 0, "maximum": 1,
-                         "description": "Fraction of the work that can run at once (default 1)."},
-            "coupling": {"type": "string", "enum": ["low", "high"],
-                         "description": "high: later steps need exact detail from earlier ones."},
-            "check": {"type": "string", "enum": ["exact", "review", "none"]},
-            "locatable": {"type": "boolean", "description": "A failed check names the fault."},
-            "expert": {"type": "boolean", "description": "One member is clearly best at this."},
-            "open_ended": {"type": "boolean", "description": "No single right answer."},
-            "adversarial": {"type": "boolean", "description": "Conflicting stakeholders or a possible saboteur."},
-            "graded": {"type": "boolean", "description": "The check gives a score (optimisation)."},
-            "tier": {"type": "string", "enum": ["haiku", "sonnet", "opus", "fable"],
-                     "description": "Strongest tier available (default sonnet)."},
-            "families": {"type": "integer", "minimum": 1, "maximum": 1000,
-                         "description": "Distinct model families available (default 1)."},
-            "repeats": {"type": "integer", "minimum": 1, "maximum": 10**12,
-                        "description": "Items sharing one instruction (a workload), default 1."},
-            "narrow": {"type": "boolean", "description": "With repeats: one fixed question per item (default true)."},
-            **{k: {"type": "number", "minimum": 0, "maximum": 1, "description": f"Dial: {k} (default 0.5)."}
-               for k in ("effort", "breadth", "scrutiny", "speed", "thrift")},
-        }, []),
-        "annotations": {"readOnlyHint": True, "openWorldHint": False},
-    },
 ]
 TOOL_NAMES = {t["name"] for t in TOOLS}
 
@@ -912,37 +847,6 @@ class Server:
                             "server's writer)")
         self.writer = wid
         return f"Attached: you write as {title(writers, wid)}.", {"writer": wid}
-
-    def t_plan_team(self, a: dict) -> tuple[str, Any]:
-        from . import firm
-        try:
-            task = firm.Task(a["kind"], a["input_tokens"], a["output_tokens"], a["stakes_usd"], a.get("check", "none"),
-                             a.get("parts", 1), a.get("urgent", True), a.get("step_usd", 0.0),
-                             a.get("detected_usd"))
-            rec = firm.record_from(self.memory, self.writer)
-            p = firm.plan(task, rec)
-        except ValueError as e:
-            raise ToolError(str(e))
-        out = firm.as_dict(p)
-        out["record"] = firm.explain(rec, [task.kind])
-        on = sum(r["on_record"] for r in out["record"])
-        text = p.summary() + (f"\n  track record for '{task.kind}': {on} judged part(s)" if on else
-                              f"\n  no track record for '{task.kind}' yet: priors only")
-        if rec.truncated:
-            text += "\n  (the record was too large to read in full: only part of it was used)"
-        out["record_truncated"] = rec.truncated
-        return text, out
-
-    def t_design_team(self, a: dict) -> tuple[str, Any]:
-        from . import forms
-        dial_keys = ("effort", "breadth", "scrutiny", "speed", "thrift")
-        try:
-            prof = forms.Profile(**{k: v for k, v in a.items() if k not in dial_keys})
-            dials = forms.Dials(**{k: a[k] for k in dial_keys if k in a})
-            d = forms.compose(prof, dials)
-        except (TypeError, ValueError) as e:
-            raise ToolError(str(e))
-        return d.summary(), d.as_dict()
 
     def t_whoami(self, a: dict) -> tuple[str, Any]:
         full = self.memory.writers()

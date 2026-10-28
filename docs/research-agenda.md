@@ -17,8 +17,8 @@ or cited. Where something is a guess, it says so.
 | Recall where the history cannot be read (BEAM, 100K-10M tokens) | top 10 (~5,500 tokens) holds 38.7 / 27.0 / 19.9% of evidence at 500K / 1M / 10M, against 13.5 / 3.1 / 0% in the last 200K tokens; at 100K the window wins (96.3 vs 45.1) | `python bench/beam.py --data BEAM` (`bench/beam_results.json`) |
 | Standing directives loaded with every recall (BEAM, fixed on 500K) | instructions 4-6% -> 91-94% and preferences 15-42% -> 43-74% at 100K and 1M held out; all questions +13-14 points for ~1,000 more tokens; at 10M only +4 (the store outgrows its 1,500-token budget) | `python bench/beam.py --consolidate`, `bench/beam_consolidate.md` |
 | Answers at 1M tokens (BEAM, Haiku, 100 questions / 10 conversations) | F1 33.6 and every number right on 54% from Gnomon's top 10, vs F1 8.8 and 5% from the last 128K tokens (same 3 conversations: +23 F1, ahead in all 3) | `bench/beam_qa/score.py` |
-| Cheap workers vs an LLM (spam, star ratings, sentiment) | see README "The floor" | `python bench/floor/run.py`, protocol fixed in `bench/floor/PROTOCOL.md` |
-| Form learner under change | change detection leaves regret in an unchanging world as it was (0.004-0.019) and cuts it after a change (0.13-0.20 to 0.08-0.16) | `tests/test_forms_stress.py` (simulated worlds, seeds held out) |
+| Cheap workers vs an LLM (spam, star ratings, sentiment) | moved to Polymechania (README "The floor") | `python bench/floor/run.py` there |
+| Form learner under change | change detection leaves regret in an unchanging world as it was (0.004-0.019) and cuts it after a change (0.13-0.20 to 0.08-0.16) | moved to Polymechania: `tests/test_forms_stress.py` there |
 
 ## 2. Blind spots, and what the evidence says about them
 
@@ -78,10 +78,12 @@ record should be strong: "not in the record" is a checkable answer.
 ## 3. Mechanisms that are missing or only half built
 
 Ranked by what they unlock. Sources in brackets: the owner's own repos are
-cited where they already contain a tested design.
+cited where they already contain a tested design. Items about teams of
+models (the company, forms, work orders) now belong to
+[Polymechania](https://github.com/5kasgard/polymechania).
 
 1. **A real multi-step goal run through the company** (M9's open item),
-   with forms chosen by `design_team`, outcomes recorded, and the result
+   with forms chosen by `mekh form`, outcomes recorded, and the result
    compared to one agent alone. Everything about the firm is priced or
    simulated until this exists.
 2. **Shadow mode for new forms** [Axiom: SHADOW/ACTIVE/SAFE authority
