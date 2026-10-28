@@ -291,6 +291,9 @@ pub struct State {
     pub appointments: BTreeMap<String, AppointmentInfo>,
     /// Appeal ids by claim, in log order (an index; not part of the view).
     pub appeals_by_claim: BTreeMap<String, Vec<String>>,
+    /// Handoff id -> the handoff that follows it (issue #53; derived, like
+    /// `appeals_by_claim`, and not part of the state digest).
+    pub successors: BTreeMap<String, String>,
     pub schema_version: i64,
 }
 
@@ -753,6 +756,11 @@ fn commit(st: &mut State, checked: Checked, seq: usize) {
         }
         Change::Handoff { event, mut info } => {
             info.seq = seq;
+            if let Some(prev) = info.body.get("follows").and_then(|v| v.as_str()) {
+                st.successors
+                    .entry(prev.to_string())
+                    .or_insert_with(|| event.clone());
+            }
             st.handoffs.insert(event, info);
         }
         Change::Position { mut info } => {
@@ -1991,17 +1999,11 @@ fn check(
                         // From protocol version 3, a handoff has at most one
                         // successor (issue #53): a second run continuing the
                         // same work is refused instead of forking silently.
-                        if st.schema_version >= 3 {
-                            let taken = st.handoffs.values().any(|h| {
-                                h.compartment == c.compartment
-                                    && h.body.get("follows").and_then(|v| v.as_str()) == Some(prev)
-                            });
-                            if taken {
-                                return Err(err(
-                                    "E_FORK",
-                                    "another handoff already follows this one; follow the latest",
-                                ));
-                            }
+                        if st.schema_version >= 3 && st.successors.contains_key(prev) {
+                            return Err(err(
+                                "E_FORK",
+                                "another handoff already follows this one; follow the latest",
+                            ));
                         }
                     }
                     _ => return Err(not_found("handoff", prev)),
