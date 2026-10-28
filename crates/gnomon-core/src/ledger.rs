@@ -302,6 +302,26 @@ pub struct Draft {
     pub body: Value,
 }
 
+/// How far ahead of the gate's clock a fresh write may be dated (issue #52).
+pub const MAX_FUTURE_SECS: i64 = 300;
+
+/// The gate's clock plus `secs`, as a record-time string (UTC, whole seconds).
+fn timestamp_after_now(secs: i64) -> String {
+    let now = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
+        + secs;
+    let (days, rem) = (now.div_euclid(86_400), now.rem_euclid(86_400));
+    let (y, m, d) = crate::recall::civil_from_days(days);
+    format!(
+        "{y:04}-{m:02}-{d:02}T{:02}:{:02}:{:02}Z",
+        rem / 3600,
+        (rem % 3600) / 60,
+        rem % 60
+    )
+}
+
 #[derive(Default, Debug, PartialEq)]
 pub struct Ledger {
     pub events: Vec<Value>,
@@ -340,7 +360,22 @@ impl Ledger {
     }
 
     /// Build a full envelope for `draft`, run it through the gate, append it.
+    ///
+    /// A fresh write may not be dated more than `MAX_FUTURE_SECS` ahead of the
+    /// gate's own clock (issue #52: one far-future event would otherwise lock
+    /// the log, since record time never runs backwards). Only fresh writes
+    /// are checked against the clock: replaying a log stays deterministic,
+    /// and a log that already holds such an event still verifies.
     pub fn append(&mut self, draft: Draft) -> GateResult<Value> {
+        if schema::is_timestamp(&draft.record_time) {
+            let limit = timestamp_after_now(MAX_FUTURE_SECS);
+            if draft.record_time.as_str() > limit.as_str() {
+                return Err(err(
+                    "E_FUTURE",
+                    format!("record_time is more than {MAX_FUTURE_SECS} seconds ahead of the gate's clock"),
+                ));
+            }
+        }
         let next_writer_seq = self
             .state
             .writers
@@ -1952,6 +1987,21 @@ fn check(
                                 "E_REFERENCE",
                                 "a handoff follows one in the same frame",
                             ));
+                        }
+                        // From protocol version 3, a handoff has at most one
+                        // successor (issue #53): a second run continuing the
+                        // same work is refused instead of forking silently.
+                        if st.schema_version >= 3 {
+                            let taken = st.handoffs.values().any(|h| {
+                                h.compartment == c.compartment
+                                    && h.body.get("follows").and_then(|v| v.as_str()) == Some(prev)
+                            });
+                            if taken {
+                                return Err(err(
+                                    "E_FORK",
+                                    "another handoff already follows this one; follow the latest",
+                                ));
+                            }
                         }
                     }
                     _ => return Err(not_found("handoff", prev)),

@@ -58,7 +58,7 @@ class Org(unittest.TestCase):
         from datetime import datetime, timedelta
         q = '?- holds(W, "acme", "Lead").'
         r = self.m.query("john", q)
-        later = (datetime.strptime(r["as_of"], "%Y-%m-%dT%H:%M:%SZ") + timedelta(hours=1)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        later = (datetime.strptime(r["as_of"], "%Y-%m-%dT%H:%M:%SZ") + timedelta(seconds=120)).strftime("%Y-%m-%dT%H:%M:%SZ")
         self.m.dismiss("ceo", self.lead, "Restructuring.", record_time=later)
         # A proof describes one moment: a later dismissal does not undo it.
         self.assertEqual(proofs.check(r, q, VIEWS, self.log, require_hashes=True), [])
