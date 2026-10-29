@@ -1352,13 +1352,24 @@ fn check(
                         format!("an instance's id starts with '{writer}-'"),
                     ));
                 }
-                // From version 7 (issue #48, I2b): the gate assigns the id. It
+                // From version 7 (issue #48, I2b, I2c): the gate assigns the id. It
                 // is exactly '<parent>-<k>', k the smallest number above the
                 // instances this parent has started for which that id is
                 // free: skipping depends only on what owners registered. The
                 // duplicate check comes first, so a session that lost a race
                 // for an id is told so and retries.
                 if st.schema_version >= 7 {
+                    // I2c: the id is exactly '<parent>-<integer>' before any
+                    // lookup, so a name in another parent's namespace
+                    // ('c-x-1' asked by 'c') is refused alike whether or not
+                    // it exists.
+                    let tail = &r.writer[writer.len() + 1..];
+                    if tail.is_empty() || !tail.bytes().all(|b| b.is_ascii_digit()) {
+                        return Err(err(
+                            "E_SPAWN",
+                            format!("an instance's id is '{writer}-<k>', k a whole number"),
+                        ));
+                    }
                     if st.writers.contains_key(r.writer) {
                         return Err(err(
                             "E_DUPLICATE",

@@ -120,5 +120,38 @@ class F3VersionSixLog(unittest.TestCase):
         self.assertEqual(outs, ["accepted", "accepted"])
 
 
+class G1ForeignNamespaceIdIsRefusedAlike(unittest.TestCase):
+    """I2c: `c` asking for `c-x-1` (another parent's instance id) gets the same code whether or not it exists."""
+
+    def test_same_refusal_with_and_without_the_hidden_instance(self):
+        outs = []
+        for hidden in (True, False):
+            with tempfile.TemporaryDirectory() as d:
+                m = g.Memory(Path(d) / "m.jsonl")
+                genesis(m)
+                for w, c in (("c", "b"), ("c-x", "a")):
+                    m.register("o", w, party="p", kind="model", model="m", operator="o", name="C",
+                               capabilities=["write", "spawn"], compartments=[c], record_time=T(1))
+                if hidden:
+                    m.register("c-x", "c-x-1", party="p", kind="model", model="m", operator="o", name="C",
+                               capabilities=["write"], compartments=["a"], record_time=T(2))
+                outs.append(code(lambda: m.register(
+                    "c", "c-x-1", party="p", kind="model", model="m", operator="o", name="C",
+                    capabilities=["write"], compartments=["b"], record_time=T(3))))
+        self.assertEqual(outs, ["E_SPAWN", "E_SPAWN"])
+
+    def test_non_integer_suffix_is_refused_before_the_duplicate_check(self):
+        with tempfile.TemporaryDirectory() as d:
+            m = g.Memory(Path(d) / "m.jsonl")
+            genesis(m)
+            parent(m)
+            m.register("o", "c-abc", party="p", kind="model", model="m", operator="o", name="C",
+                       capabilities=["write"], compartments=["a"], record_time=T(2))
+            for bad in ("c-abc", "c-", "c-1-2", "c-1x"):
+                self.assertEqual(code(lambda: m.register(
+                    "c", bad, party="p", kind="model", model="m", operator="o", name="C",
+                    capabilities=["write"], compartments=["a"], record_time=T(3))), "E_SPAWN", bad)
+
+
 if __name__ == "__main__":
     unittest.main()

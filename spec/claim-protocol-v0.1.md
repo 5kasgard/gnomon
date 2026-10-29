@@ -95,10 +95,12 @@ surface if it has one; an id that starts with the parent's id and a hyphen
 capabilities the parent has, never `owner`, `govern` or `spawn`. So an
 instance can never take another identity or more power, and cannot probe
 for ids outside its parent's namespace. From protocol version 7 (issue #48) the
-gate assigns the id: exactly `<parent>-<k>`, k the smallest number above the
-instances the parent has started for which that id is free (so it depends only
-on what owners registered), and the duplicate check comes first, so a session
-that lost a race is told `E_DUPLICATE` and retries. The MCP server uses this
+gate assigns the id: exactly `<parent>-<k>` (the id is first checked to be the
+parent's id, a hyphen and decimal digits only, `E_SPAWN` otherwise), then the
+duplicate check, so a session that lost a race is told `E_DUPLICATE` and
+retries, then k must be the smallest number above the instances the parent has
+started for which that id is free (so it depends only on what owners
+registered). The MCP server uses this
 (`--per-session`) so that every session gets its own writer, however the
 host is configured; a session that resumes keeps its writer.
 
