@@ -351,6 +351,14 @@ def main(argv: Optional[list] = None) -> int:
         if not session:
             return 0
         memory = Memory(a.log)
+        held = memory.writers().get(a.writer, {}).get("compartments", [])
+        if len(held) > 1:
+            # One session records into one compartment, but it may read all
+            # of the template's: what it read in one would be filed in another.
+            print(f"gnomon hook: auto mode needs a template writer with one compartment, and '{a.writer}' holds "
+                  f"{len(held)} ({', '.join(held)}); nothing is recorded and no context is added. Register a "
+                  "template writer for one compartment.", file=sys.stderr)
+            return 0
         writer = instance_for(memory, a.writer, session, surface="claude-code")
         compartment = a.compartment or memory.writers()[writer]["compartments"][0]
         transcript = event.get("transcript_path")
