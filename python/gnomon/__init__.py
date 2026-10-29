@@ -245,11 +245,13 @@ class Memory:
     def handoff(self, writer: str, *, frame: str, summary: str, compartment: str,
                    goal: Optional[str] = None, done: Iterable[str] = (), next: Iterable[str] = (),
                    open: Iterable[str] = (), refs: Iterable[str] = (), artifacts: Iterable[dict] = (),
-                   follows: Optional[str] = None, record_time: Optional[str] = None) -> str:
+                   follows: Optional[str] = None, lease: Optional[str] = None,
+                   record_time: Optional[str] = None) -> str:
         """Record where a piece of work (`frame`) stands, so that anyone can
         pick it up: a summary, the goal, what is done, what comes next, what
         is open, the claims and episodes it rests on (`refs`), and artifacts
-        ({"uri", "note", "sha256"}). Returns the handoff's event id."""
+        ({"uri", "note", "sha256"}). In a leased frame (protocol version 6)
+        the holder names its `lease`. Returns the handoff's event id."""
         body: dict[str, Any] = {"compartment": compartment, "frame": frame, "summary": summary}
         for key, val in (("done", list(done)), ("next", list(next)), ("open", list(open)),
                          ("refs", list(refs)), ("artifacts", [dict(x) for x in artifacts])):
@@ -259,6 +261,8 @@ class Memory:
             body["goal"] = goal
         if follows:
             body["follows"] = follows
+        if lease:
+            body["lease"] = lease
         return self.append(writer, "handoff", body, record_time)["event_id"]
 
     def packet(self, reader: str, resident: str, frame: Optional[str] = None, as_of: Optional[str] = None,
@@ -447,6 +451,34 @@ class Memory:
             body["note"] = note
         return self.append(writer, "verdict", body, record_time)
 
+    def lease(self, writer: str, target: str, frame: str, expires: str, reason: Optional[str] = None,
+              record_time: Optional[str] = None) -> str:
+        """Give `target` a hold on `frame` until `expires` (protocol version 6,
+        issue #54): only it (and its instances, and the owner) may write
+        there meanwhile, naming the lease. Needs `schedule` (or owner); never
+        to oneself; one live lease per frame. Returns the lease's event id,
+        which is also its fencing token."""
+        body = {"writer": target, "frame": frame, "expires": expires}
+        if reason:
+            body["reason"] = reason
+        return self.append(writer, "lease", body, record_time)["event_id"]
+
+    def release(self, writer: str, lease: str, reason: Optional[str] = None,
+                record_time: Optional[str] = None) -> dict:
+        """End a lease early: its holder, whoever granted it, or the owner."""
+        body = {"lease": lease}
+        if reason:
+            body["reason"] = reason
+        return self.append(writer, "release", body, record_time)
+
+    def revoke(self, writer: str, target: str, compartments: Iterable[str], reason: str,
+               record_time: Optional[str] = None) -> dict:
+        """End `target`'s access to `compartments` from now on (protocol
+        version 5, issue #49): the owner only; the target's instances lose
+        them too; what it wrote before stays on record."""
+        body = {"writer": target, "compartments": list(compartments), "reason": reason}
+        return self.append(writer, "revoke", body, record_time)
+
     def supersede(self, writer: str, old: str, new: str, kind: str, evidence: Iterable[str],
                   reason: str, record_time: Optional[str] = None) -> dict:
         body = {"old": old, "new": new, "kind": kind, "evidence": list(evidence), "reason": reason}
@@ -559,7 +591,7 @@ class Memory:
 
 
 #: The protocol version new memories start at (see the spec, section 2a).
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 6
 
 
 def _cut(text: str, n: int) -> str:

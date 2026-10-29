@@ -29,8 +29,11 @@ const ENVELOPE_FIELDS: &[&str] = &[
 ];
 
 /// Content address of a claim body.
+/// A claim's id: the hash of its content. A `lease` field (protocol
+/// version 6) says under which hold it was written, not what it says, so it
+/// is left out: the same statement under two leases is one claim.
 pub fn claim_id(body: &Value) -> String {
-    format!("c:{}", hex_digest(canonical(body).as_bytes()))
+    format!("c:{}", hex_digest(canonical(&body.without("lease")).as_bytes()))
 }
 
 /// Hash of an envelope: SHA-256 of its canonical form without `hash`.
@@ -213,6 +216,18 @@ pub struct HandoffInfo {
     pub body: Value,
 }
 
+/// A lease (protocol version 6, issue #54): `writer` holds `frame` until
+/// `expires`, unless released first (`ended`: the release event).
+#[derive(Clone, Debug, PartialEq)]
+pub struct LeaseInfo {
+    pub writer: String,
+    pub frame: String,
+    pub expires: String,
+    pub by: String,
+    pub record_time: String,
+    pub ended: Option<String>,
+}
+
 /// A position in an organisation (the latest definition of its title).
 #[derive(Clone, Debug, PartialEq)]
 pub struct PositionInfo {
@@ -294,6 +309,8 @@ pub struct State {
     /// Handoff id -> the handoff that follows it (issue #53; derived, like
     /// `appeals_by_claim`, and not part of the state digest).
     pub successors: BTreeMap<String, String>,
+    /// Leases by event id (protocol version 6).
+    pub leases: BTreeMap<String, LeaseInfo>,
     pub schema_version: i64,
 }
 
@@ -377,6 +394,16 @@ impl Ledger {
                     "E_FUTURE",
                     format!("record_time is more than {MAX_FUTURE_SECS} seconds ahead of the gate's clock"),
                 ));
+            }
+        }
+        // A fresh write naming a lease is checked against the gate's clock
+        // too (issue #54): a holder cannot date its write back to before
+        // expiry to slip in after it.
+        if let Some(id) = draft.body.get("lease").and_then(|v| v.as_str()) {
+            if let Some(l) = self.state.leases.get(id) {
+                if l.expires.as_str() <= timestamp_after_now(0).as_str() {
+                    return Err(err("E_LEASE", format!("lease '{id}' has expired by the gate's clock")));
+                }
             }
         }
         let next_writer_seq = self
@@ -550,6 +577,20 @@ pub enum Change {
         party: String,
     },
     SchemaVersion(i64),
+    /// Compartments taken from these writers (one revoked writer and every
+    /// instance started from it).
+    Revoke {
+        writers: Vec<String>,
+        compartments: Vec<String>,
+    },
+    Lease {
+        event: String,
+        info: LeaseInfo,
+    },
+    Release {
+        lease: String,
+        event: String,
+    },
 }
 
 pub struct Checked {
@@ -668,6 +709,76 @@ fn frame_gate(st: &State, writer: &str, w: &WriterInfo, frame: Option<&str>) -> 
         "E_CAPABILITY",
         format!("only the owner writes '{family}/{resident}'"),
     ))
+}
+
+/// The live lease on `frame` at `at`, if any: not released, not yet expired.
+fn live_lease<'a>(st: &'a State, frame: &str, at: &str) -> Option<(&'a String, &'a LeaseInfo)> {
+    st.leases
+        .iter()
+        .find(|(_, l)| l.frame == frame && l.ended.is_none() && l.expires.as_str() > at)
+}
+
+/// Whether `writer` is `holder` or an instance started from it, at any depth.
+fn acts_for(st: &State, writer: &str, holder: &str) -> bool {
+    let mut cur = Some(writer);
+    while let Some(id) = cur {
+        if id == holder {
+            return true;
+        }
+        cur = st.writers.get(id).and_then(|x| x.instance_of.as_deref());
+    }
+    false
+}
+
+/// From protocol version 6 (issue #54): while a frame is leased, only its
+/// holder (or the holder's instances, or the owner) writes there, and the
+/// holder names the lease it holds. Naming an ended lease is refused, so a
+/// stale holder (a crashed run's process, still writing) is fenced off.
+fn lease_gate(
+    st: &State,
+    writer: &str,
+    w: &WriterInfo,
+    frame: Option<&str>,
+    body: &Value,
+    record_time: &str,
+) -> GateResult<()> {
+    let named = body.get("lease").map(|v| v.as_str());
+    if st.schema_version < 6 {
+        if named.is_some() {
+            return Err(err("E_SCHEMA_VERSION", "'lease' needs protocol version 6"));
+        }
+        return Ok(());
+    }
+    let named = match named {
+        Some(Some(s)) => Some(s),
+        Some(None) => return Err(err("E_BODY", "'lease' must be a lease's event id")),
+        None => None,
+    };
+    if let Some(id) = named {
+        let l = st.leases.get(id).ok_or_else(|| not_found("lease", id))?;
+        if Some(l.frame.as_str()) != frame {
+            return Err(err("E_LEASE", format!("lease '{id}' is for frame '{}'", l.frame)));
+        }
+        if !acts_for(st, writer, &l.writer) {
+            return Err(err("E_LEASE", format!("lease '{id}' is held by '{}'", l.writer)));
+        }
+        if l.ended.is_some() || l.expires.as_str() <= record_time {
+            return Err(err("E_LEASE", format!("lease '{id}' has ended")));
+        }
+    }
+    let Some(f) = frame else { return Ok(()) };
+    if let Some((id, l)) = live_lease(st, f, record_time) {
+        if w.capabilities.iter().any(|c| c == "owner") {
+            return Ok(());
+        }
+        if !acts_for(st, writer, &l.writer) {
+            return Err(err("E_LEASE", format!("frame '{f}' is leased to '{}' until {}", l.writer, l.expires)));
+        }
+        if named != Some(id.as_str()) {
+            return Err(err("E_LEASE", format!("a write in leased frame '{f}' names its lease ('{id}')")));
+        }
+    }
+    Ok(())
 }
 
 fn need_compartment(w: &WriterInfo, c: &str) -> GateResult<()> {
@@ -851,6 +962,21 @@ fn commit(st: &mut State, checked: Checked, seq: usize) {
             });
         }
         Change::SchemaVersion(v) => st.schema_version = v,
+        Change::Lease { event, info } => {
+            st.leases.insert(event, info);
+        }
+        Change::Release { lease, event } => {
+            if let Some(l) = st.leases.get_mut(&lease) {
+                l.ended = Some(event);
+            }
+        }
+        Change::Revoke { writers, compartments } => {
+            for id in writers {
+                if let Some(w) = st.writers.get_mut(&id) {
+                    w.compartments.retain(|c| !compartments.contains(c));
+                }
+            }
+        }
     }
     // The event's writer exists now (genesis registers itself in this change).
     st.writers
@@ -1358,6 +1484,7 @@ fn check(
             let c = schema::claim(body)?;
             need_compartment(w, c.compartment)?;
             frame_gate(st, writer, w, body.get("frame").and_then(|v| v.as_str()))?;
+            lease_gate(st, writer, w, body.get("frame").and_then(|v| v.as_str()), body, record_time)?;
             if st.schema_version >= 2 {
                 if let Some(fr) = body.get("frame").and_then(|v| v.as_str()) {
                     schema::one_line(fr, "claim: 'frame'")?;
@@ -2018,6 +2145,7 @@ fn check(
             let c = schema::handoff(body)?;
             need_compartment(w, c.compartment)?;
             frame_gate(st, writer, w, Some(c.frame))?;
+            lease_gate(st, writer, w, Some(c.frame), body, record_time)?;
             // What it rests on is in its own compartment; missing and
             // elsewhere are refused alike.
             for id in &c.refs {
@@ -2198,6 +2326,107 @@ fn check(
                 by: writer.to_string(),
                 reason: d.reason.to_string(),
                 time: record_time.to_string(),
+            })
+        }
+
+        "lease" => {
+            if st.schema_version < 6 {
+                return Err(err("E_SCHEMA_VERSION", "lease needs protocol version 6"));
+            }
+            need(w, "schedule")?;
+            let l = schema::lease(body)?;
+            let target = st
+                .writers
+                .get(l.writer)
+                .ok_or_else(|| err("E_UNKNOWN_WRITER", format!("writer '{}' is not registered", l.writer)))?;
+            if acts_for(st, writer, l.writer) {
+                return Err(err("E_LEASE", "a writer never leases to itself"));
+            }
+            if target.capabilities.iter().any(|c| c == "owner") {
+                return Err(err("E_LEASE", "an owner needs no lease"));
+            }
+            if l.expires <= record_time {
+                return Err(err("E_LEASE", "a lease must expire after it is granted"));
+            }
+            if let Some((id, held)) = live_lease(st, l.frame, record_time) {
+                return Err(err(
+                    "E_LEASED",
+                    format!("frame '{}' is already leased ('{id}', to '{}' until {})", l.frame, held.writer, held.expires),
+                ));
+            }
+            done(Change::Lease {
+                event: event_id.to_string(),
+                info: LeaseInfo {
+                    writer: l.writer.to_string(),
+                    frame: l.frame.to_string(),
+                    expires: l.expires.to_string(),
+                    by: writer.to_string(),
+                    record_time: record_time.to_string(),
+                    ended: None,
+                },
+            })
+        }
+
+        "release" => {
+            if st.schema_version < 6 {
+                return Err(err("E_SCHEMA_VERSION", "release needs protocol version 6"));
+            }
+            let id = schema::release(body)?;
+            let l = st.leases.get(id).ok_or_else(|| not_found("lease", id))?;
+            let owner = w.capabilities.iter().any(|c| c == "owner");
+            if !(owner || l.by == writer || acts_for(st, writer, &l.writer)) {
+                return Err(err("E_CAPABILITY", "a lease is released by its holder, whoever granted it, or the owner"));
+            }
+            if l.ended.is_some() {
+                return Err(err("E_LEASE", format!("lease '{id}' was already released")));
+            }
+            done(Change::Release { lease: id.to_string(), event: event_id.to_string() })
+        }
+
+        "revoke" => {
+            // Issue #49: access granted by mistake, or to a writer that later
+            // misbehaves, can be withdrawn. From then on the writer neither
+            // reads nor writes those compartments (reads follow a writer's
+            // current compartments); everything it wrote before stays.
+            if st.schema_version < 5 {
+                return Err(err("E_SCHEMA_VERSION", "revoke needs protocol version 5"));
+            }
+            if !w.capabilities.iter().any(|c| c == "owner") {
+                return Err(err("E_CAPABILITY", "only the owner revokes"));
+            }
+            let r = schema::revoke(body)?;
+            let target = st
+                .writers
+                .get(r.writer)
+                .ok_or_else(|| err("E_UNKNOWN_WRITER", format!("writer '{}' is not registered", r.writer)))?;
+            if target.capabilities.iter().any(|c| c == "owner") {
+                return Err(err("E_REVOKE", "an owner's access is not revoked (it could lock the record)"));
+            }
+            for c in &r.compartments {
+                if !target.in_compartment(c) {
+                    return Err(err(
+                        "E_REVOKE",
+                        format!("'{}' is not in compartment '{c}'", r.writer),
+                    ));
+                }
+            }
+            // The writer and every instance started from it, at any depth.
+            let mut writers = vec![r.writer.to_string()];
+            let mut grew = true;
+            while grew {
+                grew = false;
+                for (id, x) in &st.writers {
+                    if let Some(parent) = &x.instance_of {
+                        if writers.contains(parent) && !writers.contains(id) {
+                            writers.push(id.clone());
+                            grew = true;
+                        }
+                    }
+                }
+            }
+            done(Change::Revoke {
+                writers,
+                compartments: r.compartments.iter().map(|c| c.to_string()).collect(),
             })
         }
 

@@ -378,6 +378,8 @@ fn verified_for(key: &Path, bytes: Vec<u8>) -> Result<Cached, StoreError> {
                         "appeals_by_claim"
                     } else if a.state.successors != b.state.successors {
                         "successors"
+                    } else if a.state.leases != b.state.leases {
+                        "leases"
                     } else {
                         "schema_version"
                     };
