@@ -96,3 +96,45 @@ reviews the chosen diff and the results, as for #51.
 - Bandwidth is not measured, only whether a bit crosses.
 - The author of the arms and the probes is the same planner (Claude Opus); the builder is a
   Claude Sonnet sub-agent. Reviews from outside the family are the check on that.
+
+## Amendment 1 (2026-10-29, before any arm is built or run)
+
+From a review by a separate Claude Haiku agent (verbatim in `REVIEWS.md`), each claim checked
+by `review_checks.py` before acting. Changes:
+
+- **Two-world measure.** Every channel is now tested by running the same script twice, with
+  and without the hidden A-side action, and comparing everything the B side gets back
+  (returns, refusal codes and text, views, query `through`). Any difference = crosses. An
+  exception in a probe counts as not closed. The old P13 and P14 returned fixed values; both
+  are rewritten this way. Measure 2 covers P1-P23 (there are 23 probes, not 22).
+- **New channels** (all confirmed by `review_checks.py` on main):
+  - **R, write returns:** a shared writer's B-side write returns `x/4` after three A events,
+    `x/1` without. Same root as P14; Q1 must close both or it does not qualify.
+  - **L, leases:** a B-side scheduler leasing to a hidden A writer is accepted, to a missing
+    one refused (`E_UNKNOWN_WRITER`), so an A-side spawn signals a bit; and `E_LEASED` names an
+    A-side lease's holder and expiry. (The reviewer's own example, bindings, did not reproduce:
+    bindings already answer hidden and missing alike, P8.)
+  - **V, `through`:** `lease`, `release`, `revoke` and `schema_change` are visible to every
+    reader (`query.rs` `event_visible`, `_ => true`), so a B query's `through` shows an A-only
+    lease event, its id and time.
+  - **C, clock:** an A-only event with a later time makes a B write at an earlier time fail
+    with `E_CLOCK`.
+  - **P12r:** P12 with the order reversed (c takes `c-x-0` before `c-x` exists).
+- **New arms:**
+  - **L1:** a lease's target must share a compartment with the scheduler, with one refusal
+    for hidden and missing; `E_LEASED` names neither holder nor expiry when the holder is
+    hidden from the scheduler.
+  - **V1:** lease and release are visible to a reader iff the lease's target shares a
+    compartment with the reader; revoke iff its target does; schema_change to all (a global,
+    owner-made protocol event).
+  - **T1:** the clock rule compares a new event's time only with events the writer can see
+    (its compartments). **T0:** the rule as today, stated as a known limit.
+- **O2** is restated for every registration (owner's too); P10 under O2 expects the refusal,
+  and the refusal must not name the operator's compartments.
+- **I2:** the reviewer judged it unbuildable (the sender must learn n). Disputed, not acted on:
+  n counts the parent's own instances, which the parent can see. Built as written; if the
+  builder finds otherwise, it is reported as not buildable.
+- **Q1** must make event ids, write returns and `E_WRITER_SEQ` messages per compartment, or
+  it does not qualify for P14 and R.
+- The decision rule is unchanged, applied per channel (P10, P11, P12 with P12r, P14 with R, L,
+  V, C). A combination is chosen only from qualifying arms and rerun on all channels together.
