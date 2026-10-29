@@ -427,6 +427,14 @@ A query's `through` (where the reader's view ends) counts a lease or release onl
 if the leased writer shares a compartment with the reader, and a revocation only if
 its target does (issue #48); a schema change counts for everyone.
 
+From protocol version 7 (issue #48) the rule that record time never runs backwards
+compares an event's time only with events touching the writer's compartments (and
+global ones such as a schema change), so an event in a compartment the writer is
+not in cannot make its write fail. Cost: the log's record times are then ordered
+only within a compartment, and an `as_of` view, which replays a prefix of the log,
+ends at the first event dated after the cut and can omit a later-appended event
+dated before it.
+
 Known limit: event ids are `<writer>/<writer_seq>`, so gaps in a writer's
 visible sequence reveal that it wrote hidden events (not what they were).
 
