@@ -153,8 +153,10 @@ class ReviewM6(unittest.TestCase):
         self.dir = tempfile.TemporaryDirectory()
         self.log = str(Path(self.dir.name) / "memory.jsonl")
         m = self.m = Memory(self.log)
-        m.register("root", "root", party="root", kind="human", capabilities=["owner"], name="Root Admin",
-                   compartments=["private", "lab"], record_time=t(0))
+        # Version 6: these tests spawn instances whose operator the parent cannot see.
+        m.append("root", "register", {"writer": "root", "party": "root", "kind": "human", "capabilities": ["owner"],
+                                      "name": "Root Admin", "compartments": ["private", "lab"],
+                                      "schema_version": 6}, t(0))
         # A reader in lab only, and an owner-registered model it can see.
         m.register("root", "reader", party="reader", kind="human", capabilities=["write"], compartments=["lab"],
                    record_time=t(1))

@@ -448,6 +448,42 @@ free again: if a scheduler crashes, its leases still expire. The `lease`
 field is left out of a claim's id, so the same statement under two leases is
 one claim. Budgets are the engine's business, not the gate's.
 
+**Noninterference (protocol version 7, issue #48).** From a genesis that
+sets version 7, a non-owner learns nothing about writers it cannot see (those
+sharing no compartment with it); owners are trusted and unchanged. Logs at
+versions 1-6 replay exactly as before.
+
+- *Operator, parent.* A compartment-filtered writer view and the Datalog
+  `identity(_, "operator", _)`, `instance_of` and `group` sources show an
+  operator or parent only if the reader also sees that writer's registration.
+  A non-owner registration naming an operator is accepted only for a human
+  the registering writer sees; otherwise `E_IDENTITY` ("operator not
+  accepted"), whether the target is absent, hidden or not human.
+- *Sessions and names.* A non-owner's session (and cross-party name) collision
+  is checked only against writers sharing a compartment with the new
+  registration, and the error (`E_IDENTITY`) names nothing. The uniqueness
+  domain is therefore the shared compartments; sessions are not globally
+  unique (owner registrations still are).
+- *Writer ids.* A non-owner's duplicate id is `E_REGISTER` ("registration
+  refused"), the same for a visible and a hidden writer. The parent-prefix
+  rule (`E_SPAWN`) is checked first and is unchanged. Limit: ids stay
+  caller-chosen, so an id cannot be both globally unique and silent about
+  hidden collisions; an owner still gets `E_DUPLICATE`.
+- *Positions.* `append` returns a non-owner a receipt without `seq` or `prev`: the event id and its `writer_seq`, which counts the writer's own
+  events and is the local sequence. Restricted views already omit `last_seq`.
+  Limit: event hashes are still returned (a hash chain commits to history, so it lets a reader correlate equality and change).
+- *Leases.* For a non-owner only leases whose holder or granter shares a
+  compartment with it exist: a hidden or unknown target is `E_LEASE`
+  ("lease refused"), a hidden lease neither blocks a frame nor fences a write,
+  and `release` or a named `lease` that is hidden is "not found". Frames are
+  contended per visibility domain, not globally.
+- *through.* `lease`, `release` and `revoke` events count as visible to a
+  reader only if their target writer (or revoked compartment) is visible, so
+  they do not move its `through`.
+- *Clock (accepted side channel).* Record time stays one global monotonic
+  clock, so timestamps reveal that hidden events happened and roughly when;
+  a per-compartment clock would need a different `as_of` design.
+
 ## 6. Hidden channels
 
 Refused in every structured field: every Unicode format character

@@ -511,6 +511,25 @@ pub fn append(path: &Path, draft: Draft) -> Result<Value, StoreError> {
     f.write_all(line.as_bytes())?;
     f.sync_data()?;
     c.bytes.extend_from_slice(line.as_bytes());
+    // Protocol version 7 (issue #48): a non-owner gets a receipt without the
+    // global position ("seq") or the previous hash ("prev"); its own
+    // "writer_seq" is the stable local sequence.
+    let st = &c.ledger.state;
+    let restricted = st.schema_version >= 7
+        && env
+            .get("writer")
+            .and_then(|w| w.as_str())
+            .and_then(|w| st.writers.get(w))
+            .map_or(false, |w| !w.capabilities.iter().any(|c| c == "owner"));
+    let out = if restricted {
+        let mut o = env.clone();
+        if let Value::Object(m) = &mut o {
+            m.retain(|(k, _)| !matches!(k.as_str(), "seq" | "prev"));
+        }
+        o
+    } else {
+        env
+    };
     put_cache(key, c);
-    Ok(env)
+    Ok(out)
 }

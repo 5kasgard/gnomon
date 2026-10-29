@@ -189,6 +189,14 @@ impl<'a> Builder<'a> {
         self.visible.iter().any(|c| c == compartment)
     }
 
+    fn sees_writer(&self, id: &str) -> bool {
+        self.ledger
+            .state
+            .writers
+            .get(id)
+            .map_or(false, |w| w.compartments.iter().any(|c| self.sees(c)))
+    }
+
     fn last_visible(&self) -> Option<usize> {
         last_visible(self.ledger, self.visible)
     }
@@ -533,6 +541,10 @@ impl<'a> Builder<'a> {
                 ("session", &w.session),
             ] {
                 if let Some(v) = v {
+                    // Version 7: an operator shows only if the reader sees it too.
+                    if k == "operator" && st.schema_version >= 7 && !self.sees_writer(v) {
+                        continue;
+                    }
                     self.add(eng, "identity", vec![s(wid), s(k), s(v)], src)?;
                 }
             }
@@ -542,6 +554,9 @@ impl<'a> Builder<'a> {
             let mut cur = w;
             while let Some(p) = cur.instance_of.as_deref() {
                 let pseq = registered[p];
+                if st.schema_version >= 7 && !self.sees_writer(p) {
+                    break;
+                }
                 line.push(self.src_seq(pseq));
                 if line.len() == 2 {
                     self.add_all(eng, "instance_of", vec![s(wid), s(p)], line.clone())?;
@@ -656,6 +671,19 @@ pub fn event_visible(ledger: &Ledger, visible: &[String], e: &Value) -> bool {
                     .map(|x| sees(&x.compartment))
                     .unwrap_or(false)
         }
+        "lease" if st.schema_version >= 7 => st
+            .writers
+            .get(field("writer"))
+            .map_or(false, |w| w.compartments.iter().any(|c| sees(c))),
+        "release" if st.schema_version >= 7 => st
+            .leases
+            .get(field("lease"))
+            .and_then(|l| st.writers.get(&l.writer))
+            .map_or(false, |w| w.compartments.iter().any(|c| sees(c))),
+        "revoke" if st.schema_version >= 7 => body
+            .and_then(|b| b.get("compartments"))
+            .and_then(|v| v.as_array())
+            .map_or(false, |a| a.iter().any(|c| c.as_str().map_or(false, |c| sees(c)))),
         "register" => st
             .writers
             .get(field("writer"))

@@ -712,10 +712,33 @@ fn frame_gate(st: &State, writer: &str, w: &WriterInfo, frame: Option<&str>) -> 
 }
 
 /// The live lease on `frame` at `at`, if any: not released, not yet expired.
-fn live_lease<'a>(st: &'a State, frame: &str, at: &str) -> Option<(&'a String, &'a LeaseInfo)> {
-    st.leases
-        .iter()
-        .find(|(_, l)| l.frame == frame && l.ended.is_none() && l.expires.as_str() > at)
+/// From protocol version 7 (issue #48) only leases `w` can see count: leases
+/// are contended within a visibility domain, never across hidden ones.
+fn live_lease<'a>(
+    st: &'a State,
+    w: &WriterInfo,
+    frame: &str,
+    at: &str,
+) -> Option<(&'a String, &'a LeaseInfo)> {
+    st.leases.iter().find(|(_, l)| {
+        l.frame == frame && l.ended.is_none() && l.expires.as_str() > at && lease_seen(st, w, l)
+    })
+}
+
+/// Protocol version 7: does `w` share a compartment with `id`'s registration?
+fn shares(st: &State, w: &WriterInfo, id: &str) -> bool {
+    st.writers
+        .get(id)
+        .map_or(false, |t| t.compartments.iter().any(|c| w.in_compartment(c)))
+}
+
+/// Before version 7 every lease is visible; from it, owners and the holder's
+/// (or granter's) compartment-mates see it.
+fn lease_seen(st: &State, w: &WriterInfo, l: &LeaseInfo) -> bool {
+    st.schema_version < 7
+        || w.capabilities.iter().any(|c| c == "owner")
+        || shares(st, w, &l.writer)
+        || shares(st, w, &l.by)
 }
 
 /// Whether `writer` is `holder` or an instance started from it, at any depth.
@@ -755,7 +778,11 @@ fn lease_gate(
         None => None,
     };
     if let Some(id) = named {
-        let l = st.leases.get(id).ok_or_else(|| not_found("lease", id))?;
+        let l = st
+            .leases
+            .get(id)
+            .filter(|l| lease_seen(st, w, l))
+            .ok_or_else(|| not_found("lease", id))?;
         if Some(l.frame.as_str()) != frame {
             return Err(err("E_LEASE", format!("lease '{id}' is for frame '{}'", l.frame)));
         }
@@ -767,7 +794,7 @@ fn lease_gate(
         }
     }
     let Some(f) = frame else { return Ok(()) };
-    if let Some((id, l)) = live_lease(st, f, record_time) {
+    if let Some((id, l)) = live_lease(st, w, f, record_time) {
         if w.capabilities.iter().any(|c| c == "owner") {
             return Ok(());
         }
@@ -1365,7 +1392,17 @@ fn check(
                     return Err(err("E_SPAWN", "an instance gets a subset of its parent's capabilities, never owner, govern or spawn"));
                 }
             }
+            // Version 7: a non-owner learns nothing from a collision, so
+            // duplicates, operators, sessions and names are refused alike
+            // and only writers sharing its compartments count.
+            let v7 = st.schema_version >= 7 && !by_owner;
+            let mates = |x: &WriterInfo| {
+                !v7 || x.compartments.iter().any(|c| r.compartments.contains(&c.as_str()))
+            };
             if st.writers.contains_key(r.writer) {
+                if v7 {
+                    return Err(err("E_REGISTER", "registration refused"));
+                }
                 return Err(err(
                     "E_DUPLICATE",
                     format!("writer '{}' already registered", r.writer),
@@ -1374,6 +1411,9 @@ fn check(
             // An instance acts for a person who is already on record.
             if let Some(op) = r.operator {
                 match st.writers.get(op) {
+                    _ if v7 && !(shares(st, w, op) && st.writers[op].kind == "human") => {
+                        return Err(err("E_IDENTITY", "operator not accepted"))
+                    }
                     Some(o) if o.kind == "human" => {}
                     Some(_) => {
                         return Err(err("E_IDENTITY", format!("operator '{op}' is not a human")))
@@ -1391,13 +1431,14 @@ fn check(
             // (Checked within the party: a session id is the party's.)
             if let Some(sess) = r.session {
                 if st.writers.values().any(|x| {
-                    x.party == r.party
+                    mates(x)
+                        && x.party == r.party
                         && x.session.as_deref() == Some(sess)
                         && x.surface.as_deref() == r.surface
                 }) {
                     return Err(err(
                         "E_IDENTITY",
-                        format!("session '{sess}' is already registered"),
+                        if v7 { "identity not accepted".to_string() } else { format!("session '{sess}' is already registered") },
                     ));
                 }
             }
@@ -1407,11 +1448,11 @@ fn check(
                 if st
                     .writers
                     .values()
-                    .any(|x| x.name.as_deref() == Some(n) && x.party != r.party)
+                    .any(|x| mates(x) && x.name.as_deref() == Some(n) && x.party != r.party)
                 {
                     return Err(err(
                         "E_IDENTITY",
-                        format!("the name '{n}' belongs to another party's writer"),
+                        if v7 { "identity not accepted".to_string() } else { format!("the name '{n}' belongs to another party's writer") },
                     ));
                 }
             }
@@ -2335,9 +2376,14 @@ fn check(
             }
             need(w, "schedule")?;
             let l = schema::lease(body)?;
+            // Version 7: a target the leaser cannot see is "not registered".
+            let hidden = st.schema_version >= 7
+                && !w.capabilities.iter().any(|c| c == "owner")
+                && !shares(st, w, l.writer);
             let target = st
                 .writers
                 .get(l.writer)
+                .filter(|_| !hidden)
                 .ok_or_else(|| err("E_UNKNOWN_WRITER", format!("writer '{}' is not registered", l.writer)))?;
             if acts_for(st, writer, l.writer) {
                 return Err(err("E_LEASE", "a writer never leases to itself"));
@@ -2348,7 +2394,7 @@ fn check(
             if l.expires <= record_time {
                 return Err(err("E_LEASE", "a lease must expire after it is granted"));
             }
-            if let Some((id, held)) = live_lease(st, l.frame, record_time) {
+            if let Some((id, held)) = live_lease(st, w, l.frame, record_time) {
                 return Err(err(
                     "E_LEASED",
                     format!("frame '{}' is already leased ('{id}', to '{}' until {})", l.frame, held.writer, held.expires),
@@ -2372,7 +2418,11 @@ fn check(
                 return Err(err("E_SCHEMA_VERSION", "release needs protocol version 6"));
             }
             let id = schema::release(body)?;
-            let l = st.leases.get(id).ok_or_else(|| not_found("lease", id))?;
+            let l = st
+                .leases
+                .get(id)
+                .filter(|l| lease_seen(st, w, l))
+                .ok_or_else(|| not_found("lease", id))?;
             let owner = w.capabilities.iter().any(|c| c == "owner");
             if !(owner || l.by == writer || acts_for(st, writer, &l.writer)) {
                 return Err(err("E_CAPABILITY", "a lease is released by its holder, whoever granted it, or the owner"));
@@ -3041,15 +3091,26 @@ impl State {
                     ("compartments", strs(&shown)),
                     ("group", Value::str(self.group(id))),
                 ];
-                for (k, v) in [
-                    ("name", &w.name),
-                    ("model", &w.model),
-                    ("operator", &w.operator),
-                    ("surface", &w.surface),
-                    ("session", &w.session),
-                    ("instance_of", &w.instance_of),
+                // Version 7: a link to another writer (operator, parent) shows
+                // only if the reader can see that writer's registration too.
+                let linked = |v: &String| {
+                    self.schema_version < 7
+                        || self.writers.get(v).map_or(false, |t| {
+                            t.compartments.iter().any(|c| visible(c))
+                        })
+                };
+                for (k, v, link) in [
+                    ("name", &w.name, false),
+                    ("model", &w.model, false),
+                    ("operator", &w.operator, true),
+                    ("surface", &w.surface, false),
+                    ("session", &w.session, false),
+                    ("instance_of", &w.instance_of, true),
                 ] {
                     if let Some(v) = v {
+                        if link && compartments.is_some() && !linked(v) {
+                            continue;
+                        }
                         fields.push((k, Value::str(v.clone())));
                     }
                 }
