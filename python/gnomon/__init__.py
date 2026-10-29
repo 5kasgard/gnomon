@@ -261,6 +261,50 @@ class Memory:
             body["follows"] = follows
         return self.append(writer, "handoff", body, record_time)["event_id"]
 
+    def packet(self, reader: str, resident: str, frame: Optional[str] = None, as_of: Optional[str] = None,
+               limit: int = 20, turns: int = 12) -> dict:
+        """A resident's start packet (protocol version 4, issue #55), built
+        only from the frames the gate guards: who it is (`self/<resident>`),
+        its standing instructions (`standing/<resident>`), and where its own
+        work stands (resume of `run/<resident>/<frame>`; default: its most
+        recently active run frame).
+
+        Each of the first two is one page: the owner's latest claim in its
+        frame is the whole current page, and the owner's earlier ones are
+        history (`earlier` counts them). From version 4 only the owner can
+        write those frames, and `guarded` is True. Claims there by anyone
+        else (possible only before version 4) never count as the page;
+        `others` counts them so they can be flagged."""
+        st = self.state(as_of=as_of, compartments=self._compartments(reader))["state"]
+        guarded = st.get("schema_version", 1) >= 4
+
+        owners = {w for w, i in st["writers"].items() if "owner" in i["capabilities"]}
+
+        def page(family):
+            # Only an owner's page counts. Others can exist only from before
+            # version 4 (an upgraded log); they are counted, never shown as binding.
+            f = f"{family}/{resident}"
+            rows = sorted((c["order"], cid, c["first_event"].rsplit("/", 1)[0], c)
+                          for cid, c in st["claims"].items() if c["body"].get("frame") == f)
+            mine = [r for r in rows if r[2] in owners]
+            others = len(rows) - len(mine)
+            if not mine:
+                return {"claim": None, "others": others} if others else None
+            _, cid, writer, c = mine[-1]
+            return {"claim": cid, "writer": writer, "time": c["record_time"], "text": c["body"]["statement"],
+                    "earlier": len(mine) - 1, "others": others}
+
+        mine = f"run/{resident}"
+        if frame is not None:
+            run = f"{mine}/{frame}"
+        else:
+            runs = [f["frame"] for f in self.frames(reader, as_of=as_of)
+                    if f["frame"] == mine or f["frame"].startswith(mine + "/")]
+            run = runs[0] if runs else None
+        work = self.resume(reader, frame=run, as_of=as_of, limit=limit, turns=turns) if run else None
+        return {"resident": resident, "guarded": guarded, "self": page("self"), "standing": page("standing"),
+                "frame": run, "work": work}
+
     def frames(self, reader: str, as_of: Optional[str] = None) -> list:
         """Every piece of work (frame) the reader can see, most recently
         active first: its last activity, how many claims and handoffs it
@@ -515,7 +559,7 @@ class Memory:
 
 
 #: The protocol version new memories start at (see the spec, section 2a).
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 
 def _cut(text: str, n: int) -> str:

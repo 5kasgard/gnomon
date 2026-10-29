@@ -41,7 +41,7 @@ Confidence is expressed as integer basis points (0–10000).
 | --- | --- | --- |
 | `register` | the owner (and, at genesis, the owner registering itself); or a writer with `spawn`, for a new instance of itself (section 2a) | adds a writer with a party, kind, capabilities, compartments and identity |
 | `episode` | `write` | records raw material whole: a transcript, document or tool output, optionally binding its speakers' names to writers |
-| `claim` | `write` | records a claim; identical content from another writer is corroboration |
+| `claim` | `write`; in the start-packet frames, only the writers section 13 allows (from version 4) | records a claim; identical content from another writer is corroboration |
 | `verdict` | `verify`, never a writer or party that asserted the claim; one verdict per party | supports, refutes or abstains on a claim |
 | `supersede` | `write`; both claims in one compartment; neither in an open dispute | links an old claim to a new one: refuted, narrowed, generalised or contested |
 | `resolve` | to rule: `verify`, never a party with a stake; to withdraw: `write`, the party that raised it | ends a contest (`old`, `new`, `both`) or an appeal (`reinstated`, `upheld`); either may be `withdrawn` |
@@ -931,6 +931,26 @@ refused with `E_FORK` ("follow the latest"); the writer resumes and
 follows the newest handoff instead. Logs at version 2 keep the old rule
 until upgraded with `schema_change`.
 
+**Start-packet frames (protocol version 4).** Three frame families are
+guarded, because what a resident reads at the start of a run decides how it
+works: another writer's request that reaches that packet changes the
+resident far more than any label on it (measured in Polymechania, T12b-d).
+`self/<w>` (who writer `w` is: identity, rules, voice) and `standing/<w>`
+(instructions for every future run) are written by the owner only;
+`run/<w>` and `run/<w>/...` (the resident's own work: handoffs, lessons,
+journal) by `w`, its instances (section 2a) or the owner. Anyone else is
+refused with `E_CAPABILITY`, for claims and handoffs alike. Every other
+frame stays free. `Memory.packet(reader, w)` builds a start packet from
+these alone: the owner's latest claim in `self/<w>` and in `standing/<w>`,
+each the whole current page (earlier ones are history; a page is replaced
+by writing a new one), and the resume of `w`'s run frame. Claims there by
+anyone but the owner, possible only on a log upgraded from an older
+version, are counted and never shown as the page. `render_packet` shows the
+two pages as the owner's, and the rest as recorded data. Logs at version 3
+keep free frames until upgraded with `schema_change`. Not closed by the
+gate: a resident that restates another writer's request in its own handoff
+carries it forward under its own name.
+
 **Time from the gate's side.** Record time never runs backwards, so one
 event dated far ahead would block every later write. A fresh write dated
 more than 300 seconds ahead of the gate's own clock is refused with
@@ -1283,7 +1303,9 @@ The `design_team` MCP tool returns a design.
 
 ## 16. Not yet in v0.1
 
-Signatures (writer identity is by registration only), multi-writer merge of
+Grants that let someone other than the owner write a resident's standing
+instructions (`instruct:<w>`), which wait for revocation and expiry (issues
+#49, #54); signatures (writer identity is by registration only), multi-writer merge of
 independently written logs, storage in immutable segments with sync to
 object storage and client-side encryption, a hosted remote MCP endpoint
 with sign-in, a web viewer for people, arithmetic and aggregation in queries, HTTP
