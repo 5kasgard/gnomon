@@ -81,7 +81,7 @@ their meaning.
 | `model` | models: required; tools: optional | the model it runs as reported by its runtime (not verified), or a tool's version |
 | `operator` | models and tools: required | the registered human it acts for |
 | `surface` | models and tools, optional | where it runs: claude-code, claude-app, api… |
-| `session` | models and tools, optional | the runtime's id for this session or agent; one writer per party, session and surface among writers sharing a compartment (`E_IDENTITY`; issue #48: a refusal never tells of a session where the registrant cannot see) |
+| `session` | models and tools, optional | the runtime's id for this session or agent; one writer per party, session and surface (`E_IDENTITY`); from protocol version 7 (issue #48) only among writers sharing a compartment with the registrant, so a refusal never tells of a session where the registrant cannot see |
 
 Models, operators and sessions are printable ASCII without spaces; names
 follow the participant-name rules (no look-alike scripts, combining marks,
@@ -423,9 +423,10 @@ shown (in the view and as an `identity` fact) only if the operator shares a
 compartment with the reader. Its digest covers only what it shows, and it omits the
 log's event count and head hash, which describe the whole log.
 
-A query's `through` (where the reader's view ends) counts a lease or release only
-if the leased writer shares a compartment with the reader, and a revocation only if
-its target does (issue #48); a schema change counts for everyone.
+From protocol version 7 (issue #48) a query's `through` (where the reader's view
+ends) counts a lease or release only if the leased writer shares a compartment with
+the reader, and a revocation only if its target does; a schema change counts for
+everyone. Older logs count them for everyone, as before.
 
 From protocol version 7 (issue #48) the rule that record time never runs backwards
 compares an event's time only with events touching the writer's compartments (and
@@ -435,8 +436,17 @@ only within a compartment, and an `as_of` view, which replays a prefix of the lo
 ends at the first event dated after the cut and can omit a later-appended event
 dated before it.
 
-Known limit: event ids are `<writer>/<writer_seq>`, so gaps in a writer's
-visible sequence reveal that it wrote hidden events (not what they were).
+Known limit (P14, R; issue #48): a restricted reader can still learn how many
+events exist that it cannot see. Event ids are `<writer>/<writer_seq>`, so gaps in
+a writer's visible sequence reveal that it wrote hidden events (not what they
+were); the id and the return value of a write reveal how many events that writer
+holds in all, including hidden ones; and an event's global `seq` reveals how many
+events the whole log holds before it, visible or not. No rule here closes this:
+doing so would need per-compartment sequences, a design change.
+
+Known limit (channel L, open, with the owner): leases on a frame name are not
+compartment-scoped. A live lease on a frame in a compartment a scheduler cannot
+see still makes that scheduler's lease on the same frame name fail (`E_LEASED`).
 
 **Revocation (protocol version 5).** Access granted by mistake, or to a
 writer that later misbehaves, is withdrawn with `revoke` (`writer`,

@@ -675,14 +675,18 @@ pub fn event_visible(ledger: &Ledger, visible: &[String], e: &Value) -> bool {
         // Issue #48 (V1): a lease and its release are visible to a reader
         // who shares a compartment with the leased writer; a revocation to
         // one who shares a compartment with its target. (Not a state
-        // change: only what `through` can show, so no protocol bump.)
-        "lease" => shares(field("writer")),
-        "release" => st
-            .leases
-            .get(field("lease"))
-            .map(|l| shares(&l.writer))
-            .unwrap_or(false),
-        "revoke" => shares(field("writer")),
+        // change: only what `through` can show; gated on version 7 with the rest.)
+        // From protocol version 7; older logs count them for everyone, as before.
+        "lease" => st.schema_version < 7 || shares(field("writer")),
+        "release" => {
+            st.schema_version < 7
+                || st
+                    .leases
+                    .get(field("lease"))
+                    .map(|l| shares(&l.writer))
+                    .unwrap_or(false)
+        }
+        "revoke" => st.schema_version < 7 || shares(field("writer")),
         _ => true,
     }
 }

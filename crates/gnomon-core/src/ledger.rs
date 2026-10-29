@@ -1464,13 +1464,14 @@ fn check(
             // (Checked within the party: a session id is the party's. And only
             // against writers sharing a compartment with this one: a refusal
             // must not tell a writer that a session exists where it cannot
-            // see, issue #48.)
+            // see, issue #48, S1: from version 7.)
             if let Some(sess) = r.session {
                 if st.writers.values().any(|x| {
                     x.party == r.party
                         && x.session.as_deref() == Some(sess)
                         && x.surface.as_deref() == r.surface
-                        && r.compartments.iter().any(|c| x.in_compartment(c))
+                        && (st.schema_version < 7
+                            || r.compartments.iter().any(|c| x.in_compartment(c)))
                 }) {
                     return Err(err(
                         "E_IDENTITY",
