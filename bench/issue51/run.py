@@ -525,6 +525,23 @@ def run_u4() -> dict:
         return {"u4": ok, "read_x": saw, "write_y_refused": err2}
 
 
+def run_u5() -> dict:
+    """A template used by auto mode (the hook has run for it) and also by a
+    standalone per-session MCP server with no token: does the standalone
+    server's first tool call succeed?"""
+    with tempfile.TemporaryDirectory() as d:
+        tmp = Path(d)
+        log, m = build(tmp)
+        s = Session(tmp, log, "s-u5-auto")
+        s.start()  # the hook runs for template `t`
+        srv = Server(log, "t", per_session=True)   # another process, no token
+        srv.handle({"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {"protocolVersion": "2025-11-25"}})
+        r = srv.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/call",
+                        "params": {"name": "recall", "arguments": {"query": "Heron codeword"}}})["result"]
+        text = "\n".join(b["text"] for b in r["content"] if b.get("type") == "text")
+        return {"u5": not r.get("isError"), "u5_first_call": text[:120]}
+
+
 # ------------------------------------------------------------------ size, tests
 
 def git(*a, check=False):
@@ -578,7 +595,7 @@ def main() -> int:
     out["widening_scenario"] = run_widening()
     out["widening"] = bool(out["widening_scenario"]["widening"] or any(c["widening"] for c in out["channels"].values()))
     use = {}
-    use.update(run_u1()); use.update(run_u2_u3()); use.update(run_u4())
+    use.update(run_u1()); use.update(run_u2_u3()); use.update(run_u4()); use.update(run_u5())
     out["use"] = use
     out["leaks"] = [n for n, c in out["channels"].items() if c["leak"]]
     if not a.no_size:
