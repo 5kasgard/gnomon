@@ -61,3 +61,37 @@ every measure rerun on the combination, then a non-Claude review before any PR.
 Version number: the arms bump to protocol 7. `docs/gnomon-50-options.md` in Polymechania
 planned protocol 7 for signed appends (#50, waiting on the owner); whichever lands second
 takes 8.
+
+## Follow-ups I2b and G (registered after the combination's results, before either is built)
+
+The planner's review of `arm48-combo` (Claude Opus, reading the diff and testing it) found:
+
+1. **I2 can block a parent for good.** If any writer already holds `<parent>-<n>` (only an
+   owner can register such an id; it may sit in a compartment the parent cannot see), the gate
+   demands exactly that id, refuses it (`E_DUPLICATE`, which also tells the parent the hidden
+   writer exists), and refuses every other id (`E_SPAWN`). Tested: `c` can then start no
+   instance at all. The pre-registered rule check (measure 5) used a clean log only.
+2. **I2 breaks the race retry.** Two sessions starting at once both compute `<parent>-<n>`; the
+   loser now gets `E_SPAWN` (the I2 check runs before the duplicate check), but `instance_for`
+   retries only on `E_DUPLICATE`, so that session does not start. Tested.
+3. **Gating that weakens the fix.** O1 and V1 change only what views show, and S1 only relaxes
+   a refusal; none can change how an old log replays. Gating them on version 7 leaves every
+   existing log leaking on P10, V and P11 until it is upgraded.
+
+Arms:
+
+- **I2b:** I2, except (a) the duplicate check runs before the I2 rule, so a race loser gets
+  `E_DUPLICATE` and retries; (b) the required id is `<parent>-<k>`, k the smallest number above
+  the count of the parent's instances whose id is free. Skipping depends only on what owners
+  registered, which is not a channel a non-owner can modulate. `instance_for` computes the same k.
+- **G:** O1, V1 and S1 apply to every log, whatever its version; I2b and T1 stay gated.
+
+Measures: every measure of the combination (channels, P1-P23, suites, replay of old logs,
+own rules), plus **f1**: with an owner-registered `c-1` hidden from `c`, `instance_for(c)`
+starts an instance; **f2**: two `Memory` objects on one log both start an instance of the same
+parent, the second having read the writers before the first registered, and both succeed;
+**f3**: on a version-6 log, P10, V and P11 do not cross under G.
+
+Decision: the combination takes I2b if f1, f2 and every combination measure hold; it takes G
+if f3 and every combination measure hold (replay identical included). Otherwise the
+combination stays as it is and the failing follow-up is reported.
