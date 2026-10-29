@@ -563,7 +563,7 @@ def tests() -> dict:
                 errors = int(v)
     failed = sorted(set(re.findall(r"^(?:FAIL|ERROR): (\S+) \(([^)]+)\)", out, re.M)))
     return {"ran": ran, "failures": failures, "errors": errors, "passed": ran - failures - errors,
-            "ok": r.returncode == 0, "failed": [f"{b}.{a}" for a, b in failed]}
+            "ok": r.returncode == 0, "failed": sorted({b for _, b in failed})}
 
 
 def main() -> int:
