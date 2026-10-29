@@ -11,7 +11,7 @@ use crate::json::Value;
 /// to state their model and operator and resolves speakers strictly (see
 /// section 2a of the spec); version 1 logs replay under the rules they were
 /// written with, and move to version 2 with a `schema_change`.
-pub const SCHEMA_VERSION: i64 = 3;
+pub const SCHEMA_VERSION: i64 = 4;
 
 pub const STATEMENT_KINDS: &[&str] =
     &["describe", "promise", "permit", "command", "ask", "imagine"];

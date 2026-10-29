@@ -628,6 +628,48 @@ fn need(w: &WriterInfo, cap: &str) -> GateResult<()> {
     }
 }
 
+/// From protocol version 4 (issue #55): who may write into the frames a
+/// resident's start packet is built from. `self/<w>` (who the resident is)
+/// and `standing/<w>` (instructions for every future run) are written by
+/// the owner only; `run/<w>/...` (the resident's own work: handoffs,
+/// lessons, journal) by the resident, its own instances, or the owner.
+/// Every other frame is free, as before. Measured in Polymechania (T12b-d):
+/// a label on another writer's request protects the self far less than
+/// keeping the request out of what the next run reads.
+fn frame_gate(st: &State, writer: &str, w: &WriterInfo, frame: Option<&str>) -> GateResult<()> {
+    if st.schema_version < 4 {
+        return Ok(());
+    }
+    let Some((family, rest)) = frame.and_then(|f| f.split_once('/')) else {
+        return Ok(());
+    };
+    if !matches!(family, "self" | "standing" | "run") {
+        return Ok(());
+    }
+    if w.capabilities.iter().any(|c| c == "owner") {
+        return Ok(());
+    }
+    let resident = rest.split('/').next().unwrap_or("");
+    if family == "run" {
+        // The writer itself, or the writer it is an instance of, and so on up.
+        let mut cur = Some(writer);
+        while let Some(id) = cur {
+            if id == resident {
+                return Ok(());
+            }
+            cur = st.writers.get(id).and_then(|x| x.instance_of.as_deref());
+        }
+        return Err(err(
+            "E_CAPABILITY",
+            format!("only '{resident}', its instances or the owner write in 'run/{resident}'"),
+        ));
+    }
+    Err(err(
+        "E_CAPABILITY",
+        format!("only the owner writes '{family}/{resident}'"),
+    ))
+}
+
 fn need_compartment(w: &WriterInfo, c: &str) -> GateResult<()> {
     if w.in_compartment(c) {
         Ok(())
@@ -1315,6 +1357,7 @@ fn check(
             need(w, "write")?;
             let c = schema::claim(body)?;
             need_compartment(w, c.compartment)?;
+            frame_gate(st, writer, w, body.get("frame").and_then(|v| v.as_str()))?;
             if st.schema_version >= 2 {
                 if let Some(fr) = body.get("frame").and_then(|v| v.as_str()) {
                     schema::one_line(fr, "claim: 'frame'")?;
@@ -1974,6 +2017,7 @@ fn check(
             need(w, "write")?;
             let c = schema::handoff(body)?;
             need_compartment(w, c.compartment)?;
+            frame_gate(st, writer, w, Some(c.frame))?;
             // What it rests on is in its own compartment; missing and
             // elsewhere are refused alike.
             for id in &c.refs {
