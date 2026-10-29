@@ -59,3 +59,8 @@ crosses after it becomes a stated limit in the spec, and the PR goes up.
   16 probes). Held outside the repo until the builds are done. sha256: `spec_SC.md`
   17eaf7935f13..., `probes_SC.py` 22872cc4f930..., builder's copy `spec_SC_rules.md` (rules and
   pitfalls only, the probe pointer cut) 1fa7d168316c...
+- 2026-10-30: build SC delivered (fresh Claude Sonnet, from `spec_SC_rules.md` and main only),
+  branch `arm48-SC`. Builder's report: all seven rules; 198 Rust and 299 Python tests pass;
+  **one existing test edited** (`test_auto.py` test_8 renamed a spawner `claude-x` to
+  `claudex`, which rule 3 forbids beside `claude`). Scored as a side effect: main's unchanged
+  suite is run on every build too, and its failures are listed.
