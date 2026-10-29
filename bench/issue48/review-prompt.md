@@ -20,17 +20,6 @@ Cost bound: $0 API (Claude sub-agents on the owner's plan; no model is called by
 The archived probes (`polymechania/bench/archive/map/probes.py`) rerun against current main:
 P10, P11, P12 and P14 still cross; P13 stays sealed. #57, #60 and #61 changed none of them.
 
-===== PREREG.md =====
-# Issue #48: which fixes close the four side channels between compartments?
-
-Pre-registered 2026-10-29, before any arm is built or run. Amend only before data exists.
-Cost bound: $0 API (Claude sub-agents on the owner's plan; no model is called by the harness).
-
-## Reproduction on main (2026-10-29, commit 629d7e1, before this file)
-
-The archived probes (`polymechania/bench/archive/map/probes.py`) rerun against current main:
-P10, P11, P12 and P14 still cross; P13 stays sealed. #57, #60 and #61 changed none of them.
-
 ## Question
 
 Information still crosses between writers who share no compartment:
