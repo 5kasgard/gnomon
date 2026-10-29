@@ -71,7 +71,7 @@ def main(argv=None) -> int:
         print(json.dumps(settings(log, a.writer, sys.executable, str(Path(__file__).resolve().parent.parent),
                                   per_message=a.per_message), indent=2))
         print("\nAdd this to ~/.claude/settings.json (or .claude/settings.json in a project), and start the "
-              "MCP server with --per-session.", file=sys.stderr)
+              "MCP server with --per-session --require-attach.", file=sys.stderr)
         return 0
     log = Path(a.log)
     existed = log.exists() and log.stat().st_size > 0
