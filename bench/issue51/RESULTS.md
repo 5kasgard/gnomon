@@ -66,3 +66,27 @@ resumed pre-upgrade session is recorded, and nothing from X reaches Y. Road 7 is
 
 Decision: D2 replaces D1 if it closes all eight roads with the flag set, with no widening, u1-u4
 and u6 true, and the suite passing; u5 is expected true.
+
+## D2 results (built by Claude Sonnet; rerun independently by Claude Opus, identical)
+
+| Arm | Roads 1-8 leaking | Road 7, flag not set | Widening | u1 | u2 | u3 | u4 | u5 | u6 | Lines +/- | Suite |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| D | none | (no flag; never leaks) | no | yes | 6/6 | yes | yes | no | no | +21/-14 | 283/290 |
+| D1 | none | (no flag; never leaks) | no | yes | 6/6 | yes | yes | no | no | +39/-8 | 290/290 |
+| **D2** | **none** | **leaks** | no | yes | 6/6 | yes | yes | **yes** | **yes** | +56/-16 | 290/290 |
+
+u6 for the other arms: 0 no (X leaks), A no (not recorded), B yes, C no (X leaks), C2 no.
+
+D2 meets its registered rule, so it replaces D1. What it trades: D1 closed road 7 even when
+the MCP server was set up without anything new (its marker), at the cost of breaking standalone
+per-session servers for good (u5) and a first-run race. D2 closes road 7 only when the server is
+started with `--require-attach`, which auto mode's setup now prints and the README shows; a
+server started without it is a misconfiguration and leaks. The same is true today of a server
+started without `--per-session` (Gemini's point), so D2 adds no new kind of reliance.
+
+Port to main: branch `issue-51-one-compartment` (D2's code, docs, `python/tests/test_issue_51.py`,
+5 tests that fail without the change); 198 Rust and 266 Python tests pass.
+
+Limits (not tested here): roads through the session's own file or shell access (the CLI run as
+the template, reading another session's attach token from disk) are #50's class; paraphrase
+was not tested, which matters only for B and C.
