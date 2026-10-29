@@ -312,10 +312,6 @@ pub struct State {
     /// Leases by event id (protocol version 6).
     pub leases: BTreeMap<String, LeaseInfo>,
     pub schema_version: i64,
-    /// Latest record time of any event touching each compartment, and under
-    /// "" of any global event (protocol version 7, issue #48, T1). Derived,
-    /// like `successors`, and not part of the state digest.
-    pub clock: BTreeMap<String, String>,
 }
 
 /// What a caller submits; the ledger assigns sequence numbers and hashes.
@@ -460,16 +456,7 @@ impl Ledger {
             self.events.last(),
             computed,
         )?;
-        let touched = touched(&self.state, &env);
         commit(&mut self.state, checked, self.events.len());
-        if let Some(rt) = env.get("record_time").and_then(|v| v.as_str()) {
-            for c in touched {
-                let e = self.state.clock.entry(c).or_default();
-                if e.as_str() < rt {
-                    *e = rt.to_string();
-                }
-            }
-        }
         self.events.push(env);
         Ok(())
     }
@@ -826,35 +813,6 @@ fn visible_item_compartment<'a>(st: &'a State, w: &WriterInfo, id: &str) -> Gate
     };
     c.filter(|c| w.in_compartment(c))
         .ok_or_else(|| not_found("evidence", id))
-}
-
-/// The compartments an event touches, for the clock (issue #48, T1); "" for a
-/// global event. Worked out from the state before the event is applied.
-fn touched(st: &State, env: &Value) -> Vec<String> {
-    let body = env.get("body");
-    let text = |k: &str| body.and_then(|b| b.get(k)).and_then(|v| v.as_str()).unwrap_or("");
-    let of_writer = |w: &str| st.writers.get(w).map(|x| x.compartments.clone()).unwrap_or_default();
-    let one = |c: Option<&str>| c.map(|c| vec![c.to_string()]).unwrap_or_default();
-    match env.get("kind").and_then(|v| v.as_str()).unwrap_or("") {
-        "claim" | "episode" | "handoff" | "position" | "appoint" => one(Some(text("compartment"))),
-        "verdict" | "appeal" => one(st.claims.get(text("claim")).map(|c| c.compartment.as_str())),
-        "supersede" => one(st.claims.get(text("old")).map(|c| c.compartment.as_str())),
-        "resolve" => one(
-            st.supersessions
-                .get(text("dispute"))
-                .map(|x| x.compartment.as_str())
-                .or_else(|| st.appeals.get(text("dispute")).map(|x| x.compartment.as_str())),
-        ),
-        "dismiss" => one(st.appointments.get(text("appointment")).map(|x| x.compartment.as_str())),
-        "register" => body
-            .and_then(|b| b.get("compartments"))
-            .and_then(|v| v.as_array())
-            .map(|a| a.iter().filter_map(|c| c.as_str().map(String::from)).collect())
-            .unwrap_or_default(),
-        "lease" | "revoke" => of_writer(text("writer")),
-        "release" => st.leases.get(text("lease")).map(|l| of_writer(&l.writer)).unwrap_or_default(),
-        _ => vec![String::new()],
-    }
 }
 
 fn commit(st: &mut State, checked: Checked, seq: usize) {
@@ -1274,23 +1232,10 @@ fn check(
             "record_time must be a real YYYY-MM-DDTHH:MM:SSZ time",
         ));
     }
-    // From version 7 (issue #48, T1) the rule compares only with events the
-    // writer can see: those touching its compartments, and global ones. An
-    // event in a compartment it is not in cannot make its write fail.
-    let floor_v7;
-    let floor = if st.schema_version >= 7 && expected_seq > 0 {
-        let comps = st.writers.get(s(env, "writer")?).map(|w| w.compartments.as_slice()).unwrap_or(&[]);
-        floor_v7 = comps
-            .iter()
-            .chain(std::iter::once(&String::new()))
-            .filter_map(|c| st.clock.get(c))
-            .max()
-            .cloned();
-        floor_v7.as_deref()
-    } else {
-        last.and_then(|e| e.get("record_time")).and_then(|v| v.as_str())
-    };
-    if let Some(prev_rt) = floor {
+    if let Some(prev_rt) = last
+        .and_then(|e| e.get("record_time"))
+        .and_then(|v| v.as_str())
+    {
         if record_time < prev_rt {
             return Err(err(
                 "E_CLOCK",

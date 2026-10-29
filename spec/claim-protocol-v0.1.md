@@ -430,14 +430,6 @@ ends) counts a lease or release only if the leased writer shares a compartment w
 the reader, and a revocation only if its target does; a schema change counts for
 everyone.
 
-From protocol version 7 (issue #48) the rule that record time never runs backwards
-compares an event's time only with events touching the writer's compartments (and
-global ones such as a schema change), so an event in a compartment the writer is
-not in cannot make its write fail. Cost: the log's record times are then ordered
-only within a compartment, and an `as_of` view, which replays a prefix of the log,
-ends at the first event dated after the cut and can omit a later-appended event
-dated before it.
-
 Known limit (P14, R; issue #48): a restricted reader can still learn how many
 events exist that it cannot see. Event ids are `<writer>/<writer_seq>`, so gaps in
 a writer's visible sequence reveal that it wrote hidden events (not what they
@@ -445,6 +437,11 @@ were); the id and the return value of a write reveal how many events that writer
 holds in all, including hidden ones; and an event's global `seq` reveals how many
 events the whole log holds before it, visible or not. No rule here closes this:
 doing so would need per-compartment sequences, a design change.
+
+Known limit (channel C; issue #48): the rule that record time never runs backwards
+compares with the whole log, so an event dated later in a compartment the writer
+cannot see makes the writer's earlier-dated write fail with `E_CLOCK`; the writer
+can learn that such an event exists.
 
 Known limit (channel L, open, with the owner): leases on a frame name are not
 compartment-scoped. A live lease on a frame in a compartment a scheduler cannot
