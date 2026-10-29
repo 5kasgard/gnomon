@@ -107,3 +107,7 @@ crosses after it becomes a stated limit in the spec, and the PR goes up.
   existing test changed** (`test_identity.ReviewM6` fixture pinned to v6). **Independence
   slip, self-reported:** a `ps` listing showed another arm's test text; the builder says it was
   not used. Recorded; not tested.
+- 2026-10-30, **scoring rule set before any build's held-out results were read** (main's were):
+  11 SC probes also return a `setup` record of what the hidden side's own calls returned, which
+  is not what B observes, so it would count a leak on any build. A probe crosses if its two
+  worlds differ **with the `setup` field removed**. On main this changes no probe's verdict.
