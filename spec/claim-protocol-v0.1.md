@@ -423,6 +423,10 @@ shown (in the view and as an `identity` fact) only if the operator shares a
 compartment with the reader. Its digest covers only what it shows, and it omits the
 log's event count and head hash, which describe the whole log.
 
+A query's `through` (where the reader's view ends) counts a lease or release only
+if the leased writer shares a compartment with the reader, and a revocation only if
+its target does (issue #48); a schema change counts for everyone.
+
 Known limit: event ids are `<writer>/<writer_seq>`, so gaps in a writer's
 visible sequence reveal that it wrote hidden events (not what they were).
 
