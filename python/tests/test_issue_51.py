@@ -1,6 +1,6 @@
 """Issue #51: in auto mode a session's writer holds only the compartment it is
 recorded in, so nothing it reads through Gnomon can come from another; an
-unattached per-session MCP server refuses use for a template the hook runs.
+per-session MCP server started with --require-attach refuses use until attached.
 Standard library only."""
 
 from __future__ import annotations
@@ -61,12 +61,12 @@ class OneCompartment(unittest.TestCase):
 
     def instances(self, session: str = "s-1", parent: str = "claude") -> dict:
         w = Memory(self.log).writers()
-        return {k: v for k, v in w.items() if v.get("instance_of") == parent and v.get("session") == session}
+        return {k: v for k, v in w.items() if v.get("instance_of") == parent and str(v.get("session")).split("~")[0] == session}
 
     def attach(self, started: subprocess.CompletedProcess, writer: str = "claude") -> Proc:
         ctx = json.loads(started.stdout)["hookSpecificOutput"]["additionalContext"]
         token = ctx.split("token ")[1].split(",")[0]
-        s = Proc("--log", self.log, "--writer", writer, "--per-session")
+        s = Proc("--log", self.log, "--writer", writer, "--per-session", "--require-attach")
         self.addCleanup(s.close)
         self.assertFalse(s.call("attach", {"token": token})["isError"])
         return s
@@ -94,38 +94,60 @@ class OneCompartment(unittest.TestCase):
         self.assertIn(OKAY, st)
 
     # 2
-    def test_unattached_use_is_refused_only_for_a_template_the_hook_runs(self):
+    def test_require_attach_refuses_unattached_use(self):
         self.assertEqual(self.hook("SessionStart", "s-1", "--compartment", "cy").returncode, 0)
         n = len(Memory(self.log).writers())
-        s = Proc("--log", self.log, "--writer", "claude", "--per-session")
+        s = Proc("--log", self.log, "--writer", "claude", "--per-session", "--require-attach")
         self.addCleanup(s.close)
         for tool, args in (("recall", {"query": "vault code"}), ("whoami", {}), ("frames", {})):
             r = s.call(tool, args)
             self.assertTrue(r["isError"], tool)
             self.assertIn("attach", json.dumps(r))
         self.assertEqual(len(Memory(self.log).writers()), n)  # no instance was started
-        o = Proc("--log", self.log, "--writer", "other", "--per-session")  # never run by the hook
-        self.addCleanup(o.close)
-        r = o.call("whoami", {})
+
+    def test_a_standalone_per_session_server_still_works_after_the_hook_ran(self):
+        self.assertEqual(self.hook("SessionStart", "s-1", "--compartment", "cy").returncode, 0)
+        s = Proc("--log", self.log, "--writer", "claude", "--per-session")  # as on main: no flag
+        self.addCleanup(s.close)
+        r = s.call("whoami", {})
         self.assertFalse(r["isError"], r)
-        mine = [k for k, v in Memory(self.log).writers().items() if v.get("instance_of") == "other"]
-        self.assertEqual(len(mine), 1)
-        self.assertEqual(r["structuredContent"]["writer"], mine[0])
+        w = r["structuredContent"]["writer"]
+        self.assertNotIn(w, self.instances())  # its own instance, not the hook's
+        self.assertEqual(Memory(self.log).writers()[w]["instance_of"], "claude")
+        # the flag without --per-session changes nothing: one fixed writer
+        f = Proc("--log", self.log, "--writer", "john", "--require-attach")
+        self.addCleanup(f.close)
+        self.assertFalse(f.call("whoami", {})["isError"])
 
     # 3
-    def test_a_resumed_session_with_a_wider_instance_is_not_recorded(self):
+    def test_a_resumed_session_with_a_wider_instance_gets_a_narrow_one(self):
         from gnomon.session import instance_for
-        wid = instance_for(self.m, "claude", "s-old", surface="claude-code")  # the old way: holds X and Y
-        self.assertEqual(sorted(self.m.writers()[wid]["compartments"]), ["cx", "cy"])
-        before = Path(self.log).read_bytes()
-        for event in ("Stop", "SessionStart"):
-            r = self.hook(event, "s-old", "--compartment", "cy")
-            self.assertEqual(r.returncode, 0, r.stderr)
-            self.assertIn("gnomon hook", r.stderr)
-            self.assertIn("start a new session", r.stderr)
-            self.assertEqual(r.stdout, "")
-        self.assertEqual(Path(self.log).read_bytes(), before)  # nothing recorded, nothing changed
-        self.assertEqual(len(self.instances("s-old")), 1)
+        old = instance_for(self.m, "claude", "s-old", surface="claude-code")  # the old way: holds cx and cy
+        self.assertEqual(sorted(self.m.writers()[old]["compartments"]), ["cx", "cy"])
+        r = self.hook("Stop", "s-old", "--compartment", "cy")
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertIn("holds only 'cy'", r.stderr)
+        inst = self.instances("s-old")
+        self.assertEqual(len(inst), 2)
+        new = [k for k, v in inst.items() if v["compartments"] == ["cy"]]
+        self.assertEqual(len(new), 1)
+        self.assertEqual(self.m.writers()[old]["compartments"], ["cx", "cy"])  # untouched
+        self.assertIn("Hello there", json.dumps(Memory(self.log).recall("reader", "Hello there")))  # recorded, in cy
+        for q in ("vault code", CANARY):
+            self.assertNotIn(CANARY, json.dumps(Memory(self.log).recall("reader", q)))
+        # later hooks reuse the narrow one, quietly
+        r = self.hook("Stop", "s-old", "--compartment", "cy")
+        self.assertEqual((r.returncode, r.stderr), (0, ""))
+        self.assertEqual(len(self.instances("s-old")), 2)
+        # the session start binds the narrow one
+        r = self.hook("SessionStart", "s-old", "--compartment", "cy")
+        self.assertIn(f"[{new[0]}]", json.loads(r.stdout)["hookSpecificOutput"]["additionalContext"])
+        self.assertNotIn(CANARY, r.stdout)
+        ctx = json.loads(r.stdout)["hookSpecificOutput"]["additionalContext"]
+        srv = Proc("--log", self.log, "--writer", "claude", "--per-session", "--require-attach", "--session", "s-old")
+        self.addCleanup(srv.close)  # a server that knows the host's session id can redeem the token
+        self.assertFalse(srv.call("attach", {"token": ctx.split("token ")[1].split(",")[0]})["isError"])
+        self.assertEqual(srv.call("whoami", {})["structuredContent"]["writer"], new[0])
 
     # 4
     def test_a_handoff_into_y_cannot_carry_x(self):

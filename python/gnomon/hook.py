@@ -44,7 +44,7 @@ from typing import Any, Optional
 
 from . import GateError, Memory, title
 from .ingest import record_messages
-from .session import instance_for, issue_token, mark_auto, outstanding_tokens
+from .session import instance_for, issue_token, outstanding_tokens
 
 MAX_EPISODE = 90_000  # characters per recorded episode (the core allows 100,000)
 
@@ -305,11 +305,12 @@ def situation_context(memory: Memory, writer: str, budget_tokens: int = 1500) ->
 
 
 def start_context(memory: Memory, log: str, writer: str, frame: Optional[str] = None,
-                  budget_tokens: int = 2000, situation_tokens: int = 1500) -> str:
+                  budget_tokens: int = 2000, situation_tokens: int = 1500,
+                  session: Optional[str] = None) -> str:
     """What the model is told at the start of a session."""
     from .mcp import render_resume
     writers = memory.writers()
-    session = memory.writers().get(writer, {}).get("session")
+    session = session or memory.writers().get(writer, {}).get("session")  # the host's id, not a derived one
     token = issue_token(log, writer, session)
     lines = [
         "Gnomon (verifiable memory) is attached to this session.",
@@ -350,13 +351,17 @@ def main(argv: Optional[list] = None) -> int:
         session = str(event.get("session_id") or "")
         if not session:
             return 0
-        mark_auto(a.log, a.writer)
         memory = Memory(a.log)
         held = memory.writers().get(a.writer, {}).get("compartments") or [None]
         compartment = a.compartment or held[0]
         # The session's writer holds only the compartment it is recorded in,
         # so nothing it reads through Gnomon can come from another.
+        known = memory.writers()
         writer = instance_for(memory, a.writer, session, surface="claude-code", compartments=[compartment])
+        if writer not in known and any(w.get("instance_of") == a.writer and w.get("session") == session
+                                       for w in known.values()):
+            print(f"gnomon hook: this session's earlier writer held more than '{compartment}'; "
+                  f"recording as {writer}, which holds only '{compartment}'", file=sys.stderr)
         transcript = event.get("transcript_path")
         if name == "PreCompact":
             _mark_compaction(a.log, session)
@@ -365,7 +370,7 @@ def main(argv: Optional[list] = None) -> int:
         elif name == "SessionStart":
             if transcript:  # a resumed session: catch up on anything unrecorded
                 record(memory, a.log, writer, session, transcript, compartment, a.with_tools)
-            ctx = start_context(memory, a.log, writer, a.frame, max(200, a.budget), a.situation_budget)
+            ctx = start_context(memory, a.log, writer, a.frame, max(200, a.budget), a.situation_budget, session)
             print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": ctx}}))
         elif name == "UserPromptSubmit" and a.per_message > 0 and (event.get("prompt") or "").strip():
             from .consolidate import Tiers, span_key

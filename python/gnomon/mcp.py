@@ -30,7 +30,7 @@ import uuid
 
 from . import GateError, Memory, VIEWS, __version__, _native, claim, checkers, proofs, title
 from .ingest import ingest, record_messages
-from .session import instance_for, redeem_token, runs_auto
+from .session import instance_for, redeem_token
 
 MODERN = ["2026-07-28"]
 LEGACY = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"]
@@ -421,7 +421,7 @@ class ToolError(Exception):
 
 class Server:
     def __init__(self, log: str, writer: str, checker: Optional[str] = None, per_session: bool = False,
-                 session: Optional[str] = None, dedup: bool = True, embed=None):
+                 session: Optional[str] = None, dedup: bool = True, embed=None, require_attach: bool = False):
         self.memory = Memory(log)
         # Optional meaning layer for `context` (gnomon.rank); None keeps the
         # server dependency-free and ranks by recall alone.
@@ -440,6 +440,9 @@ class Server:
         # a writer, however they are configured.
         self.parent: Optional[str] = writer if per_session else None
         self.session = session
+        # With per_session: every tool but `attach` is refused until attached
+        # (auto mode: the session's writer, not a fresh one, must do the reading).
+        self.require_attach = require_attach
         self.legacy: Optional[str] = None  # negotiated legacy version for this stdio process
         self.tools = [t for t in TOOLS if t["name"] != "run_checkers" or checker]
         self.tool_names = {t["name"] for t in self.tools}
@@ -449,8 +452,7 @@ class Server:
         if name == "attach":
             return self.t_attach(args)
         if self.parent is not None and self.writer == self.parent:
-            if runs_auto(self.log, self.parent):
-                # Auto mode runs this template: it may hold compartments the session's writer does not.
+            if self.require_attach:
                 raise ToolError("this session has no writer yet: call `attach` with the token in your session "
                                 "context first")
             self._start_instance()
@@ -1290,6 +1292,8 @@ def main(argv: Optional[list[str]] = None) -> int:
     p.add_argument("--checker", help="a registered verifier writer for run_checkers (optional)")
     p.add_argument("--per-session", action="store_true",
                    help="start a new writer for this session, as an instance of --writer (which needs 'spawn')")
+    p.add_argument("--require-attach", action="store_true",
+                   help="with --per-session: refuse every tool but `attach` until attached (auto mode's setting)")
     p.add_argument("--session", help="this session's id, if the host has one (default: random)")
     p.add_argument("--meaning", action="store_true",
                    help="rank `context` by words, meaning and surprise (needs: pip install model2vec)")
@@ -1304,7 +1308,8 @@ def main(argv: Optional[list[str]] = None) -> int:
             print("gnomon: --meaning needs model2vec (pip install model2vec)", file=sys.stderr)
             return 2
     server = Server(a.log, a.writer, a.checker, per_session=a.per_session,
-                    session=a.session or os.environ.get("GNOMON_SESSION"), dedup=not a.no_dedup, embed=embed)
+                    session=a.session or os.environ.get("GNOMON_SESSION"), dedup=not a.no_dedup, embed=embed,
+                    require_attach=a.require_attach and a.per_session)
     try:
         writers = server.memory.writers()
     except GateError as e:

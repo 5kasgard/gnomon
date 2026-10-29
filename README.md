@@ -91,7 +91,7 @@ python3 -m gnomon register --log ~/memory.jsonl --by john --writer claude \
 
 # Claude Code
 claude mcp add gnomon -e PYTHONPATH=$PWD/python -- \
-    python3 -m gnomon.mcp --log ~/memory.jsonl --writer claude --per-session
+    python3 -m gnomon.mcp --log ~/memory.jsonl --writer claude --per-session --require-attach
 ```
 
 **Auto mode (Claude Code).** Every conversation is recorded and every
@@ -106,14 +106,14 @@ resuming, including the end of the last conversation, fitted to a token
 budget so it never crowds out the work. After every reply, the new turns
 are saved exactly, attributed to that session and to you.
 
-In auto mode a session holds only the compartment it is recorded in (`--compartment`, default the template's first), and an unattached per-session MCP server refuses use for a template the hook runs.
+In auto mode a session holds only the compartment it is recorded in (`--compartment`, default the template's first), and the MCP server started with `--per-session --require-attach` (as in the configurations here) refuses every tool but `attach` until the session has attached with its token. Without `--require-attach` a per-session server starts its own instance on first use, which holds all the template's compartments: do not use it that way in auto mode. A resumed session whose instance holds more than its compartment gets a fresh, narrower one.
 
 For hosts configured with JSON (e.g. Claude Desktop):
 
 ```json
 {"mcpServers": {"gnomon": {
   "command": "python3",
-  "args": ["-m", "gnomon.mcp", "--log", "/home/john/memory.jsonl", "--writer", "claude", "--per-session"],
+  "args": ["-m", "gnomon.mcp", "--log", "/home/john/memory.jsonl", "--writer", "claude", "--per-session", "--require-attach"],
   "env": {"PYTHONPATH": "/path/to/gnomon/python"}}}}
 ```
 
