@@ -170,7 +170,18 @@ pub unsafe extern "C" fn gn_append(path: *const c_char, draft: *const c_char) ->
                 body,
             },
         ) {
-            Ok(env) => ok(vec![("event", env)]),
+            Ok(env) => {
+                // Issue #48: the global position is a count of everyone's
+                // events, so only an owner is told it. Internal code keeps it.
+                let owner = store::with_ledger(Path::new(path), |l| {
+                    l.state
+                        .writers
+                        .get(env.get("writer").and_then(|w| w.as_str()).unwrap_or(""))
+                        .map_or(false, |w| w.capabilities.iter().any(|c| c == "owner"))
+                })
+                .unwrap_or(false);
+                ok(vec![("event", if owner { env } else { env.without("seq") })])
+            }
             Err(e) => store_fail(e),
         }
     })

@@ -226,6 +226,9 @@ pub struct LeaseInfo {
     pub by: String,
     pub record_time: String,
     pub ended: Option<String>,
+    /// Protocol version 7 (issue #48): the target's compartments the granter
+    /// was in when it granted the lease. None before version 7.
+    pub scope: Option<Vec<String>>,
 }
 
 /// A position in an organisation (the latest definition of its title).
@@ -400,7 +403,11 @@ impl Ledger {
         // too (issue #54): a holder cannot date its write back to before
         // expiry to slip in after it.
         if let Some(id) = draft.body.get("lease").and_then(|v| v.as_str()) {
-            if let Some(l) = self.state.leases.get(id) {
+            let seen = |l: &LeaseInfo| {
+                self.state.schema_version < 7
+                    || self.state.writers.get(&draft.writer).map_or(false, |w| lease_seen(w, l))
+            };
+            if let Some(l) = self.state.leases.get(id).filter(|l| seen(l)) {
                 if l.expires.as_str() <= timestamp_after_now(0).as_str() {
                     return Err(err("E_LEASE", format!("lease '{id}' has expired by the gate's clock")));
                 }
@@ -712,10 +719,27 @@ fn frame_gate(st: &State, writer: &str, w: &WriterInfo, frame: Option<&str>) -> 
 }
 
 /// The live lease on `frame` at `at`, if any: not released, not yet expired.
-fn live_lease<'a>(st: &'a State, frame: &str, at: &str) -> Option<(&'a String, &'a LeaseInfo)> {
-    st.leases
-        .iter()
-        .find(|(_, l)| l.frame == frame && l.ended.is_none() && l.expires.as_str() > at)
+/// From version 7 a lease binds only the compartments in its scope: `applies`
+/// says whether this one matters to the caller (leases without a scope always do).
+fn live_lease<'a>(
+    st: &'a State,
+    frame: &str,
+    at: &str,
+    applies: impl Fn(&[String]) -> bool,
+) -> Option<(&'a String, &'a LeaseInfo)> {
+    st.leases.iter().find(|(_, l)| {
+        l.frame == frame
+            && l.ended.is_none()
+            && l.expires.as_str() > at
+            && l.scope.as_deref().map_or(true, &applies)
+    })
+}
+
+/// Whether `w` may know of lease `l` (version 7: it shares a compartment of
+/// the lease's scope, or is an owner). Otherwise the lease does not exist for it.
+fn lease_seen(w: &WriterInfo, l: &LeaseInfo) -> bool {
+    w.capabilities.iter().any(|c| c == "owner")
+        || l.scope.as_ref().map_or(true, |sc| sc.iter().any(|c| w.in_compartment(c)))
 }
 
 /// Whether `writer` is `holder` or an instance started from it, at any depth.
@@ -739,6 +763,7 @@ fn lease_gate(
     writer: &str,
     w: &WriterInfo,
     frame: Option<&str>,
+    compartment: &str,
     body: &Value,
     record_time: &str,
 ) -> GateResult<()> {
@@ -755,7 +780,11 @@ fn lease_gate(
         None => None,
     };
     if let Some(id) = named {
-        let l = st.leases.get(id).ok_or_else(|| not_found("lease", id))?;
+        let l = st
+            .leases
+            .get(id)
+            .filter(|l| lease_seen(w, l))
+            .ok_or_else(|| not_found("lease", id))?;
         if Some(l.frame.as_str()) != frame {
             return Err(err("E_LEASE", format!("lease '{id}' is for frame '{}'", l.frame)));
         }
@@ -767,7 +796,7 @@ fn lease_gate(
         }
     }
     let Some(f) = frame else { return Ok(()) };
-    if let Some((id, l)) = live_lease(st, f, record_time) {
+    if let Some((id, l)) = live_lease(st, f, record_time, |sc| sc.iter().any(|c| c == compartment)) {
         if w.capabilities.iter().any(|c| c == "owner") {
             return Ok(());
         }
@@ -1365,6 +1394,21 @@ fn check(
                     return Err(err("E_SPAWN", "an instance gets a subset of its parent's capabilities, never owner, govern or spawn"));
                 }
             }
+            // Version 7 (issue #48): a spawner's namespace `<id>-` is its own,
+            // so `E_DUPLICATE` never reports another compartment's writer.
+            if by_owner && st.schema_version >= 7 {
+                let spawns = r.capabilities.iter().any(|c| *c == "spawn");
+                let inside = st.writers.iter().any(|(id, x)| {
+                    (x.capabilities.iter().any(|c| c == "spawn") && r.writer.starts_with(&format!("{id}-")))
+                        || (spawns && id.starts_with(&format!("{}-", r.writer)))
+                });
+                if inside {
+                    return Err(err(
+                        "E_DUPLICATE",
+                        format!("id '{}' lies in a spawner's namespace ('<id>-')", r.writer),
+                    ));
+                }
+            }
             if st.writers.contains_key(r.writer) {
                 return Err(err(
                     "E_DUPLICATE",
@@ -1390,10 +1434,18 @@ fn check(
             // between names, or two sessions' words merged under one.
             // (Checked within the party: a session id is the party's.)
             if let Some(sess) = r.session {
+                // Version 7: only writers sharing a compartment can clash.
+                let shares = |x: &WriterInfo| {
+                    st.schema_version < 7
+                        || r.capabilities.iter().any(|c| *c == "owner")
+                        || x.capabilities.iter().any(|c| c == "owner")
+                        || r.compartments.iter().any(|c| x.in_compartment(c))
+                };
                 if st.writers.values().any(|x| {
                     x.party == r.party
                         && x.session.as_deref() == Some(sess)
                         && x.surface.as_deref() == r.surface
+                        && shares(x)
                 }) {
                     return Err(err(
                         "E_IDENTITY",
@@ -1484,7 +1536,7 @@ fn check(
             let c = schema::claim(body)?;
             need_compartment(w, c.compartment)?;
             frame_gate(st, writer, w, body.get("frame").and_then(|v| v.as_str()))?;
-            lease_gate(st, writer, w, body.get("frame").and_then(|v| v.as_str()), body, record_time)?;
+            lease_gate(st, writer, w, body.get("frame").and_then(|v| v.as_str()), c.compartment, body, record_time)?;
             if st.schema_version >= 2 {
                 if let Some(fr) = body.get("frame").and_then(|v| v.as_str()) {
                     schema::one_line(fr, "claim: 'frame'")?;
@@ -2145,7 +2197,7 @@ fn check(
             let c = schema::handoff(body)?;
             need_compartment(w, c.compartment)?;
             frame_gate(st, writer, w, Some(c.frame))?;
-            lease_gate(st, writer, w, Some(c.frame), body, record_time)?;
+            lease_gate(st, writer, w, Some(c.frame), c.compartment, body, record_time)?;
             // What it rests on is in its own compartment; missing and
             // elsewhere are refused alike.
             for id in &c.refs {
@@ -2335,10 +2387,18 @@ fn check(
             }
             need(w, "schedule")?;
             let l = schema::lease(body)?;
-            let target = st
-                .writers
-                .get(l.writer)
-                .ok_or_else(|| err("E_UNKNOWN_WRITER", format!("writer '{}' is not registered", l.writer)))?;
+            let unknown = || err("E_UNKNOWN_WRITER", format!("writer '{}' is not registered", l.writer));
+            let target = st.writers.get(l.writer).ok_or_else(unknown)?;
+            // Version 7: the lease covers the target's compartments the granter
+            // is in. With none, the target does not exist for the granter, and
+            // this is checked before anything that could reveal it.
+            let scope: Option<Vec<String>> = (st.schema_version >= 7).then(|| {
+                let all = w.capabilities.iter().any(|c| c == "owner");
+                target.compartments.iter().filter(|c| all || w.in_compartment(c)).cloned().collect()
+            });
+            if scope.as_ref().map_or(false, |sc| sc.is_empty()) {
+                return Err(unknown());
+            }
             if acts_for(st, writer, l.writer) {
                 return Err(err("E_LEASE", "a writer never leases to itself"));
             }
@@ -2348,7 +2408,8 @@ fn check(
             if l.expires <= record_time {
                 return Err(err("E_LEASE", "a lease must expire after it is granted"));
             }
-            if let Some((id, held)) = live_lease(st, l.frame, record_time) {
+            let clash = |sc: &[String]| scope.as_ref().map_or(true, |mine| mine.iter().any(|c| sc.contains(c)));
+            if let Some((id, held)) = live_lease(st, l.frame, record_time, clash) {
                 return Err(err(
                     "E_LEASED",
                     format!("frame '{}' is already leased ('{id}', to '{}' until {})", l.frame, held.writer, held.expires),
@@ -2363,6 +2424,7 @@ fn check(
                     by: writer.to_string(),
                     record_time: record_time.to_string(),
                     ended: None,
+                    scope,
                 },
             })
         }
@@ -2372,7 +2434,11 @@ fn check(
                 return Err(err("E_SCHEMA_VERSION", "release needs protocol version 6"));
             }
             let id = schema::release(body)?;
-            let l = st.leases.get(id).ok_or_else(|| not_found("lease", id))?;
+            let l = st
+                .leases
+                .get(id)
+                .filter(|l| st.schema_version < 7 || lease_seen(w, l))
+                .ok_or_else(|| not_found("lease", id))?;
             let owner = w.capabilities.iter().any(|c| c == "owner");
             if !(owner || l.by == writer || acts_for(st, writer, &l.writer)) {
                 return Err(err("E_CAPABILITY", "a lease is released by its holder, whoever granted it, or the owner"));
@@ -3050,6 +3116,10 @@ impl State {
                     ("instance_of", &w.instance_of),
                 ] {
                     if let Some(v) = v {
+                        // Issue #48: an operator the reader cannot see is left out.
+                        if k == "operator" && !self.sees_writer(v, compartments) {
+                            continue;
+                        }
                         fields.push((k, Value::str(v.clone())));
                     }
                 }
@@ -3072,6 +3142,15 @@ impl State {
             ("positions", Value::Object(positions)),
             ("appointments", Value::Object(appointments)),
         ])
+    }
+
+    /// Whether writer `id` is in a compartment the reader sees (None: all).
+    pub fn sees_writer(&self, id: &str, compartments: Option<&[String]>) -> bool {
+        match (compartments, self.writers.get(id)) {
+            (None, _) => true,
+            (Some(cs), Some(w)) => w.compartments.iter().any(|c| cs.contains(c)),
+            _ => false,
+        }
     }
 
     /// Is the claim in an open contest or appeal?

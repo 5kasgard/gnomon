@@ -533,6 +533,10 @@ impl<'a> Builder<'a> {
                 ("session", &w.session),
             ] {
                 if let Some(v) = v {
+                    // Issue #48: an operator the reader cannot see is not named.
+                    if k == "operator" && !st.sees_writer(v, Some(self.visible)) {
+                        continue;
+                    }
                     self.add(eng, "identity", vec![s(wid), s(k), s(v)], src)?;
                 }
             }
@@ -541,6 +545,9 @@ impl<'a> Builder<'a> {
             let mut line = vec![src];
             let mut cur = w;
             while let Some(p) = cur.instance_of.as_deref() {
+                if !st.sees_writer(p, Some(self.visible)) {
+                    break; // never cite a registration the reader cannot see
+                }
                 let pseq = registered[p];
                 line.push(self.src_seq(pseq));
                 if line.len() == 2 {
@@ -661,7 +668,32 @@ pub fn event_visible(ledger: &Ledger, visible: &[String], e: &Value) -> bool {
             .get(field("writer"))
             .map(|w| w.compartments.iter().any(|c| sees(c)))
             .unwrap_or(false),
-        _ => true,
+        // Version 7 leases carry their scope; older ones follow their target.
+        "lease" => st
+            .leases
+            .get(id)
+            .map(|l| match &l.scope {
+                Some(sc) => sc.iter().any(|c| sees(c)),
+                None => st.sees_writer(&l.writer, Some(visible)),
+            })
+            .unwrap_or(false),
+        "release" => st
+            .leases
+            .get(field("lease"))
+            .map(|l| match &l.scope {
+                Some(sc) => sc.iter().any(|c| sees(c)),
+                None => st.sees_writer(&l.writer, Some(visible)),
+            })
+            .unwrap_or(false),
+        // Revoking A from a writer also in B changes nothing in B's view.
+        "revoke" => body
+            .and_then(|b| b.get("compartments"))
+            .and_then(|v| v.as_array())
+            .map(|cs| cs.iter().any(|c| c.as_str().map_or(false, |c| sees(c))))
+            .unwrap_or(false),
+        "schema_change" => true,
+        // A kind that is not listed here is owner-only until it decides.
+        _ => false,
     }
 }
 

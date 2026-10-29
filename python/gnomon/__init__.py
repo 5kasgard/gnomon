@@ -7,7 +7,7 @@ nothing written here can bypass the write gate.
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
@@ -111,14 +111,39 @@ def claim(
 class Memory:
     """A log file and everything derived from it."""
 
-    def __init__(self, path: str | Path):
+    def __init__(self, path: str | Path, skew: int = 300):
         self.path = str(path)
+        self.skew = skew  # seconds a non-owner's event may be dated ahead of the host clock
+
+    def _head_time(self) -> Optional[str]:
+        """record_time of the last event in the log (read from its tail)."""
+        try:
+            with open(self.path, "rb") as f:
+                f.seek(0, 2)
+                size = f.tell()
+                f.seek(max(0, size - 65536))
+                lines = f.read().splitlines()
+            return json.loads(lines[-1])["record_time"] if lines else None
+        except (OSError, ValueError, KeyError):
+            return None
 
     # -- writing ------------------------------------------------------
     def append(self, writer: str, kind: str, body: dict, record_time: Optional[str] = None) -> dict:
+        # Issue #48 (binding, not protocol): the clock is global, so a
+        # non-owner cannot move it more than `skew` ahead of the host's, and
+        # an omitted time is the host's, or the head's if that is later. (At the
+        # default 300 s the core's E_FUTURE already refuses the same, for everyone.)
+        t = now()
+        if record_time is None:
+            head = self._head_time()
+            record_time = max(t, head) if head else t
+        elif self.skew < 300 and record_time > (datetime.now(timezone.utc) + timedelta(seconds=self.skew)).strftime("%Y-%m-%dT%H:%M:%SZ"):
+            info = self.writers().get(writer)
+            if info is not None and "owner" not in info["capabilities"]:
+                raise GateError("E_CLOCK_AHEAD", f"record_time is more than {self.skew} seconds ahead of the host's clock")
         draft = {
             "writer": writer,
-            "record_time": record_time or now(),
+            "record_time": record_time,
             "kind": kind,
             "body": body,
         }
@@ -591,7 +616,7 @@ class Memory:
 
 
 #: The protocol version new memories start at (see the spec, section 2a).
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 
 def _cut(text: str, n: int) -> str:

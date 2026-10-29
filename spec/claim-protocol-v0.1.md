@@ -448,6 +448,55 @@ free again: if a scheduler crashes, its leases still expire. The `lease`
 field is left out of a claim's id, so the same statement under two leases is
 one claim. Budgets are the engine's business, not the gate's.
 
+## 5a. Cross-compartment channels (protocol version 7, issue #48)
+
+Reader R *sees* writer X if they share a compartment (owners are in every
+compartment). Rules marked *view* change only what reads return and apply to
+every version; rules marked v7 are gate rules for logs at version 7 or later
+(new logs start at 7; older logs replay unchanged).
+
+- **Operator (view).** A restricted view or query shows a writer's `operator`
+  (`state`, `writers`, `identity(W, "operator", O)`) only if the operator is in
+  a compartment the reader sees; otherwise the field is omitted, not nulled.
+  Group lines in proofs stop at a registration the reader cannot see. The
+  gate errors on `operator` are reachable only by owners.
+- **Session ids (v7).** The duplicate-session check considers only writers
+  with the same party, session and surface whose compartments intersect the
+  new writer's (an owner, or a new owner, always intersects).
+- **Writer ids (v7).** A spawner's namespace `<id>-` is exclusive: an owner
+  registration of `W` is refused (`E_DUPLICATE`) if `W` starts with `S-` for an
+  existing writer `S` holding `spawn`, or if `W` is given `spawn` and an
+  existing id starts with `W-` or `W` starts with `S-` for any existing `S`.
+  So `E_DUPLICATE` under `<parent>-` only reports the parent's own writers.
+- **Counts.** Restricted views and queries show no global `seq` (events,
+  `through`, proofs cite event ids). A write return to a non-owner carries
+  `event_id` but not `seq` (stripped at the binding; the log keeps it).
+- **Leases (v7).** A lease's `scope` is the target's compartments the granter
+  is in (all of them for an owner), stored at apply time. An empty scope is
+  refused as an unregistered writer (`E_UNKNOWN_WRITER`), before any other
+  check. A new lease conflicts (`E_LEASED`) only with a live lease on the
+  frame whose scope intersects; a live lease restricts only writes in its
+  scope's compartments; releasing or naming a lease whose scope the requester
+  shares nothing with answers `not_found`, as for a missing lease.
+- **`through` (view).** `lease` events are visible if the reader sees a
+  compartment of the scope (pre-v7: the target); `release` follows its lease;
+  `revoke` if the reader sees a revoked compartment; `schema_change` to all;
+  any other kind only to owners until it is listed.
+- **Clock (binding).** A non-owner event dated more than `skew` (default 300 s)
+  ahead of the host clock is refused (`E_CLOCK_AHEAD`); an omitted time is
+  `max(now, head)`. No effect on replay.
+
+Limits, stated: (1) pre-v7 logs may hold overlapping writer namespaces and
+cross-compartment session clashes. (2) `writer_seq` gaps: a writer in A and B
+numbers all its events in one sequence, so a B reader sees gaps for its A
+events; such a bridge can say anything it knows into B anyway, and closing it
+needs per-compartment ids. (3) Adjacency: if hashes of visible events reach a
+restricted reader it could learn that "some hidden event came between"; views
+show `hash` only in `through`, never `prev`. (4) The clock is global and
+monotonic (per-compartment clocks would break `as_of` and the time-dependent
+checks), so an A writer can push it up to `skew` ahead and a B writer using
+real time may be refused during that window.
+
 ## 6. Hidden channels
 
 Refused in every structured field: every Unicode format character

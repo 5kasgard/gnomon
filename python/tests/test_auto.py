@@ -314,11 +314,11 @@ class ReviewAuto(Auto):
         self.assertEqual(contents, ["User: Real question?"])
 
     def test_8_instances_are_only_their_parents(self):
-        self.m.register("john", "claude-x", party="anthropic", kind="model", model="claude-opus-5-5",
+        self.m.register("john", "claudex", party="anthropic", kind="model", model="claude-opus-5-5",
                         operator="john", name="Claude", capabilities=["write", "spawn"], compartments=["lab"],
                         record_time=t(3))
         from gnomon.session import instance_for
-        other = instance_for(self.m, "claude-x", "s-1")
+        other = instance_for(self.m, "claudex", "s-1")
         mine = instance_for(self.m, "claude", "s-1")
         self.assertNotEqual(other, mine)
         self.assertEqual(self.writers()[mine]["instance_of"], "claude")
