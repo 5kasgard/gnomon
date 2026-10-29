@@ -1,0 +1,1076 @@
+{
+ "arms": {
+  "0": {
+   "branch": "auto-one-compartment",
+   "commit": "a00f301",
+   "channels": {
+    "1": {
+     "name": "MCP recall of X content",
+     "leak": true,
+     "canary_given_to_model": true,
+     "canary_via": "tool:recall",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "2": {
+     "name": "start context: resume packet of a frame in X",
+     "leak": true,
+     "canary_given_to_model": true,
+     "canary_via": "start_context",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "3": {
+     "name": "start context: the person's situation recorded in X",
+     "leak": true,
+     "canary_given_to_model": true,
+     "canary_via": "start_context",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "4": {
+     "name": "per-message context drawn from X",
+     "leak": true,
+     "canary_given_to_model": true,
+     "canary_via": "per_message_context",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "5": {
+     "name": "restated after compaction",
+     "leak": true,
+     "canary_given_to_model": true,
+     "canary_via": "tool:recall",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 3,
+     "instance": "t-1"
+    },
+    "6": {
+     "name": "sub-agent quotes X content",
+     "leak": true,
+     "canary_given_to_model": true,
+     "canary_via": "subagent_result",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 3,
+     "instance": "t-1"
+    },
+    "7": {
+     "name": "MCP used without attach",
+     "leak": true,
+     "canary_given_to_model": true,
+     "canary_via": "tool:recall",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "8": {
+     "name": "write-back through handoff",
+     "leak": true,
+     "canary_given_to_model": true,
+     "canary_via": "tool:recall",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    }
+   },
+   "widening_scenario": {
+    "widening": false,
+    "rx_sees_y_canary": false,
+    "ry_sees_x_canary": true,
+    "hook_stderr": []
+   },
+   "widening": false,
+   "use": {
+    "u1": true,
+    "context_given": true,
+    "attached": true,
+    "user_turn_recorded": true,
+    "model_turn_recorded": true,
+    "u1_hook_stderr": [],
+    "u2": 1.0,
+    "u2_turns": "6/6",
+    "u2_pure": 1.0,
+    "u2_pure_turns": "6/6",
+    "u3": true,
+    "u2_hook_stderr": [],
+    "u4": true,
+    "read_x": true,
+    "write_y_refused": false
+   },
+   "leaks": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8"
+   ],
+   "size": {
+    "base": "auto-one-compartment",
+    "head": "HEAD",
+    "added": 0,
+    "deleted": 0,
+    "changed": 0,
+    "net": 0,
+    "files": {}
+   },
+   "tests": {
+    "ran": 290,
+    "failures": 0,
+    "errors": 0,
+    "passed": 290,
+    "ok": true,
+    "failed": []
+   },
+   "arm": "0"
+  },
+  "A": {
+   "branch": "arm-A",
+   "commit": "2815408",
+   "channels": {
+    "1": {
+     "name": "MCP recall of X content",
+     "leak": false,
+     "canary_given_to_model": true,
+     "canary_via": "tool:recall",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [
+      "SessionStart: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment.",
+      "Stop: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment.",
+      "SessionEnd: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment."
+     ],
+     "error": null,
+     "episodes_in_y": 1,
+     "instance": ""
+    },
+    "2": {
+     "name": "start context: resume packet of a frame in X",
+     "leak": false,
+     "canary_given_to_model": false,
+     "canary_via": null,
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [
+      "SessionStart: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment.",
+      "Stop: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment.",
+      "SessionEnd: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment."
+     ],
+     "error": null,
+     "episodes_in_y": 1,
+     "instance": ""
+    },
+    "3": {
+     "name": "start context: the person's situation recorded in X",
+     "leak": false,
+     "canary_given_to_model": false,
+     "canary_via": null,
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [
+      "SessionStart: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment.",
+      "Stop: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment.",
+      "SessionEnd: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment."
+     ],
+     "error": null,
+     "episodes_in_y": 1,
+     "instance": ""
+    },
+    "4": {
+     "name": "per-message context drawn from X",
+     "leak": false,
+     "canary_given_to_model": false,
+     "canary_via": null,
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [
+      "SessionStart: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment.",
+      "UserPromptSubmit: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment.",
+      "Stop: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment."
+     ],
+     "error": null,
+     "episodes_in_y": 1,
+     "instance": ""
+    },
+    "5": {
+     "name": "restated after compaction",
+     "leak": false,
+     "canary_given_to_model": true,
+     "canary_via": "tool:recall",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [
+      "SessionStart: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment.",
+      "Stop: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment.",
+      "PreCompact: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment."
+     ],
+     "error": null,
+     "episodes_in_y": 1,
+     "instance": ""
+    },
+    "6": {
+     "name": "sub-agent quotes X content",
+     "leak": false,
+     "canary_given_to_model": true,
+     "canary_via": "subagent_result",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [
+      "SessionStart: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment.",
+      "SubagentStop: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment.",
+      "Stop: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment."
+     ],
+     "error": null,
+     "episodes_in_y": 1,
+     "instance": ""
+    },
+    "7": {
+     "name": "MCP used without attach",
+     "leak": false,
+     "canary_given_to_model": true,
+     "canary_via": "tool:recall",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [
+      "SessionStart: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment.",
+      "Stop: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment.",
+      "SessionEnd: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment."
+     ],
+     "error": null,
+     "episodes_in_y": 1,
+     "instance": ""
+    },
+    "8": {
+     "name": "write-back through handoff",
+     "leak": true,
+     "canary_given_to_model": true,
+     "canary_via": "tool:recall",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [
+      "SessionStart: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment.",
+      "Stop: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment.",
+      "SessionEnd: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment."
+     ],
+     "error": null,
+     "episodes_in_y": 1,
+     "instance": ""
+    }
+   },
+   "widening_scenario": {
+    "widening": false,
+    "rx_sees_y_canary": false,
+    "ry_sees_x_canary": false,
+    "hook_stderr": [
+     "SessionStart: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment.",
+     "Stop: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment.",
+     "SessionEnd: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment."
+    ]
+   },
+   "widening": false,
+   "use": {
+    "u1": true,
+    "context_given": true,
+    "attached": true,
+    "user_turn_recorded": true,
+    "model_turn_recorded": true,
+    "u1_hook_stderr": [],
+    "u2": 0.0,
+    "u2_turns": "0/6",
+    "u2_pure": 0.0,
+    "u2_pure_turns": "0/6",
+    "u3": true,
+    "u2_hook_stderr": [
+     "SessionStart: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment.",
+     "Stop: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment.",
+     "Stop: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment."
+    ],
+    "u4": true,
+    "read_x": true,
+    "write_y_refused": false
+   },
+   "leaks": [
+    "8"
+   ],
+   "size": {
+    "base": "auto-one-compartment",
+    "head": "HEAD",
+    "added": 8,
+    "deleted": 0,
+    "changed": 8,
+    "net": 8,
+    "files": {
+     "python/gnomon/hook.py": [
+      8,
+      0
+     ]
+    }
+   },
+   "tests": {
+    "ran": 290,
+    "failures": 0,
+    "errors": 0,
+    "passed": 290,
+    "ok": true,
+    "failed": []
+   },
+   "arm": "A"
+  },
+  "B": {
+   "branch": "arm-B",
+   "commit": "90f9c35",
+   "channels": {
+    "1": {
+     "name": "MCP recall of X content",
+     "leak": false,
+     "canary_given_to_model": true,
+     "canary_via": "tool:recall",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "2": {
+     "name": "start context: resume packet of a frame in X",
+     "leak": false,
+     "canary_given_to_model": true,
+     "canary_via": "start_context",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "3": {
+     "name": "start context: the person's situation recorded in X",
+     "leak": false,
+     "canary_given_to_model": true,
+     "canary_via": "start_context",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "4": {
+     "name": "per-message context drawn from X",
+     "leak": false,
+     "canary_given_to_model": true,
+     "canary_via": "per_message_context",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "5": {
+     "name": "restated after compaction",
+     "leak": false,
+     "canary_given_to_model": true,
+     "canary_via": "tool:recall",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 3,
+     "instance": "t-1"
+    },
+    "6": {
+     "name": "sub-agent quotes X content",
+     "leak": false,
+     "canary_given_to_model": true,
+     "canary_via": "subagent_result",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 3,
+     "instance": "t-1"
+    },
+    "7": {
+     "name": "MCP used without attach",
+     "leak": false,
+     "canary_given_to_model": true,
+     "canary_via": "tool:recall",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "8": {
+     "name": "write-back through handoff",
+     "leak": true,
+     "canary_given_to_model": true,
+     "canary_via": "tool:recall",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    }
+   },
+   "widening_scenario": {
+    "widening": false,
+    "rx_sees_y_canary": false,
+    "ry_sees_x_canary": false,
+    "hook_stderr": []
+   },
+   "widening": false,
+   "use": {
+    "u1": true,
+    "context_given": true,
+    "attached": true,
+    "user_turn_recorded": true,
+    "model_turn_recorded": true,
+    "u1_hook_stderr": [],
+    "u2": 0.667,
+    "u2_turns": "4/6",
+    "u2_pure": 1.0,
+    "u2_pure_turns": "6/6",
+    "u3": true,
+    "u2_hook_stderr": [],
+    "u4": true,
+    "read_x": true,
+    "write_y_refused": false
+   },
+   "leaks": [
+    "8"
+   ],
+   "size": {
+    "base": "auto-one-compartment",
+    "head": "HEAD",
+    "added": 144,
+    "deleted": 0,
+    "changed": 144,
+    "net": 144,
+    "files": {
+     "python/gnomon/hook.py": [
+      144,
+      0
+     ]
+    }
+   },
+   "tests": {
+    "ran": 290,
+    "failures": 0,
+    "errors": 0,
+    "passed": 290,
+    "ok": true,
+    "failed": []
+   },
+   "arm": "B"
+  },
+  "C": {
+   "branch": "arm-C",
+   "commit": "e236298",
+   "channels": {
+    "1": {
+     "name": "MCP recall of X content",
+     "leak": true,
+     "canary_given_to_model": true,
+     "canary_via": "tool:recall",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "2": {
+     "name": "start context: resume packet of a frame in X",
+     "leak": true,
+     "canary_given_to_model": true,
+     "canary_via": "start_context",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "3": {
+     "name": "start context: the person's situation recorded in X",
+     "leak": true,
+     "canary_given_to_model": true,
+     "canary_via": "start_context",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "4": {
+     "name": "per-message context drawn from X",
+     "leak": true,
+     "canary_given_to_model": true,
+     "canary_via": "per_message_context",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "5": {
+     "name": "restated after compaction",
+     "leak": true,
+     "canary_given_to_model": true,
+     "canary_via": "tool:recall",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 3,
+     "instance": "t-1"
+    },
+    "6": {
+     "name": "sub-agent quotes X content",
+     "leak": true,
+     "canary_given_to_model": true,
+     "canary_via": "subagent_result",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 3,
+     "instance": "t-1"
+    },
+    "7": {
+     "name": "MCP used without attach",
+     "leak": true,
+     "canary_given_to_model": true,
+     "canary_via": "tool:recall",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "8": {
+     "name": "write-back through handoff",
+     "leak": true,
+     "canary_given_to_model": true,
+     "canary_via": "tool:recall",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    }
+   },
+   "widening_scenario": {
+    "widening": true,
+    "rx_sees_y_canary": true,
+    "ry_sees_x_canary": true,
+    "hook_stderr": []
+   },
+   "widening": true,
+   "use": {
+    "u1": true,
+    "context_given": true,
+    "attached": true,
+    "user_turn_recorded": true,
+    "model_turn_recorded": true,
+    "u1_hook_stderr": [],
+    "u2": 1.0,
+    "u2_turns": "6/6",
+    "u2_pure": 1.0,
+    "u2_pure_turns": "6/6",
+    "u3": true,
+    "u2_hook_stderr": [],
+    "u4": true,
+    "read_x": true,
+    "write_y_refused": false
+   },
+   "leaks": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5",
+    "6",
+    "7",
+    "8"
+   ],
+   "size": {
+    "base": "auto-one-compartment",
+    "head": "HEAD",
+    "added": 168,
+    "deleted": 16,
+    "changed": 184,
+    "net": 152,
+    "files": {
+     "python/gnomon/hook.py": [
+      168,
+      16
+     ]
+    }
+   },
+   "tests": {
+    "ran": 290,
+    "failures": 0,
+    "errors": 0,
+    "passed": 290,
+    "ok": true,
+    "failed": []
+   },
+   "arm": "C"
+  },
+  "C2": {
+   "branch": "arm-C2",
+   "commit": "977c67d",
+   "channels": {
+    "1": {
+     "name": "MCP recall of X content",
+     "leak": false,
+     "canary_given_to_model": true,
+     "canary_via": "tool:recall",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 1,
+     "instance": "t-1"
+    },
+    "2": {
+     "name": "start context: resume packet of a frame in X",
+     "leak": false,
+     "canary_given_to_model": true,
+     "canary_via": "start_context",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 1,
+     "instance": "t-1"
+    },
+    "3": {
+     "name": "start context: the person's situation recorded in X",
+     "leak": false,
+     "canary_given_to_model": true,
+     "canary_via": "start_context",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 1,
+     "instance": "t-1"
+    },
+    "4": {
+     "name": "per-message context drawn from X",
+     "leak": false,
+     "canary_given_to_model": true,
+     "canary_via": "per_message_context",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 1,
+     "instance": "t-1"
+    },
+    "5": {
+     "name": "restated after compaction",
+     "leak": false,
+     "canary_given_to_model": true,
+     "canary_via": "tool:recall",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 1,
+     "instance": "t-1"
+    },
+    "6": {
+     "name": "sub-agent quotes X content",
+     "leak": false,
+     "canary_given_to_model": true,
+     "canary_via": "subagent_result",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "7": {
+     "name": "MCP used without attach",
+     "leak": false,
+     "canary_given_to_model": true,
+     "canary_via": "tool:recall",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 1,
+     "instance": "t-1"
+    },
+    "8": {
+     "name": "write-back through handoff",
+     "leak": true,
+     "canary_given_to_model": true,
+     "canary_via": "tool:recall",
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 1,
+     "instance": "t-1"
+    }
+   },
+   "widening_scenario": {
+    "widening": true,
+    "rx_sees_y_canary": true,
+    "ry_sees_x_canary": false,
+    "hook_stderr": []
+   },
+   "widening": true,
+   "use": {
+    "u1": true,
+    "context_given": true,
+    "attached": true,
+    "user_turn_recorded": true,
+    "model_turn_recorded": true,
+    "u1_hook_stderr": [],
+    "u2": 0.333,
+    "u2_turns": "2/6",
+    "u2_pure": 1.0,
+    "u2_pure_turns": "6/6",
+    "u3": true,
+    "u2_hook_stderr": [],
+    "u4": true,
+    "read_x": true,
+    "write_y_refused": false
+   },
+   "leaks": [
+    "8"
+   ],
+   "size": {
+    "base": "auto-one-compartment",
+    "head": "HEAD",
+    "added": 168,
+    "deleted": 16,
+    "changed": 184,
+    "net": 152,
+    "files": {
+     "python/gnomon/hook.py": [
+      168,
+      16
+     ]
+    }
+   },
+   "tests": {
+    "ran": 290,
+    "failures": 0,
+    "errors": 0,
+    "passed": 290,
+    "ok": true,
+    "failed": []
+   },
+   "arm": "C2"
+  },
+  "D": {
+   "branch": "arm-D",
+   "commit": "58c9256",
+   "channels": {
+    "1": {
+     "name": "MCP recall of X content",
+     "leak": false,
+     "canary_given_to_model": false,
+     "canary_via": null,
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "2": {
+     "name": "start context: resume packet of a frame in X",
+     "leak": false,
+     "canary_given_to_model": false,
+     "canary_via": null,
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "3": {
+     "name": "start context: the person's situation recorded in X",
+     "leak": false,
+     "canary_given_to_model": false,
+     "canary_via": null,
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "4": {
+     "name": "per-message context drawn from X",
+     "leak": false,
+     "canary_given_to_model": false,
+     "canary_via": null,
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "5": {
+     "name": "restated after compaction",
+     "leak": false,
+     "canary_given_to_model": false,
+     "canary_via": null,
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 3,
+     "instance": "t-1"
+    },
+    "6": {
+     "name": "sub-agent quotes X content",
+     "leak": false,
+     "canary_given_to_model": false,
+     "canary_via": null,
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 3,
+     "instance": "t-1"
+    },
+    "7": {
+     "name": "MCP used without attach",
+     "leak": false,
+     "canary_given_to_model": false,
+     "canary_via": null,
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "8": {
+     "name": "write-back through handoff",
+     "leak": false,
+     "canary_given_to_model": false,
+     "canary_via": null,
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    }
+   },
+   "widening_scenario": {
+    "widening": false,
+    "rx_sees_y_canary": false,
+    "ry_sees_x_canary": false,
+    "hook_stderr": []
+   },
+   "widening": false,
+   "use": {
+    "u1": true,
+    "context_given": true,
+    "attached": true,
+    "user_turn_recorded": true,
+    "model_turn_recorded": true,
+    "u1_hook_stderr": [],
+    "u2": 1.0,
+    "u2_turns": "6/6",
+    "u2_pure": 1.0,
+    "u2_pure_turns": "6/6",
+    "u3": true,
+    "u2_hook_stderr": [],
+    "u4": true,
+    "read_x": true,
+    "write_y_refused": false
+   },
+   "leaks": [],
+   "size": {
+    "base": "auto-one-compartment",
+    "head": "HEAD",
+    "added": 21,
+    "deleted": 14,
+    "changed": 35,
+    "net": 7,
+    "files": {
+     "python/gnomon/hook.py": [
+      5,
+      2
+     ],
+     "python/gnomon/mcp.py": [
+      4,
+      8
+     ],
+     "python/gnomon/session.py": [
+      12,
+      4
+     ]
+    }
+   },
+   "tests": {
+    "ran": 290,
+    "failures": 2,
+    "errors": 5,
+    "passed": 283,
+    "ok": false,
+    "failed": [
+     "test_auto.Budget.test_over_mcp_the_structured_part_stays_small",
+     "test_continuity.Continuity.test_over_mcp_across_models",
+     "test_continuity.ReviewM8.test_no_field_can_pass_as_another_line",
+     "test_forum.Forum.test_over_mcp",
+     "test_forum.ReviewM7.test_open_questions_counts_exactly",
+     "test_identity.PerSessionServer.test_each_process_is_its_own_writer",
+     "test_identity.ReviewM6.test_whoami_names_only_what_the_writer_can_see"
+    ]
+   },
+   "arm": "D"
+  }
+ },
+ "note": "arm 0 = auto-one-compartment (main's code); C2 = extra variant, not pre-registered"
+}
