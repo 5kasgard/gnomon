@@ -45,6 +45,31 @@ strongest detection the hook can do without a change to the core.
    writer the server was configured with (the template, holding X and Y). This channel can
    defeat D, so it is listed before D is built.
 
+8. Write-back: the session reads X content and writes it into Y itself through a Gnomon write
+   tool (`handoff`, which the start context asks for, or another write tool).
+
+## Amendment 1 (2026-10-29, before any arm is built or run)
+
+From a review by a separate Claude Haiku agent (verbatim notes in the commit that adds the
+result). Changes:
+
+- Every arm runs the hook with `--compartment Y` pinned (the default, the first compartment,
+  could be X).
+- Channel 8 (write-back) added above, tested in every arm.
+- D includes what channel 7 needs: with `--per-session`, the MCP server today acts as the
+  template (X and Y) until `attach`; D refuses every tool but `attach` until then. Its lines count.
+- The hook today keeps only text blocks of a transcript, so B and C must add code that reads
+  Gnomon tool results and where they came from; that code counts in their size. If it cannot be
+  built, the arm is reported as not buildable, not dropped silently.
+- u2 is now: share of the turns of a two-compartment template's session, drawing only on Y,
+  that are recorded word for word in Y. u4 is now: the owner, outside auto mode (the CLI or an
+  MCP server run as the template), can write a sentence quoting X content into Y. Same check
+  in every arm.
+- The harness calls no model: restatements are scripted, the same script for every arm, and
+  canaries are matched exactly. So paraphrase is not tested; that weakens B and C's detection
+  in real use more than A and D, which do not detect anything. Recorded as a limit.
+- Size counts all non-test changes, including `settings()` and the MCP server.
+
 ## Measures (all exact, by script)
 
 - **Leak:** for each channel, can a reader holding only Y find the canary? (yes or no)
@@ -56,9 +81,9 @@ strongest detection the hook can do without a change to the core.
 
 ## Decision rule (fixed now)
 
-1. Keep the arms that close all seven channels with no widening.
+1. Keep the arms that close all eight channels with no widening.
 2. Among those, prefer the fewest use failures, then the fewest lines.
-3. If no arm closes all seven, report every arm and the owner decides.
+3. If no arm closes all eight, report every arm and the owner decides.
 
 Out of scope, recorded as a limit: content reaching the session by roads Gnomon does not open
 (the person pastes it, files on disk, issue #50). No arm here can see those.
