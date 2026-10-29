@@ -389,24 +389,54 @@ def record(memory: Memory, log: str, writer: str, session: str, transcript: str,
             label = writer
         operator = w.get("operator")
         turns, end = read_turns(transcript, start, with_tools, label)
+        # What the session has drawn on so far, turn by turn (its own words
+        # are the person's: only the model's turns carry what it read). Runs
+        # of turns that drew on the same compartments are filed together,
+        # in the compartment they are recorded for and in each of those.
+        drawn = _load_taint(log, session)
+        reads = _gnomon_results(transcript, start)
+        src = Sources(memory, writer, compartment) if reads else None
+        reads = [(off, src.drawn(tx)) for off, tx in reads]
+        parts, i = [], 0  # [compartments drawn on, turns]
+        for turn in turns:
+            while i < len(reads) and reads[i][0] < turn[2]:
+                drawn |= reads[i][1]
+                i += 1
+            if turn[0] == "User":
+                if parts:
+                    parts[-1][1].append(turn)
+                else:
+                    parts.append([None, [turn]])
+            elif parts and parts[-1][0] in (None, drawn):
+                parts[-1][0] = set(drawn)
+                parts[-1][1].append(turn)
+            else:
+                parts.append([set(drawn), [turn]])
+        for _, d in reads[i:]:
+            drawn |= d
+        _save_taint(log, session, drawn)
         outstanding = outstanding_tokens(log)
         episodes = []
-        for chunk, stop in _chunks(turns, start):
-            chunk = [(sp, _redact(tx, outstanding)) for sp, tx in chunk]
-            names = {sp for sp, _ in chunk}
-            bindings = {k: v for k, v in ((label, writer), ("User", operator)) if v and k in names}
-            try:
-                episodes.append(record_messages(memory, writer, chunk, compartment=compartment, medium="claude-code",
-                                                bindings=bindings, exact=True))
-            except GateError as e:
-                print(f"gnomon hook: part of the conversation was refused: {e.code}: {e.message}", file=sys.stderr)
-                try:
-                    episodes.append(record_messages(
-                        memory, writer, [(label, f"[{len(chunk)} turn(s) could not be recorded: {e.code}]")],
-                        compartment=compartment, medium="claude-code", bindings={label: writer}))
-                except GateError:
-                    pass
-            _save_mark(log, session, stop, file_id)
+        for part_drew, part in parts:
+            targets = [compartment] + sorted(part_drew - {compartment}) if part_drew else [compartment]
+            for chunk, stop in _chunks(part, start):
+                chunk = [(sp, _redact(tx, outstanding)) for sp, tx in chunk]
+                names = {sp for sp, _ in chunk}
+                bindings = {k: v for k, v in ((label, writer), ("User", operator)) if v and k in names}
+                for where in targets:
+                    try:
+                        episodes.append(record_messages(memory, writer, chunk, compartment=where,
+                                                        medium="claude-code", bindings=bindings, exact=True))
+                    except GateError as e:
+                        print(f"gnomon hook: part of the conversation was refused: {e.code}: {e.message}",
+                              file=sys.stderr)
+                        try:
+                            episodes.append(record_messages(
+                                memory, writer, [(label, f"[{len(chunk)} turn(s) could not be recorded: {e.code}]")],
+                                compartment=where, medium="claude-code", bindings={label: writer}))
+                        except GateError:
+                            pass
+                _save_mark(log, session, stop, file_id)
         _save_mark(log, session, end, file_id)
     return episodes
 
