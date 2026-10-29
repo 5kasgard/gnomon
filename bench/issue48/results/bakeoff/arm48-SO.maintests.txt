@@ -1,0 +1,53 @@
+.......................................................................................................EEE.......................................................................................................................gnomon MCP server: /tmp/tmp2bvo0_vc/memory.jsonl as claude-c1
+.....................................................................
+======================================================================
+ERROR: test_forged_identity_facts_are_caught (test_identity.ReviewM6.test_forged_identity_facts_are_caught)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/claude-0/wt/s-arm48-SO-mt/python/tests/test_identity.py", line 182, in test_forged_identity_facts_are_caught
+    self.m.register("claude", "claude-1", party="anthropic", kind="model", model=OPUS, operator="op",
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                    name="Claude", capabilities=["write"], compartments=["lab"], session="s1", record_time=t(3))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/claude-0/wt/s-arm48-SO-mt/python/gnomon/__init__.py", line 159, in register
+    return self.append(by, "register", body, record_time)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/claude-0/wt/s-arm48-SO-mt/python/gnomon/__init__.py", line 125, in append
+    return _unwrap(_native.call("gn_append", self.path, _dumps(draft)))["event"]
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/claude-0/wt/s-arm48-SO-mt/python/gnomon/__init__.py", line 42, in _unwrap
+    raise GateError(result.get("code", "E_UNKNOWN"), result.get("message", ""))
+gnomon.GateError: E_IDENTITY: operator not accepted
+
+======================================================================
+ERROR: test_instance_of_is_only_for_instances (test_identity.ReviewM6.test_instance_of_is_only_for_instances)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/claude-0/wt/s-arm48-SO-mt/python/tests/test_identity.py", line 175, in test_instance_of_is_only_for_instances
+    self.m.register("claude", "claude-1", party="anthropic", kind="model", model=OPUS, operator="op",
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                    name="Claude", capabilities=["write"], compartments=["lab"], session="s1", record_time=t(3))
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/claude-0/wt/s-arm48-SO-mt/python/gnomon/__init__.py", line 159, in register
+    return self.append(by, "register", body, record_time)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/claude-0/wt/s-arm48-SO-mt/python/gnomon/__init__.py", line 125, in append
+    return _unwrap(_native.call("gn_append", self.path, _dumps(draft)))["event"]
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/claude-0/wt/s-arm48-SO-mt/python/gnomon/__init__.py", line 42, in _unwrap
+    raise GateError(result.get("code", "E_UNKNOWN"), result.get("message", ""))
+gnomon.GateError: E_IDENTITY: operator not accepted
+
+======================================================================
+ERROR: test_whoami_names_only_what_the_writer_can_see (test_identity.ReviewM6.test_whoami_names_only_what_the_writer_can_see)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/claude-0/wt/s-arm48-SO-mt/python/tests/test_identity.py", line 197, in test_whoami_names_only_what_the_writer_can_see
+    first = out["structuredContent"]["writer"]
+            ~~~^^^^^^^^^^^^^^^^^^^^^
+KeyError: 'structuredContent'
+
+----------------------------------------------------------------------
+Ran 294 tests in 21.899s
+
+FAILED (errors=3)

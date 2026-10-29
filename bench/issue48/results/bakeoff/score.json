@@ -1,0 +1,942 @@
+[
+ {
+  "arm": "main",
+  "heldout_cross": 35,
+  "heldout_of": 35,
+  "cross": [
+   [
+    "probes_SC.py",
+    "operator_view"
+   ],
+   [
+    "probes_SC.py",
+    "operator_datalog"
+   ],
+   [
+    "probes_SC.py",
+    "session_duplicate"
+   ],
+   [
+    "probes_SC.py",
+    "session_instance_for"
+   ],
+   [
+    "probes_SC.py",
+    "writer_id_child"
+   ],
+   [
+    "probes_SC.py",
+    "writer_id_reverse"
+   ],
+   [
+    "probes_SC.py",
+    "writer_id_parent_asks"
+   ],
+   [
+    "probes_SC.py",
+    "counts"
+   ],
+   [
+    "probes_SC.py",
+    "limit_writer_seq_gap"
+   ],
+   [
+    "probes_SC.py",
+    "lease_hidden_target"
+   ],
+   [
+    "probes_SC.py",
+    "lease_frame_blocked"
+   ],
+   [
+    "probes_SC.py",
+    "lease_release_guess"
+   ],
+   [
+    "probes_SC.py",
+    "through_lease_release_revoke"
+   ],
+   [
+    "probes_SC.py",
+    "limit_clock_within_skew"
+   ],
+   [
+    "probes_SC.py",
+    "lease_advances_clock"
+   ],
+   [
+    "probes_SZ.py",
+    "operator_view"
+   ],
+   [
+    "probes_SZ.py",
+    "operator_query"
+   ],
+   [
+    "probes_SZ.py",
+    "session"
+   ],
+   [
+    "probes_SZ.py",
+    "writer_ids"
+   ],
+   [
+    "probes_SZ.py",
+    "counts_write_seq"
+   ],
+   [
+    "probes_SZ.py",
+    "counts_view_seq"
+   ],
+   [
+    "probes_SZ.py",
+    "counts_writer_seq"
+   ],
+   [
+    "probes_SZ.py",
+    "lease_unknown_writer"
+   ],
+   [
+    "probes_SZ.py",
+    "lease_leased"
+   ],
+   [
+    "probes_SZ.py",
+    "clock"
+   ],
+   [
+    "probes_SZ.py",
+    "as_of"
+   ],
+   [
+    "probes_SZ.py",
+    "name"
+   ],
+   [
+    "probes_SZ.py",
+    "lease_cross_sides"
+   ],
+   [
+    "probes_SO.py",
+    "session_collision"
+   ],
+   [
+    "probes_SO.py",
+    "duplicate_id"
+   ],
+   [
+    "probes_SO.py",
+    "parent_namespace"
+   ],
+   [
+    "probes_SO.py",
+    "global_event_count"
+   ],
+   [
+    "probes_SO.py",
+    "hidden_lease_target"
+   ],
+   [
+    "probes_SO.py",
+    "hidden_lease_holder"
+   ],
+   [
+    "probes_SO.py",
+    "global_clock"
+   ]
+  ],
+  "side": [],
+  "run_ch": [
+   "P10",
+   "P11",
+   "P12",
+   "P12r",
+   "P14",
+   "R",
+   "L",
+   "V",
+   "C"
+  ],
+  "gemini": [
+   "G1 P12r variant (gate)",
+   "G2 as_of cut short",
+   "G3a lease advances B clock",
+   "G3b own A write blocks own B write",
+   "G4 lease on an A+B writer in B's through",
+   "G4r release visibility",
+   "G5 instance_for, hidden c-1",
+   "G6 global seq in a B write return"
+  ],
+  "review": [
+   "a write return",
+   "c through",
+   "d clock"
+  ],
+  "cargo_fail": 0,
+  "py_fail": 0,
+  "main_tests": "ok",
+  "replay": true,
+  "lines": "0/0/0/0"
+ },
+ {
+  "arm": "arm48-combo3",
+  "heldout_cross": 22,
+  "heldout_of": 35,
+  "cross": [
+   [
+    "probes_SC.py",
+    "operator_datalog"
+   ],
+   [
+    "probes_SC.py",
+    "session_duplicate"
+   ],
+   [
+    "probes_SC.py",
+    "counts"
+   ],
+   [
+    "probes_SC.py",
+    "limit_writer_seq_gap"
+   ],
+   [
+    "probes_SC.py",
+    "lease_frame_blocked"
+   ],
+   [
+    "probes_SC.py",
+    "lease_release_guess"
+   ],
+   [
+    "probes_SC.py",
+    "limit_clock_within_skew"
+   ],
+   [
+    "probes_SC.py",
+    "lease_advances_clock"
+   ],
+   [
+    "probes_SZ.py",
+    "operator_view"
+   ],
+   [
+    "probes_SZ.py",
+    "operator_query"
+   ],
+   [
+    "probes_SZ.py",
+    "writer_ids"
+   ],
+   [
+    "probes_SZ.py",
+    "counts_write_seq"
+   ],
+   [
+    "probes_SZ.py",
+    "counts_view_seq"
+   ],
+   [
+    "probes_SZ.py",
+    "counts_writer_seq"
+   ],
+   [
+    "probes_SZ.py",
+    "lease_leased"
+   ],
+   [
+    "probes_SZ.py",
+    "clock"
+   ],
+   [
+    "probes_SZ.py",
+    "as_of"
+   ],
+   [
+    "probes_SZ.py",
+    "name"
+   ],
+   [
+    "probes_SO.py",
+    "parent_namespace"
+   ],
+   [
+    "probes_SO.py",
+    "global_event_count"
+   ],
+   [
+    "probes_SO.py",
+    "hidden_lease_holder"
+   ],
+   [
+    "probes_SO.py",
+    "global_clock"
+   ]
+  ],
+  "side": [
+   [
+    "probes_SC.py",
+    "operator_view"
+   ],
+   [
+    "probes_SC.py",
+    "operator_datalog"
+   ],
+   [
+    "probes_SC.py",
+    "session_duplicate"
+   ],
+   [
+    "probes_SC.py",
+    "writer_id_child"
+   ],
+   [
+    "probes_SC.py",
+    "writer_id_reverse"
+   ],
+   [
+    "probes_SC.py",
+    "writer_id_parent_asks"
+   ],
+   [
+    "probes_SC.py",
+    "counts"
+   ],
+   [
+    "probes_SC.py",
+    "limit_writer_seq_gap"
+   ],
+   [
+    "probes_SC.py",
+    "through_lease_release_revoke"
+   ],
+   [
+    "probes_SC.py",
+    "limit_clock_within_skew"
+   ],
+   [
+    "probes_SZ.py",
+    "operator_query"
+   ],
+   [
+    "probes_SZ.py",
+    "writer_ids"
+   ],
+   [
+    "probes_SZ.py",
+    "counts_view_seq"
+   ],
+   [
+    "probes_SZ.py",
+    "as_of"
+   ],
+   [
+    "probes_SO.py",
+    "session_collision"
+   ],
+   [
+    "probes_SO.py",
+    "duplicate_id"
+   ],
+   [
+    "probes_SO.py",
+    "parent_namespace"
+   ],
+   [
+    "probes_SO.py",
+    "global_event_count"
+   ],
+   [
+    "probes_SO.py",
+    "global_clock"
+   ]
+  ],
+  "run_ch": [
+   "P14",
+   "R",
+   "L",
+   "C"
+  ],
+  "gemini": [
+   "G2 as_of cut short",
+   "G3a lease advances B clock",
+   "G3b own A write blocks own B write",
+   "G4 lease on an A+B writer in B's through",
+   "G4r release visibility",
+   "G5 instance_for, hidden c-1",
+   "G6 global seq in a B write return"
+  ],
+  "review": [
+   "a write return",
+   "d clock"
+  ],
+  "cargo_fail": 0,
+  "py_fail": 0,
+  "main_tests": "ok",
+  "replay": true,
+  "lines": "87/2/32/539"
+ },
+ {
+  "arm": "arm48-SC",
+  "heldout_cross": 19,
+  "heldout_of": 35,
+  "cross": [
+   [
+    "probes_SC.py",
+    "operator_datalog"
+   ],
+   [
+    "probes_SC.py",
+    "session_duplicate"
+   ],
+   [
+    "probes_SC.py",
+    "counts"
+   ],
+   [
+    "probes_SC.py",
+    "limit_writer_seq_gap"
+   ],
+   [
+    "probes_SC.py",
+    "limit_clock_within_skew"
+   ],
+   [
+    "probes_SC.py",
+    "lease_advances_clock"
+   ],
+   [
+    "probes_SZ.py",
+    "operator_view"
+   ],
+   [
+    "probes_SZ.py",
+    "operator_query"
+   ],
+   [
+    "probes_SZ.py",
+    "writer_ids"
+   ],
+   [
+    "probes_SZ.py",
+    "counts_view_seq"
+   ],
+   [
+    "probes_SZ.py",
+    "counts_writer_seq"
+   ],
+   [
+    "probes_SZ.py",
+    "clock"
+   ],
+   [
+    "probes_SZ.py",
+    "as_of"
+   ],
+   [
+    "probes_SZ.py",
+    "name"
+   ],
+   [
+    "probes_SO.py",
+    "session_collision"
+   ],
+   [
+    "probes_SO.py",
+    "duplicate_id"
+   ],
+   [
+    "probes_SO.py",
+    "parent_namespace"
+   ],
+   [
+    "probes_SO.py",
+    "global_event_count"
+   ],
+   [
+    "probes_SO.py",
+    "global_clock"
+   ]
+  ],
+  "side": [
+   [
+    "probes_SC.py",
+    "operator_view"
+   ],
+   [
+    "probes_SC.py",
+    "operator_datalog"
+   ],
+   [
+    "probes_SC.py",
+    "session_duplicate"
+   ],
+   [
+    "probes_SC.py",
+    "writer_id_child"
+   ],
+   [
+    "probes_SC.py",
+    "writer_id_reverse"
+   ],
+   [
+    "probes_SC.py",
+    "writer_id_parent_asks"
+   ],
+   [
+    "probes_SC.py",
+    "counts"
+   ],
+   [
+    "probes_SC.py",
+    "limit_writer_seq_gap"
+   ],
+   [
+    "probes_SC.py",
+    "through_lease_release_revoke"
+   ],
+   [
+    "probes_SC.py",
+    "limit_clock_within_skew"
+   ],
+   [
+    "probes_SZ.py",
+    "operator_query"
+   ],
+   [
+    "probes_SZ.py",
+    "writer_ids"
+   ],
+   [
+    "probes_SZ.py",
+    "counts_write_seq"
+   ],
+   [
+    "probes_SZ.py",
+    "counts_view_seq"
+   ],
+   [
+    "probes_SZ.py",
+    "as_of"
+   ],
+   [
+    "probes_SO.py",
+    "session_collision"
+   ],
+   [
+    "probes_SO.py",
+    "duplicate_id"
+   ],
+   [
+    "probes_SO.py",
+    "parent_namespace"
+   ],
+   [
+    "probes_SO.py",
+    "global_event_count"
+   ],
+   [
+    "probes_SO.py",
+    "global_clock"
+   ]
+  ],
+  "run_ch": [
+   "P14",
+   "R",
+   "C"
+  ],
+  "gemini": [
+   "G2 as_of cut short",
+   "G3a lease advances B clock",
+   "G3b own A write blocks own B write",
+   "G4r release visibility",
+   "G5 instance_for, hidden c-1"
+  ],
+  "review": [
+   "a write return",
+   "d clock"
+  ],
+  "cargo_fail": 0,
+  "py_fail": 0,
+  "main_tests": "errors=1",
+  "replay": true,
+  "lines": "123/25/49/193"
+ },
+ {
+  "arm": "arm48-SO",
+  "heldout_cross": 22,
+  "heldout_of": 35,
+  "cross": [
+   [
+    "probes_SC.py",
+    "operator_datalog"
+   ],
+   [
+    "probes_SC.py",
+    "session_duplicate"
+   ],
+   [
+    "probes_SC.py",
+    "writer_id_child"
+   ],
+   [
+    "probes_SC.py",
+    "writer_id_reverse"
+   ],
+   [
+    "probes_SC.py",
+    "writer_id_parent_asks"
+   ],
+   [
+    "probes_SC.py",
+    "counts"
+   ],
+   [
+    "probes_SC.py",
+    "limit_writer_seq_gap"
+   ],
+   [
+    "probes_SC.py",
+    "limit_clock_within_skew"
+   ],
+   [
+    "probes_SC.py",
+    "lease_advances_clock"
+   ],
+   [
+    "probes_SZ.py",
+    "operator_view"
+   ],
+   [
+    "probes_SZ.py",
+    "operator_query"
+   ],
+   [
+    "probes_SZ.py",
+    "writer_ids"
+   ],
+   [
+    "probes_SZ.py",
+    "counts_view_seq"
+   ],
+   [
+    "probes_SZ.py",
+    "counts_writer_seq"
+   ],
+   [
+    "probes_SZ.py",
+    "clock"
+   ],
+   [
+    "probes_SZ.py",
+    "as_of"
+   ],
+   [
+    "probes_SZ.py",
+    "name"
+   ],
+   [
+    "probes_SO.py",
+    "session_collision"
+   ],
+   [
+    "probes_SO.py",
+    "duplicate_id"
+   ],
+   [
+    "probes_SO.py",
+    "parent_namespace"
+   ],
+   [
+    "probes_SO.py",
+    "global_event_count"
+   ],
+   [
+    "probes_SO.py",
+    "global_clock"
+   ]
+  ],
+  "side": [
+   [
+    "probes_SC.py",
+    "operator_view"
+   ],
+   [
+    "probes_SC.py",
+    "operator_datalog"
+   ],
+   [
+    "probes_SC.py",
+    "session_duplicate"
+   ],
+   [
+    "probes_SC.py",
+    "writer_id_child"
+   ],
+   [
+    "probes_SC.py",
+    "writer_id_reverse"
+   ],
+   [
+    "probes_SC.py",
+    "writer_id_parent_asks"
+   ],
+   [
+    "probes_SC.py",
+    "counts"
+   ],
+   [
+    "probes_SC.py",
+    "limit_writer_seq_gap"
+   ],
+   [
+    "probes_SC.py",
+    "through_lease_release_revoke"
+   ],
+   [
+    "probes_SC.py",
+    "limit_clock_within_skew"
+   ],
+   [
+    "probes_SZ.py",
+    "operator_query"
+   ],
+   [
+    "probes_SZ.py",
+    "counts_write_seq"
+   ],
+   [
+    "probes_SZ.py",
+    "counts_view_seq"
+   ],
+   [
+    "probes_SZ.py",
+    "as_of"
+   ],
+   [
+    "probes_SO.py",
+    "session_collision"
+   ],
+   [
+    "probes_SO.py",
+    "duplicate_id"
+   ],
+   [
+    "probes_SO.py",
+    "parent_namespace"
+   ],
+   [
+    "probes_SO.py",
+    "global_event_count"
+   ],
+   [
+    "probes_SO.py",
+    "global_clock"
+   ]
+  ],
+  "run_ch": [
+   "P12",
+   "P12r",
+   "P14",
+   "R",
+   "C"
+  ],
+  "gemini": [
+   "G1 P12r variant (gate)",
+   "G2 as_of cut short",
+   "G3a lease advances B clock",
+   "G3b own A write blocks own B write",
+   "G4 lease on an A+B writer in B's through",
+   "G4r release visibility",
+   "G5 instance_for, hidden c-1"
+  ],
+  "review": [
+   "a write return",
+   "d clock"
+  ],
+  "cargo_fail": 0,
+  "py_fail": 0,
+  "main_tests": "errors=3",
+  "replay": true,
+  "lines": "108/0/36/156"
+ },
+ {
+  "arm": "arm48-SZ",
+  "heldout_cross": 18,
+  "heldout_of": 35,
+  "cross": [
+   [
+    "probes_SC.py",
+    "operator_datalog"
+   ],
+   [
+    "probes_SC.py",
+    "session_duplicate"
+   ],
+   [
+    "probes_SC.py",
+    "writer_id_child"
+   ],
+   [
+    "probes_SC.py",
+    "writer_id_reverse"
+   ],
+   [
+    "probes_SC.py",
+    "writer_id_parent_asks"
+   ],
+   [
+    "probes_SC.py",
+    "counts"
+   ],
+   [
+    "probes_SC.py",
+    "limit_writer_seq_gap"
+   ],
+   [
+    "probes_SC.py",
+    "lease_release_guess"
+   ],
+   [
+    "probes_SZ.py",
+    "operator_view"
+   ],
+   [
+    "probes_SZ.py",
+    "operator_query"
+   ],
+   [
+    "probes_SZ.py",
+    "writer_ids"
+   ],
+   [
+    "probes_SZ.py",
+    "counts_view_seq"
+   ],
+   [
+    "probes_SZ.py",
+    "counts_writer_seq"
+   ],
+   [
+    "probes_SO.py",
+    "session_collision"
+   ],
+   [
+    "probes_SO.py",
+    "duplicate_id"
+   ],
+   [
+    "probes_SO.py",
+    "parent_namespace"
+   ],
+   [
+    "probes_SO.py",
+    "global_event_count"
+   ],
+   [
+    "probes_SO.py",
+    "global_clock"
+   ]
+  ],
+  "side": [
+   [
+    "probes_SC.py",
+    "operator_view"
+   ],
+   [
+    "probes_SC.py",
+    "operator_datalog"
+   ],
+   [
+    "probes_SC.py",
+    "session_duplicate"
+   ],
+   [
+    "probes_SC.py",
+    "writer_id_child"
+   ],
+   [
+    "probes_SC.py",
+    "writer_id_reverse"
+   ],
+   [
+    "probes_SC.py",
+    "writer_id_parent_asks"
+   ],
+   [
+    "probes_SC.py",
+    "counts"
+   ],
+   [
+    "probes_SC.py",
+    "limit_writer_seq_gap"
+   ],
+   [
+    "probes_SC.py",
+    "through_lease_release_revoke"
+   ],
+   [
+    "probes_SC.py",
+    "limit_clock_within_skew"
+   ],
+   [
+    "probes_SZ.py",
+    "operator_query"
+   ],
+   [
+    "probes_SZ.py",
+    "counts_write_seq"
+   ],
+   [
+    "probes_SZ.py",
+    "counts_view_seq"
+   ],
+   [
+    "probes_SZ.py",
+    "as_of"
+   ],
+   [
+    "probes_SO.py",
+    "session_collision"
+   ],
+   [
+    "probes_SO.py",
+    "duplicate_id"
+   ],
+   [
+    "probes_SO.py",
+    "parent_namespace"
+   ],
+   [
+    "probes_SO.py",
+    "global_event_count"
+   ],
+   [
+    "probes_SO.py",
+    "global_clock"
+   ]
+  ],
+  "run_ch": [
+   "P12",
+   "P12r",
+   "P14",
+   "R",
+   "V"
+  ],
+  "gemini": [
+   "G1 P12r variant (gate)",
+   "G3b own A write blocks own B write",
+   "G4 lease on an A+B writer in B's through",
+   "G4r release visibility",
+   "G5 instance_for, hidden c-1"
+  ],
+  "review": [
+   "a write return",
+   "c through"
+  ],
+  "cargo_fail": 0,
+  "py_fail": 0,
+  "main_tests": "errors=3",
+  "replay": true,
+  "lines": "149/0/40/183"
+ }
+]

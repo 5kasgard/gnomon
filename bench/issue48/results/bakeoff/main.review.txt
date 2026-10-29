@@ -1,0 +1,12 @@
+a write return: differs=True
+  with hidden A event: x/4
+  without:            x/1
+b existence: differs=False
+  with hidden A event: E_BODY
+  without:            E_BODY
+c through: differs=True
+  with hidden A event: {"event": "o/5", "hash": "7043fb51992a7c13a63b468b4eb35a370ce7e4342c3ef387fe4da040edbf8fcf", "kind": "lease", "time": "2026-01-01T00:05:00Z"}
+  without:            {"event": "wb/1", "hash": "f509622fa11b32ed9066fedc529c2012bd0d9a2d558e2c3cd23323b653d5a1bc", "kind": "claim", "time": "2026-01-01T00:02:00Z"}
+d clock: differs=True
+  with hidden A event: E_CLOCK
+  without:            accepted

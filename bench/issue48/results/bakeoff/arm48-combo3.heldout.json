@@ -1,0 +1,6221 @@
+{
+ "gnomon": "/tmp/claude-0/wt/s-arm48-combo3/python/gnomon/__init__.py",
+ "records": [
+  {
+   "file": "probes_SC.py",
+   "name": "operator_view",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    "/setup[1][1]/body/writer: bobby vs alice",
+    "/setup[1][1]/hash: 6007e15e9aede3f934a245057597650db21955b96e7ac5be9e0525260404 vs 05abfea9295125cb8adbd928503e6f0dcfce7922fe45e7ee249f46d7cb86",
+    "/setup[2][1]/body/operator: bobby vs alice",
+    "/setup[2][1]/hash: aee0e8128aa724e6970deffb3a4c5c0cef10b2168c6850be59ecf73fe2a5 vs 9108e51a778b21de16b133b258e069aeb57bc972ea32f62accb11cd286c4",
+    "/setup[2][1]/prev: 6007e15e9aede3f934a245057597650db21955b96e7ac5be9e0525260404 vs 05abfea9295125cb8adbd928503e6f0dcfce7922fe45e7ee249f46d7cb86"
+   ],
+   "hidden": {
+    "setup": [
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "owner"
+        ],
+        "compartments": [
+         "a",
+         "b"
+        ],
+        "kind": "human",
+        "party": "house",
+        "schema_version": 7,
+        "writer": "o"
+       },
+       "event_id": "o/1",
+       "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "kind": "register",
+       "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+       "record_time": "2026-01-01T00:00:00Z",
+       "seq": 0,
+       "writer": "o",
+       "writer_seq": 1
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "human",
+        "party": "p",
+        "writer": "alice"
+       },
+       "event_id": "o/2",
+       "hash": "05abfea9295125cb8adbd928503e6f0dcfce7922fe45e7ee249f46d7cb86c6f6",
+       "kind": "register",
+       "prev": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "record_time": "2026-01-01T00:01:00Z",
+       "seq": 1,
+       "writer": "o",
+       "writer_seq": 2
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "alice",
+        "party": "p",
+        "writer": "bot"
+       },
+       "event_id": "o/3",
+       "hash": "9108e51a778b21de16b133b258e069aeb57bc972ea32f62accb11cd286c48e93",
+       "kind": "register",
+       "prev": "05abfea9295125cb8adbd928503e6f0dcfce7922fe45e7ee249f46d7cb86c6f6",
+       "record_time": "2026-01-01T00:02:00Z",
+       "seq": 2,
+       "writer": "o",
+       "writer_seq": 3
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "q",
+        "writer": "rb"
+       },
+       "event_id": "o/4",
+       "hash": "4fa2f534ac910712e3535e5ffcb30a6241a00078b592677370da7ed17b2100c9",
+       "kind": "register",
+       "prev": "9108e51a778b21de16b133b258e069aeb57bc972ea32f62accb11cd286c48e93",
+       "record_time": "2026-01-01T00:03:00Z",
+       "seq": 3,
+       "writer": "o",
+       "writer_seq": 4
+      }
+     ]
+    ],
+    "writers": [
+     "ok",
+     {
+      "bot": {
+       "capabilities": [
+        "write"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "group": "model:m",
+       "kind": "model",
+       "model": "m",
+       "party": "p"
+      },
+      "o": {
+       "capabilities": [
+        "owner"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "group": "human:o",
+       "kind": "human",
+       "party": "house"
+      },
+      "rb": {
+       "capabilities": [
+        "write"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "group": "model:m",
+       "kind": "model",
+       "model": "m",
+       "operator": "o",
+       "party": "q"
+      }
+     }
+    ],
+    "state": [
+     "ok",
+     {
+      "digest": "c4cab1f472d2cc4b764315fc8cec34f86ec45ea50a6262057a58023cfc9593ff",
+      "ok": true,
+      "state": {
+       "appeals": {},
+       "appointments": {},
+       "claims": {},
+       "episodes": {},
+       "handoffs": {},
+       "positions": {},
+       "schema_version": 7,
+       "supersessions": {},
+       "writers": {
+        "bot": {
+         "capabilities": [
+          "write"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "party": "p"
+        },
+        "o": {
+         "capabilities": [
+          "owner"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "human:o",
+         "kind": "human",
+         "party": "house"
+        },
+        "rb": {
+         "capabilities": [
+          "write"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "operator": "o",
+         "party": "q"
+        }
+       }
+      }
+     }
+    ]
+   },
+   "without": {
+    "setup": [
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "owner"
+        ],
+        "compartments": [
+         "a",
+         "b"
+        ],
+        "kind": "human",
+        "party": "house",
+        "schema_version": 7,
+        "writer": "o"
+       },
+       "event_id": "o/1",
+       "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "kind": "register",
+       "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+       "record_time": "2026-01-01T00:00:00Z",
+       "seq": 0,
+       "writer": "o",
+       "writer_seq": 1
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "human",
+        "party": "p",
+        "writer": "bobby"
+       },
+       "event_id": "o/2",
+       "hash": "6007e15e9aede3f934a245057597650db21955b96e7ac5be9e05252604049e45",
+       "kind": "register",
+       "prev": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "record_time": "2026-01-01T00:01:00Z",
+       "seq": 1,
+       "writer": "o",
+       "writer_seq": 2
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "bobby",
+        "party": "p",
+        "writer": "bot"
+       },
+       "event_id": "o/3",
+       "hash": "aee0e8128aa724e6970deffb3a4c5c0cef10b2168c6850be59ecf73fe2a5196b",
+       "kind": "register",
+       "prev": "6007e15e9aede3f934a245057597650db21955b96e7ac5be9e05252604049e45",
+       "record_time": "2026-01-01T00:02:00Z",
+       "seq": 2,
+       "writer": "o",
+       "writer_seq": 3
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "q",
+        "writer": "rb"
+       },
+       "event_id": "o/4",
+       "hash": "f0471c5117b4bef46d57bd4fcef88957452f6e66d0b516f12f0265feb8abffe7",
+       "kind": "register",
+       "prev": "aee0e8128aa724e6970deffb3a4c5c0cef10b2168c6850be59ecf73fe2a5196b",
+       "record_time": "2026-01-01T00:03:00Z",
+       "seq": 3,
+       "writer": "o",
+       "writer_seq": 4
+      }
+     ]
+    ],
+    "writers": [
+     "ok",
+     {
+      "bot": {
+       "capabilities": [
+        "write"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "group": "model:m",
+       "kind": "model",
+       "model": "m",
+       "party": "p"
+      },
+      "o": {
+       "capabilities": [
+        "owner"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "group": "human:o",
+       "kind": "human",
+       "party": "house"
+      },
+      "rb": {
+       "capabilities": [
+        "write"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "group": "model:m",
+       "kind": "model",
+       "model": "m",
+       "operator": "o",
+       "party": "q"
+      }
+     }
+    ],
+    "state": [
+     "ok",
+     {
+      "digest": "c4cab1f472d2cc4b764315fc8cec34f86ec45ea50a6262057a58023cfc9593ff",
+      "ok": true,
+      "state": {
+       "appeals": {},
+       "appointments": {},
+       "claims": {},
+       "episodes": {},
+       "handoffs": {},
+       "positions": {},
+       "schema_version": 7,
+       "supersessions": {},
+       "writers": {
+        "bot": {
+         "capabilities": [
+          "write"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "party": "p"
+        },
+        "o": {
+         "capabilities": [
+          "owner"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "human:o",
+         "kind": "human",
+         "party": "house"
+        },
+        "rb": {
+         "capabilities": [
+          "write"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "operator": "o",
+         "party": "q"
+        }
+       }
+      }
+     }
+    ]
+   }
+  },
+  {
+   "file": "probes_SC.py",
+   "name": "operator_datalog",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    "/all[1]/answers[0]/proof_hash: 07c86eba9d566c29bc3df826634ffe2038e31321900d8e8c994f8e9f565b vs 13428d1650d16515103163e5e05dfe22ba8f8c30071eba509939de98b8af",
+    "/all[1]/nodes/n0/hash: 61ecec0921d2d7b38fe264144fcea3f24cb077c377c2109aece9059796b6 vs 88088859a0b17530518624e63b11dc0f8eb2c09d12933a6ed8b37d06d0c9",
+    "/all[1]/nodes/n0/sources[0]/hash: aee0e8128aa724e6970deffb3a4c5c0cef10b2168c6850be59ecf73fe2a5 vs 9108e51a778b21de16b133b258e069aeb57bc972ea32f62accb11cd286c4",
+    "/all[1]/nodes/n1/hash: 07c86eba9d566c29bc3df826634ffe2038e31321900d8e8c994f8e9f565b vs 13428d1650d16515103163e5e05dfe22ba8f8c30071eba509939de98b8af",
+    "/all[1]/through/hash: f0471c5117b4bef46d57bd4fcef88957452f6e66d0b516f12f0265feb8ab vs 4fa2f534ac910712e3535e5ffcb30a6241a00078b592677370da7ed17b21"
+   ],
+   "hidden": {
+    "setup": [
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "owner"
+        ],
+        "compartments": [
+         "a",
+         "b"
+        ],
+        "kind": "human",
+        "party": "house",
+        "schema_version": 7,
+        "writer": "o"
+       },
+       "event_id": "o/1",
+       "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "kind": "register",
+       "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+       "record_time": "2026-01-01T00:00:00Z",
+       "seq": 0,
+       "writer": "o",
+       "writer_seq": 1
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "human",
+        "party": "p",
+        "writer": "alice"
+       },
+       "event_id": "o/2",
+       "hash": "05abfea9295125cb8adbd928503e6f0dcfce7922fe45e7ee249f46d7cb86c6f6",
+       "kind": "register",
+       "prev": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "record_time": "2026-01-01T00:01:00Z",
+       "seq": 1,
+       "writer": "o",
+       "writer_seq": 2
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "alice",
+        "party": "p",
+        "writer": "bot"
+       },
+       "event_id": "o/3",
+       "hash": "9108e51a778b21de16b133b258e069aeb57bc972ea32f62accb11cd286c48e93",
+       "kind": "register",
+       "prev": "05abfea9295125cb8adbd928503e6f0dcfce7922fe45e7ee249f46d7cb86c6f6",
+       "record_time": "2026-01-01T00:02:00Z",
+       "seq": 2,
+       "writer": "o",
+       "writer_seq": 3
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "q",
+        "writer": "rb"
+       },
+       "event_id": "o/4",
+       "hash": "4fa2f534ac910712e3535e5ffcb30a6241a00078b592677370da7ed17b2100c9",
+       "kind": "register",
+       "prev": "9108e51a778b21de16b133b258e069aeb57bc972ea32f62accb11cd286c48e93",
+       "record_time": "2026-01-01T00:03:00Z",
+       "seq": 3,
+       "writer": "o",
+       "writer_seq": 4
+      }
+     ]
+    ],
+    "op": [
+     "ok",
+     {
+      "answers": [],
+      "as_of": "2026-01-01T00:03:00Z",
+      "facts": 3,
+      "nodes": {},
+      "proved": 0,
+      "rules": {},
+      "through": {
+       "event": "o/4",
+       "hash": "4fa2f534ac910712e3535e5ffcb30a6241a00078b592677370da7ed17b2100c9",
+       "kind": "register",
+       "time": "2026-01-01T00:03:00Z"
+      },
+      "truncated": false,
+      "variables": [
+       "V"
+      ],
+      "view": {
+       "compartments": [
+        "b"
+       ],
+       "reader": "rb"
+      }
+     }
+    ],
+    "all": [
+     "ok",
+     {
+      "answers": [
+       {
+        "proof": "n1",
+        "proof_hash": "13428d1650d16515103163e5e05dfe22ba8f8c30071eba509939de98b8af460a",
+        "values": [
+         "bot",
+         "model",
+         "m"
+        ]
+       },
+       {
+        "proof": null,
+        "values": [
+         "rb",
+         "model",
+         "m"
+        ]
+       },
+       {
+        "proof": null,
+        "values": [
+         "rb",
+         "operator",
+         "o"
+        ]
+       }
+      ],
+      "as_of": "2026-01-01T00:03:00Z",
+      "facts": 6,
+      "nodes": {
+       "n0": {
+        "fact": [
+         "identity",
+         "bot",
+         "model",
+         "m"
+        ],
+        "hash": "88088859a0b17530518624e63b11dc0f8eb2c09d12933a6ed8b37d06d0c98f6b",
+        "sources": [
+         {
+          "event": "o/3",
+          "hash": "9108e51a778b21de16b133b258e069aeb57bc972ea32f62accb11cd286c48e93",
+          "kind": "register"
+         }
+        ]
+       },
+       "n1": {
+        "absent": [],
+        "fact": [
+         "?",
+         "bot",
+         "model",
+         "m"
+        ],
+        "hash": "13428d1650d16515103163e5e05dfe22ba8f8c30071eba509939de98b8af460a",
+        "premises": [
+         "n0"
+        ],
+        "rule": "r0"
+       }
+      },
+      "proved": 1,
+      "rules": {
+       "r0": {
+        "hash": "69d50bcd411718f2509478647a21492f95546170fc08ded3ec70e216a48c6d7d",
+        "origin": "line 1",
+        "text": "?(W, K, V) :- identity(W, K, V)."
+       }
+      },
+      "through": {
+       "event": "o/4",
+       "hash": "4fa2f534ac910712e3535e5ffcb30a6241a00078b592677370da7ed17b2100c9",
+       "kind": "register",
+       "time": "2026-01-01T00:03:00Z"
+      },
+      "truncated": false,
+      "variables": [
+       "W",
+       "K",
+       "V"
+      ],
+      "view": {
+       "compartments": [
+        "b"
+       ],
+       "reader": "rb"
+      }
+     }
+    ]
+   },
+   "without": {
+    "setup": [
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "owner"
+        ],
+        "compartments": [
+         "a",
+         "b"
+        ],
+        "kind": "human",
+        "party": "house",
+        "schema_version": 7,
+        "writer": "o"
+       },
+       "event_id": "o/1",
+       "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "kind": "register",
+       "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+       "record_time": "2026-01-01T00:00:00Z",
+       "seq": 0,
+       "writer": "o",
+       "writer_seq": 1
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "human",
+        "party": "p",
+        "writer": "bobby"
+       },
+       "event_id": "o/2",
+       "hash": "6007e15e9aede3f934a245057597650db21955b96e7ac5be9e05252604049e45",
+       "kind": "register",
+       "prev": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "record_time": "2026-01-01T00:01:00Z",
+       "seq": 1,
+       "writer": "o",
+       "writer_seq": 2
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "bobby",
+        "party": "p",
+        "writer": "bot"
+       },
+       "event_id": "o/3",
+       "hash": "aee0e8128aa724e6970deffb3a4c5c0cef10b2168c6850be59ecf73fe2a5196b",
+       "kind": "register",
+       "prev": "6007e15e9aede3f934a245057597650db21955b96e7ac5be9e05252604049e45",
+       "record_time": "2026-01-01T00:02:00Z",
+       "seq": 2,
+       "writer": "o",
+       "writer_seq": 3
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "q",
+        "writer": "rb"
+       },
+       "event_id": "o/4",
+       "hash": "f0471c5117b4bef46d57bd4fcef88957452f6e66d0b516f12f0265feb8abffe7",
+       "kind": "register",
+       "prev": "aee0e8128aa724e6970deffb3a4c5c0cef10b2168c6850be59ecf73fe2a5196b",
+       "record_time": "2026-01-01T00:03:00Z",
+       "seq": 3,
+       "writer": "o",
+       "writer_seq": 4
+      }
+     ]
+    ],
+    "op": [
+     "ok",
+     {
+      "answers": [],
+      "as_of": "2026-01-01T00:03:00Z",
+      "facts": 3,
+      "nodes": {},
+      "proved": 0,
+      "rules": {},
+      "through": {
+       "event": "o/4",
+       "hash": "f0471c5117b4bef46d57bd4fcef88957452f6e66d0b516f12f0265feb8abffe7",
+       "kind": "register",
+       "time": "2026-01-01T00:03:00Z"
+      },
+      "truncated": false,
+      "variables": [
+       "V"
+      ],
+      "view": {
+       "compartments": [
+        "b"
+       ],
+       "reader": "rb"
+      }
+     }
+    ],
+    "all": [
+     "ok",
+     {
+      "answers": [
+       {
+        "proof": "n1",
+        "proof_hash": "07c86eba9d566c29bc3df826634ffe2038e31321900d8e8c994f8e9f565b1a59",
+        "values": [
+         "bot",
+         "model",
+         "m"
+        ]
+       },
+       {
+        "proof": null,
+        "values": [
+         "rb",
+         "model",
+         "m"
+        ]
+       },
+       {
+        "proof": null,
+        "values": [
+         "rb",
+         "operator",
+         "o"
+        ]
+       }
+      ],
+      "as_of": "2026-01-01T00:03:00Z",
+      "facts": 6,
+      "nodes": {
+       "n0": {
+        "fact": [
+         "identity",
+         "bot",
+         "model",
+         "m"
+        ],
+        "hash": "61ecec0921d2d7b38fe264144fcea3f24cb077c377c2109aece9059796b6bd73",
+        "sources": [
+         {
+          "event": "o/3",
+          "hash": "aee0e8128aa724e6970deffb3a4c5c0cef10b2168c6850be59ecf73fe2a5196b",
+          "kind": "register"
+         }
+        ]
+       },
+       "n1": {
+        "absent": [],
+        "fact": [
+         "?",
+         "bot",
+         "model",
+         "m"
+        ],
+        "hash": "07c86eba9d566c29bc3df826634ffe2038e31321900d8e8c994f8e9f565b1a59",
+        "premises": [
+         "n0"
+        ],
+        "rule": "r0"
+       }
+      },
+      "proved": 1,
+      "rules": {
+       "r0": {
+        "hash": "69d50bcd411718f2509478647a21492f95546170fc08ded3ec70e216a48c6d7d",
+        "origin": "line 1",
+        "text": "?(W, K, V) :- identity(W, K, V)."
+       }
+      },
+      "through": {
+       "event": "o/4",
+       "hash": "f0471c5117b4bef46d57bd4fcef88957452f6e66d0b516f12f0265feb8abffe7",
+       "kind": "register",
+       "time": "2026-01-01T00:03:00Z"
+      },
+      "truncated": false,
+      "variables": [
+       "W",
+       "K",
+       "V"
+      ],
+      "view": {
+       "compartments": [
+        "b"
+       ],
+       "reader": "rb"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "file": "probes_SC.py",
+   "name": "session_duplicate",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    "/b[1]/hash: 8c785eed4f5724f1943b22b52bd90814bf9cb200d239e0f9c72bba6f96ed vs dd19272f51569d5f34d4ff3d12714a40d014e69a8b04d9e6e6eb89d4585c",
+    "/b[1]/prev: c305cc9f314ced467fbffc2d06eb4a79a3412562c42de7606e038cd1b85b vs dd17cab18b3861183164288a9eb2307ef1d305a4f0179aaefd6fa1acc498",
+    "/b[1]/seq: 3 vs 4",
+    "/setup: length 3 vs 4"
+   ],
+   "hidden": {
+    "setup": [
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "owner"
+        ],
+        "compartments": [
+         "a",
+         "b"
+        ],
+        "kind": "human",
+        "party": "house",
+        "schema_version": 7,
+        "writer": "o"
+       },
+       "event_id": "o/1",
+       "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "kind": "register",
+       "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+       "record_time": "2026-01-01T00:00:00Z",
+       "seq": 0,
+       "writer": "o",
+       "writer_seq": 1
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "spawn"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "sa"
+       },
+       "event_id": "o/2",
+       "hash": "0ee5cd5e506ef832cdb63c452fa1bfbaf1d2356065f16fa64494b5952c3630d6",
+       "kind": "register",
+       "prev": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "record_time": "2026-01-01T00:01:00Z",
+       "seq": 1,
+       "writer": "o",
+       "writer_seq": 2
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "spawn"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "sb"
+       },
+       "event_id": "o/3",
+       "hash": "c305cc9f314ced467fbffc2d06eb4a79a3412562c42de7606e038cd1b85b0fd3",
+       "kind": "register",
+       "prev": "0ee5cd5e506ef832cdb63c452fa1bfbaf1d2356065f16fa64494b5952c3630d6",
+       "record_time": "2026-01-01T00:02:00Z",
+       "seq": 2,
+       "writer": "o",
+       "writer_seq": 3
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "session": "s1",
+        "writer": "sa-1"
+       },
+       "event_id": "sa/1",
+       "hash": "dd17cab18b3861183164288a9eb2307ef1d305a4f0179aaefd6fa1acc4980bf0",
+       "kind": "register",
+       "prev": "c305cc9f314ced467fbffc2d06eb4a79a3412562c42de7606e038cd1b85b0fd3",
+       "record_time": "2026-01-01T00:03:00Z",
+       "seq": 3,
+       "writer": "sa",
+       "writer_seq": 1
+      }
+     ]
+    ],
+    "b": [
+     "ok",
+     {
+      "body": {
+       "capabilities": [
+        "write"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "kind": "model",
+       "model": "m",
+       "operator": "o",
+       "party": "p",
+       "session": "s1",
+       "writer": "sb-1"
+      },
+      "event_id": "sb/1",
+      "hash": "dd19272f51569d5f34d4ff3d12714a40d014e69a8b04d9e6e6eb89d4585c325d",
+      "kind": "register",
+      "prev": "dd17cab18b3861183164288a9eb2307ef1d305a4f0179aaefd6fa1acc4980bf0",
+      "record_time": "2026-01-01T00:04:00Z",
+      "seq": 4,
+      "writer": "sb",
+      "writer_seq": 1
+     }
+    ]
+   },
+   "without": {
+    "setup": [
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "owner"
+        ],
+        "compartments": [
+         "a",
+         "b"
+        ],
+        "kind": "human",
+        "party": "house",
+        "schema_version": 7,
+        "writer": "o"
+       },
+       "event_id": "o/1",
+       "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "kind": "register",
+       "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+       "record_time": "2026-01-01T00:00:00Z",
+       "seq": 0,
+       "writer": "o",
+       "writer_seq": 1
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "spawn"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "sa"
+       },
+       "event_id": "o/2",
+       "hash": "0ee5cd5e506ef832cdb63c452fa1bfbaf1d2356065f16fa64494b5952c3630d6",
+       "kind": "register",
+       "prev": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "record_time": "2026-01-01T00:01:00Z",
+       "seq": 1,
+       "writer": "o",
+       "writer_seq": 2
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "spawn"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "sb"
+       },
+       "event_id": "o/3",
+       "hash": "c305cc9f314ced467fbffc2d06eb4a79a3412562c42de7606e038cd1b85b0fd3",
+       "kind": "register",
+       "prev": "0ee5cd5e506ef832cdb63c452fa1bfbaf1d2356065f16fa64494b5952c3630d6",
+       "record_time": "2026-01-01T00:02:00Z",
+       "seq": 2,
+       "writer": "o",
+       "writer_seq": 3
+      }
+     ]
+    ],
+    "b": [
+     "ok",
+     {
+      "body": {
+       "capabilities": [
+        "write"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "kind": "model",
+       "model": "m",
+       "operator": "o",
+       "party": "p",
+       "session": "s1",
+       "writer": "sb-1"
+      },
+      "event_id": "sb/1",
+      "hash": "8c785eed4f5724f1943b22b52bd90814bf9cb200d239e0f9c72bba6f96ed1f57",
+      "kind": "register",
+      "prev": "c305cc9f314ced467fbffc2d06eb4a79a3412562c42de7606e038cd1b85b0fd3",
+      "record_time": "2026-01-01T00:04:00Z",
+      "seq": 3,
+      "writer": "sb",
+      "writer_seq": 1
+     }
+    ]
+   }
+  },
+  {
+   "file": "probes_SC.py",
+   "name": "session_instance_for",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    "/setup: length 3 vs 4"
+   ],
+   "hidden": {
+    "setup": [
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "owner"
+        ],
+        "compartments": [
+         "a",
+         "b"
+        ],
+        "kind": "human",
+        "party": "house",
+        "schema_version": 7,
+        "writer": "o"
+       },
+       "event_id": "o/1",
+       "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "kind": "register",
+       "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+       "record_time": "2026-01-01T00:00:00Z",
+       "seq": 0,
+       "writer": "o",
+       "writer_seq": 1
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "spawn"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "sa"
+       },
+       "event_id": "o/2",
+       "hash": "0ee5cd5e506ef832cdb63c452fa1bfbaf1d2356065f16fa64494b5952c3630d6",
+       "kind": "register",
+       "prev": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "record_time": "2026-01-01T00:01:00Z",
+       "seq": 1,
+       "writer": "o",
+       "writer_seq": 2
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "spawn"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "sb"
+       },
+       "event_id": "o/3",
+       "hash": "c305cc9f314ced467fbffc2d06eb4a79a3412562c42de7606e038cd1b85b0fd3",
+       "kind": "register",
+       "prev": "0ee5cd5e506ef832cdb63c452fa1bfbaf1d2356065f16fa64494b5952c3630d6",
+       "record_time": "2026-01-01T00:02:00Z",
+       "seq": 2,
+       "writer": "o",
+       "writer_seq": 3
+      }
+     ],
+     [
+      "ok",
+      "sa-1"
+     ]
+    ],
+    "b": [
+     "ok",
+     "sb-1"
+    ]
+   },
+   "without": {
+    "setup": [
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "owner"
+        ],
+        "compartments": [
+         "a",
+         "b"
+        ],
+        "kind": "human",
+        "party": "house",
+        "schema_version": 7,
+        "writer": "o"
+       },
+       "event_id": "o/1",
+       "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "kind": "register",
+       "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+       "record_time": "2026-01-01T00:00:00Z",
+       "seq": 0,
+       "writer": "o",
+       "writer_seq": 1
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "spawn"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "sa"
+       },
+       "event_id": "o/2",
+       "hash": "0ee5cd5e506ef832cdb63c452fa1bfbaf1d2356065f16fa64494b5952c3630d6",
+       "kind": "register",
+       "prev": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "record_time": "2026-01-01T00:01:00Z",
+       "seq": 1,
+       "writer": "o",
+       "writer_seq": 2
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "spawn"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "sb"
+       },
+       "event_id": "o/3",
+       "hash": "c305cc9f314ced467fbffc2d06eb4a79a3412562c42de7606e038cd1b85b0fd3",
+       "kind": "register",
+       "prev": "0ee5cd5e506ef832cdb63c452fa1bfbaf1d2356065f16fa64494b5952c3630d6",
+       "record_time": "2026-01-01T00:02:00Z",
+       "seq": 2,
+       "writer": "o",
+       "writer_seq": 3
+      }
+     ]
+    ],
+    "b": [
+     "ok",
+     "sb-1"
+    ]
+   }
+  },
+  {
+   "file": "probes_SC.py",
+   "name": "writer_id_child",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    "/setup: length 3 vs 4"
+   ],
+   "hidden": {
+    "setup": [
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "owner"
+        ],
+        "compartments": [
+         "a",
+         "b"
+        ],
+        "kind": "human",
+        "party": "house",
+        "schema_version": 7,
+        "writer": "o"
+       },
+       "event_id": "o/1",
+       "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "kind": "register",
+       "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+       "record_time": "2026-01-01T00:00:00Z",
+       "seq": 0,
+       "writer": "o",
+       "writer_seq": 1
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "spawn"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "c"
+       },
+       "event_id": "o/2",
+       "hash": "ce6561a32a627fc470a24eede5536a180e26f8545961a3947ad66d06bc3737ff",
+       "kind": "register",
+       "prev": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "record_time": "2026-01-01T00:01:00Z",
+       "seq": 1,
+       "writer": "o",
+       "writer_seq": 2
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "spawn"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "c-x"
+       },
+       "event_id": "o/3",
+       "hash": "2eb9ade8fb74d08788343892465d74ed8ffc59c695957219a787d16e1f736913",
+       "kind": "register",
+       "prev": "ce6561a32a627fc470a24eede5536a180e26f8545961a3947ad66d06bc3737ff",
+       "record_time": "2026-01-01T00:02:00Z",
+       "seq": 2,
+       "writer": "o",
+       "writer_seq": 3
+      }
+     ],
+     [
+      "err",
+      "E_SPAWN",
+      "E_SPAWN: an instance's id is 'c-<k>', k a whole number"
+     ]
+    ],
+    "b": [
+     "ok",
+     {
+      "body": {
+       "capabilities": [
+        "write"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "kind": "model",
+       "model": "m",
+       "operator": "o",
+       "party": "p",
+       "writer": "c-x-1"
+      },
+      "event_id": "c-x/1",
+      "hash": "680bc4bde6dfde3cfecff69d437e8a7f48faf1e79d22f543ab3632577d3bb094",
+      "kind": "register",
+      "prev": "2eb9ade8fb74d08788343892465d74ed8ffc59c695957219a787d16e1f736913",
+      "record_time": "2026-01-01T00:04:00Z",
+      "seq": 3,
+      "writer": "c-x",
+      "writer_seq": 1
+     }
+    ]
+   },
+   "without": {
+    "setup": [
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "owner"
+        ],
+        "compartments": [
+         "a",
+         "b"
+        ],
+        "kind": "human",
+        "party": "house",
+        "schema_version": 7,
+        "writer": "o"
+       },
+       "event_id": "o/1",
+       "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "kind": "register",
+       "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+       "record_time": "2026-01-01T00:00:00Z",
+       "seq": 0,
+       "writer": "o",
+       "writer_seq": 1
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "spawn"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "c"
+       },
+       "event_id": "o/2",
+       "hash": "ce6561a32a627fc470a24eede5536a180e26f8545961a3947ad66d06bc3737ff",
+       "kind": "register",
+       "prev": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "record_time": "2026-01-01T00:01:00Z",
+       "seq": 1,
+       "writer": "o",
+       "writer_seq": 2
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "spawn"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "c-x"
+       },
+       "event_id": "o/3",
+       "hash": "2eb9ade8fb74d08788343892465d74ed8ffc59c695957219a787d16e1f736913",
+       "kind": "register",
+       "prev": "ce6561a32a627fc470a24eede5536a180e26f8545961a3947ad66d06bc3737ff",
+       "record_time": "2026-01-01T00:02:00Z",
+       "seq": 2,
+       "writer": "o",
+       "writer_seq": 3
+      }
+     ]
+    ],
+    "b": [
+     "ok",
+     {
+      "body": {
+       "capabilities": [
+        "write"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "kind": "model",
+       "model": "m",
+       "operator": "o",
+       "party": "p",
+       "writer": "c-x-1"
+      },
+      "event_id": "c-x/1",
+      "hash": "680bc4bde6dfde3cfecff69d437e8a7f48faf1e79d22f543ab3632577d3bb094",
+      "kind": "register",
+      "prev": "2eb9ade8fb74d08788343892465d74ed8ffc59c695957219a787d16e1f736913",
+      "record_time": "2026-01-01T00:04:00Z",
+      "seq": 3,
+      "writer": "c-x",
+      "writer_seq": 1
+     }
+    ]
+   }
+  },
+  {
+   "file": "probes_SC.py",
+   "name": "writer_id_reverse",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    "/setup: length 3 vs 4"
+   ],
+   "hidden": {
+    "setup": [
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "owner"
+        ],
+        "compartments": [
+         "a",
+         "b"
+        ],
+        "kind": "human",
+        "party": "house",
+        "schema_version": 7,
+        "writer": "o"
+       },
+       "event_id": "o/1",
+       "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "kind": "register",
+       "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+       "record_time": "2026-01-01T00:00:00Z",
+       "seq": 0,
+       "writer": "o",
+       "writer_seq": 1
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "spawn"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "c"
+       },
+       "event_id": "o/2",
+       "hash": "ce6561a32a627fc470a24eede5536a180e26f8545961a3947ad66d06bc3737ff",
+       "kind": "register",
+       "prev": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "record_time": "2026-01-01T00:01:00Z",
+       "seq": 1,
+       "writer": "o",
+       "writer_seq": 2
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "spawn"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "c-x"
+       },
+       "event_id": "o/3",
+       "hash": "2eb9ade8fb74d08788343892465d74ed8ffc59c695957219a787d16e1f736913",
+       "kind": "register",
+       "prev": "ce6561a32a627fc470a24eede5536a180e26f8545961a3947ad66d06bc3737ff",
+       "record_time": "2026-01-01T00:02:00Z",
+       "seq": 2,
+       "writer": "o",
+       "writer_seq": 3
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "c-x-1"
+       },
+       "event_id": "c-x/1",
+       "hash": "08bf174fde6eb20792ce3fc755800fa7226338720a05500a0b96f5675ed106ce",
+       "kind": "register",
+       "prev": "2eb9ade8fb74d08788343892465d74ed8ffc59c695957219a787d16e1f736913",
+       "record_time": "2026-01-01T00:03:00Z",
+       "seq": 3,
+       "writer": "c-x",
+       "writer_seq": 1
+      }
+     ]
+    ],
+    "a": [
+     "err",
+     "E_SPAWN",
+     "E_SPAWN: an instance's id is 'c-<k>', k a whole number"
+    ]
+   },
+   "without": {
+    "setup": [
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "owner"
+        ],
+        "compartments": [
+         "a",
+         "b"
+        ],
+        "kind": "human",
+        "party": "house",
+        "schema_version": 7,
+        "writer": "o"
+       },
+       "event_id": "o/1",
+       "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "kind": "register",
+       "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+       "record_time": "2026-01-01T00:00:00Z",
+       "seq": 0,
+       "writer": "o",
+       "writer_seq": 1
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "spawn"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "c"
+       },
+       "event_id": "o/2",
+       "hash": "ce6561a32a627fc470a24eede5536a180e26f8545961a3947ad66d06bc3737ff",
+       "kind": "register",
+       "prev": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "record_time": "2026-01-01T00:01:00Z",
+       "seq": 1,
+       "writer": "o",
+       "writer_seq": 2
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "spawn"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "c-x"
+       },
+       "event_id": "o/3",
+       "hash": "2eb9ade8fb74d08788343892465d74ed8ffc59c695957219a787d16e1f736913",
+       "kind": "register",
+       "prev": "ce6561a32a627fc470a24eede5536a180e26f8545961a3947ad66d06bc3737ff",
+       "record_time": "2026-01-01T00:02:00Z",
+       "seq": 2,
+       "writer": "o",
+       "writer_seq": 3
+      }
+     ]
+    ],
+    "a": [
+     "err",
+     "E_SPAWN",
+     "E_SPAWN: an instance's id is 'c-<k>', k a whole number"
+    ]
+   }
+  },
+  {
+   "file": "probes_SC.py",
+   "name": "writer_id_parent_asks",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    "/setup: length 2 vs 3"
+   ],
+   "hidden": {
+    "setup": [
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "owner"
+        ],
+        "compartments": [
+         "a",
+         "b"
+        ],
+        "kind": "human",
+        "party": "house",
+        "schema_version": 7,
+        "writer": "o"
+       },
+       "event_id": "o/1",
+       "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "kind": "register",
+       "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+       "record_time": "2026-01-01T00:00:00Z",
+       "seq": 0,
+       "writer": "o",
+       "writer_seq": 1
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "spawn"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "c"
+       },
+       "event_id": "o/2",
+       "hash": "ce6561a32a627fc470a24eede5536a180e26f8545961a3947ad66d06bc3737ff",
+       "kind": "register",
+       "prev": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "record_time": "2026-01-01T00:01:00Z",
+       "seq": 1,
+       "writer": "o",
+       "writer_seq": 2
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "spawn"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "c-x"
+       },
+       "event_id": "o/3",
+       "hash": "2eb9ade8fb74d08788343892465d74ed8ffc59c695957219a787d16e1f736913",
+       "kind": "register",
+       "prev": "ce6561a32a627fc470a24eede5536a180e26f8545961a3947ad66d06bc3737ff",
+       "record_time": "2026-01-01T00:02:00Z",
+       "seq": 2,
+       "writer": "o",
+       "writer_seq": 3
+      }
+     ]
+    ],
+    "a": [
+     "err",
+     "E_SPAWN",
+     "E_SPAWN: an instance's id is 'c-<k>', k a whole number"
+    ]
+   },
+   "without": {
+    "setup": [
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "owner"
+        ],
+        "compartments": [
+         "a",
+         "b"
+        ],
+        "kind": "human",
+        "party": "house",
+        "schema_version": 7,
+        "writer": "o"
+       },
+       "event_id": "o/1",
+       "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "kind": "register",
+       "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+       "record_time": "2026-01-01T00:00:00Z",
+       "seq": 0,
+       "writer": "o",
+       "writer_seq": 1
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "spawn"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "c"
+       },
+       "event_id": "o/2",
+       "hash": "ce6561a32a627fc470a24eede5536a180e26f8545961a3947ad66d06bc3737ff",
+       "kind": "register",
+       "prev": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "record_time": "2026-01-01T00:01:00Z",
+       "seq": 1,
+       "writer": "o",
+       "writer_seq": 2
+      }
+     ]
+    ],
+    "a": [
+     "err",
+     "E_SPAWN",
+     "E_SPAWN: an instance's id is 'c-<k>', k a whole number"
+    ]
+   }
+  },
+  {
+   "file": "probes_SC.py",
+   "name": "counts",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    "/proofs[1]/through/hash: e4afa0d3cdc474da45724f8db9a48107c5eea76b1cbe5e13cd2b9d33ce40 vs 95959dcdf88e6a34692f4517a5cf74f91dcfae545aa429bb4057d0626944",
+    "/second[1]/hash: e4afa0d3cdc474da45724f8db9a48107c5eea76b1cbe5e13cd2b9d33ce40 vs 95959dcdf88e6a34692f4517a5cf74f91dcfae545aa429bb4057d0626944",
+    "/second[1]/prev: 5594039dc405774d0ed91998adb4aed1bdb2e07d40a7652a677bf471cb63 vs c82038c8928e70c8e47c307ecbf88ad6af00491983fc5fe076875253ee27",
+    "/second[1]/seq: 4 vs 7",
+    "/setup: length 3 vs 6"
+   ],
+   "hidden": {
+    "setup": [
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "owner"
+        ],
+        "compartments": [
+         "a",
+         "b"
+        ],
+        "kind": "human",
+        "party": "house",
+        "schema_version": 7,
+        "writer": "o"
+       },
+       "event_id": "o/1",
+       "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "kind": "register",
+       "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+       "record_time": "2026-01-01T00:00:00Z",
+       "seq": 0,
+       "writer": "o",
+       "writer_seq": 1
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "wa"
+       },
+       "event_id": "o/2",
+       "hash": "4796764df6244720e6de7feff36dbb12c64d2df788513740c1bf40943e70de4f",
+       "kind": "register",
+       "prev": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "record_time": "2026-01-01T00:01:00Z",
+       "seq": 1,
+       "writer": "o",
+       "writer_seq": 2
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "q",
+        "writer": "wb"
+       },
+       "event_id": "o/3",
+       "hash": "ee150bde81f4f251add07f354691aedba91bb5f6deaec5c7ecc6b2fe7fbce74d",
+       "kind": "register",
+       "prev": "4796764df6244720e6de7feff36dbb12c64d2df788513740c1bf40943e70de4f",
+       "record_time": "2026-01-01T00:02:00Z",
+       "seq": 2,
+       "writer": "o",
+       "writer_seq": 3
+      }
+     ],
+     [
+      "ok",
+      "c:49ef57a11c5aa5e2ca2e059f3c5a562c4c6911112f2bb8f4abff21953da30523"
+     ],
+     [
+      "ok",
+      "c:44ebfab4cafe1642cfbbe5af07726e412368fd639e60fdc026bbceff2ba34d12"
+     ],
+     [
+      "ok",
+      "c:69a2603689a64059c4be389bb6a6c79345e91b3f7b2bb312cbaebfed87e9bbbe"
+     ]
+    ],
+    "first": [
+     "ok",
+     "c:100b47dc1769cd01dcbc15c02c6c751b808f9f893312cee4b93d86f8d1470094"
+    ],
+    "second": [
+     "ok",
+     {
+      "body": {
+       "compartment": "b",
+       "confidence": 5000,
+       "frame": "f",
+       "origin": "derived",
+       "speaker": "wb",
+       "stance": "asserted",
+       "statement": "b two",
+       "statement_kind": "describe",
+       "truth": "unknown"
+      },
+      "event_id": "wb/2",
+      "hash": "95959dcdf88e6a34692f4517a5cf74f91dcfae545aa429bb4057d0626944d834",
+      "kind": "claim",
+      "prev": "c82038c8928e70c8e47c307ecbf88ad6af00491983fc5fe076875253ee273f71",
+      "record_time": "2026-01-01T00:05:00Z",
+      "seq": 7,
+      "writer": "wb",
+      "writer_seq": 2
+     }
+    ],
+    "state": [
+     "ok",
+     {
+      "digest": "7cb3a50f8b83290ec217a59f6703ca7bd8d58472973167f6bc459c42cf64b504",
+      "ok": true,
+      "state": {
+       "appeals": {},
+       "appointments": {},
+       "claims": {
+        "c:0ef5e56209d7e11c6733361d27c79c920c1d58c4a0f394a8b2f07f97b3dd3386": {
+         "abstains": [],
+         "author": "wb",
+         "balance": {
+          "refutes": 0,
+          "supports": 0
+         },
+         "body": {
+          "compartment": "b",
+          "confidence": 5000,
+          "frame": "f",
+          "origin": "derived",
+          "speaker": "wb",
+          "stance": "asserted",
+          "statement": "b two",
+          "statement_kind": "describe",
+          "truth": "unknown"
+         },
+         "corroborated_by": [],
+         "defeated": false,
+         "disputed": false,
+         "effective_truth": "unknown",
+         "first_event": "wb/2",
+         "independent_groups": [
+          "model:m"
+         ],
+         "order": 1,
+         "record_time": "2026-01-01T00:05:00Z",
+         "refutes": [],
+         "source_recorded_by": null,
+         "superseded_by": [],
+         "supersedes": [],
+         "supports": []
+        },
+        "c:100b47dc1769cd01dcbc15c02c6c751b808f9f893312cee4b93d86f8d1470094": {
+         "abstains": [],
+         "author": "wb",
+         "balance": {
+          "refutes": 0,
+          "supports": 0
+         },
+         "body": {
+          "compartment": "b",
+          "confidence": 5000,
+          "frame": "f",
+          "origin": "derived",
+          "speaker": "wb",
+          "stance": "asserted",
+          "statement": "b one",
+          "statement_kind": "describe",
+          "truth": "unknown"
+         },
+         "corroborated_by": [],
+         "defeated": false,
+         "disputed": false,
+         "effective_truth": "unknown",
+         "first_event": "wb/1",
+         "independent_groups": [
+          "model:m"
+         ],
+         "order": 0,
+         "record_time": "2026-01-01T00:03:00Z",
+         "refutes": [],
+         "source_recorded_by": null,
+         "superseded_by": [],
+         "supersedes": [],
+         "supports": []
+        }
+       },
+       "episodes": {},
+       "handoffs": {},
+       "positions": {},
+       "schema_version": 7,
+       "supersessions": {},
+       "writers": {
+        "o": {
+         "capabilities": [
+          "owner"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "human:o",
+         "kind": "human",
+         "party": "house"
+        },
+        "wb": {
+         "capabilities": [
+          "write"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "operator": "o",
+         "party": "q"
+        }
+       }
+      }
+     }
+    ],
+    "writers": [
+     "ok",
+     {
+      "o": {
+       "capabilities": [
+        "owner"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "group": "human:o",
+       "kind": "human",
+       "party": "house"
+      },
+      "wb": {
+       "capabilities": [
+        "write"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "group": "model:m",
+       "kind": "model",
+       "model": "m",
+       "operator": "o",
+       "party": "q"
+      }
+     }
+    ],
+    "proofs": [
+     "ok",
+     {
+      "answers": [
+       {
+        "proof": "n1",
+        "proof_hash": "691263753f4c3b74b29c3b08c27fd624456d31c400751fd2136c57f6257e2795",
+        "values": [
+         "o",
+         "house",
+         "human"
+        ]
+       },
+       {
+        "proof": null,
+        "values": [
+         "wb",
+         "q",
+         "model"
+        ]
+       }
+      ],
+      "as_of": "2026-01-01T00:05:00Z",
+      "facts": 4,
+      "nodes": {
+       "n0": {
+        "fact": [
+         "writer",
+         "o",
+         "house",
+         "human"
+        ],
+        "hash": "07678eb331fcbf702f429e24c4e7dd3a47e5aa6e30b9864a2da6498643b04692",
+        "sources": [
+         {
+          "event": "o/1",
+          "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+          "kind": "register"
+         }
+        ]
+       },
+       "n1": {
+        "absent": [],
+        "fact": [
+         "?",
+         "o",
+         "house",
+         "human"
+        ],
+        "hash": "691263753f4c3b74b29c3b08c27fd624456d31c400751fd2136c57f6257e2795",
+        "premises": [
+         "n0"
+        ],
+        "rule": "r0"
+       }
+      },
+      "proved": 1,
+      "rules": {
+       "r0": {
+        "hash": "dbdb0b8726e209c533b4a77a620cb37952be7990a99bb27a3bc82b94097b2aec",
+        "origin": "line 1",
+        "text": "?(W, P, K) :- writer(W, P, K)."
+       }
+      },
+      "through": {
+       "event": "wb/2",
+       "hash": "95959dcdf88e6a34692f4517a5cf74f91dcfae545aa429bb4057d0626944d834",
+       "kind": "claim",
+       "time": "2026-01-01T00:05:00Z"
+      },
+      "truncated": false,
+      "variables": [
+       "W",
+       "P",
+       "K"
+      ],
+      "view": {
+       "compartments": [
+        "b"
+       ],
+       "reader": "wb"
+      }
+     }
+    ]
+   },
+   "without": {
+    "setup": [
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "owner"
+        ],
+        "compartments": [
+         "a",
+         "b"
+        ],
+        "kind": "human",
+        "party": "house",
+        "schema_version": 7,
+        "writer": "o"
+       },
+       "event_id": "o/1",
+       "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "kind": "register",
+       "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+       "record_time": "2026-01-01T00:00:00Z",
+       "seq": 0,
+       "writer": "o",
+       "writer_seq": 1
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "wa"
+       },
+       "event_id": "o/2",
+       "hash": "4796764df6244720e6de7feff36dbb12c64d2df788513740c1bf40943e70de4f",
+       "kind": "register",
+       "prev": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "record_time": "2026-01-01T00:01:00Z",
+       "seq": 1,
+       "writer": "o",
+       "writer_seq": 2
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "q",
+        "writer": "wb"
+       },
+       "event_id": "o/3",
+       "hash": "ee150bde81f4f251add07f354691aedba91bb5f6deaec5c7ecc6b2fe7fbce74d",
+       "kind": "register",
+       "prev": "4796764df6244720e6de7feff36dbb12c64d2df788513740c1bf40943e70de4f",
+       "record_time": "2026-01-01T00:02:00Z",
+       "seq": 2,
+       "writer": "o",
+       "writer_seq": 3
+      }
+     ]
+    ],
+    "first": [
+     "ok",
+     "c:100b47dc1769cd01dcbc15c02c6c751b808f9f893312cee4b93d86f8d1470094"
+    ],
+    "second": [
+     "ok",
+     {
+      "body": {
+       "compartment": "b",
+       "confidence": 5000,
+       "frame": "f",
+       "origin": "derived",
+       "speaker": "wb",
+       "stance": "asserted",
+       "statement": "b two",
+       "statement_kind": "describe",
+       "truth": "unknown"
+      },
+      "event_id": "wb/2",
+      "hash": "e4afa0d3cdc474da45724f8db9a48107c5eea76b1cbe5e13cd2b9d33ce402387",
+      "kind": "claim",
+      "prev": "5594039dc405774d0ed91998adb4aed1bdb2e07d40a7652a677bf471cb63cb92",
+      "record_time": "2026-01-01T00:05:00Z",
+      "seq": 4,
+      "writer": "wb",
+      "writer_seq": 2
+     }
+    ],
+    "state": [
+     "ok",
+     {
+      "digest": "7cb3a50f8b83290ec217a59f6703ca7bd8d58472973167f6bc459c42cf64b504",
+      "ok": true,
+      "state": {
+       "appeals": {},
+       "appointments": {},
+       "claims": {
+        "c:0ef5e56209d7e11c6733361d27c79c920c1d58c4a0f394a8b2f07f97b3dd3386": {
+         "abstains": [],
+         "author": "wb",
+         "balance": {
+          "refutes": 0,
+          "supports": 0
+         },
+         "body": {
+          "compartment": "b",
+          "confidence": 5000,
+          "frame": "f",
+          "origin": "derived",
+          "speaker": "wb",
+          "stance": "asserted",
+          "statement": "b two",
+          "statement_kind": "describe",
+          "truth": "unknown"
+         },
+         "corroborated_by": [],
+         "defeated": false,
+         "disputed": false,
+         "effective_truth": "unknown",
+         "first_event": "wb/2",
+         "independent_groups": [
+          "model:m"
+         ],
+         "order": 1,
+         "record_time": "2026-01-01T00:05:00Z",
+         "refutes": [],
+         "source_recorded_by": null,
+         "superseded_by": [],
+         "supersedes": [],
+         "supports": []
+        },
+        "c:100b47dc1769cd01dcbc15c02c6c751b808f9f893312cee4b93d86f8d1470094": {
+         "abstains": [],
+         "author": "wb",
+         "balance": {
+          "refutes": 0,
+          "supports": 0
+         },
+         "body": {
+          "compartment": "b",
+          "confidence": 5000,
+          "frame": "f",
+          "origin": "derived",
+          "speaker": "wb",
+          "stance": "asserted",
+          "statement": "b one",
+          "statement_kind": "describe",
+          "truth": "unknown"
+         },
+         "corroborated_by": [],
+         "defeated": false,
+         "disputed": false,
+         "effective_truth": "unknown",
+         "first_event": "wb/1",
+         "independent_groups": [
+          "model:m"
+         ],
+         "order": 0,
+         "record_time": "2026-01-01T00:03:00Z",
+         "refutes": [],
+         "source_recorded_by": null,
+         "superseded_by": [],
+         "supersedes": [],
+         "supports": []
+        }
+       },
+       "episodes": {},
+       "handoffs": {},
+       "positions": {},
+       "schema_version": 7,
+       "supersessions": {},
+       "writers": {
+        "o": {
+         "capabilities": [
+          "owner"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "human:o",
+         "kind": "human",
+         "party": "house"
+        },
+        "wb": {
+         "capabilities": [
+          "write"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "operator": "o",
+         "party": "q"
+        }
+       }
+      }
+     }
+    ],
+    "writers": [
+     "ok",
+     {
+      "o": {
+       "capabilities": [
+        "owner"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "group": "human:o",
+       "kind": "human",
+       "party": "house"
+      },
+      "wb": {
+       "capabilities": [
+        "write"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "group": "model:m",
+       "kind": "model",
+       "model": "m",
+       "operator": "o",
+       "party": "q"
+      }
+     }
+    ],
+    "proofs": [
+     "ok",
+     {
+      "answers": [
+       {
+        "proof": "n1",
+        "proof_hash": "691263753f4c3b74b29c3b08c27fd624456d31c400751fd2136c57f6257e2795",
+        "values": [
+         "o",
+         "house",
+         "human"
+        ]
+       },
+       {
+        "proof": null,
+        "values": [
+         "wb",
+         "q",
+         "model"
+        ]
+       }
+      ],
+      "as_of": "2026-01-01T00:05:00Z",
+      "facts": 4,
+      "nodes": {
+       "n0": {
+        "fact": [
+         "writer",
+         "o",
+         "house",
+         "human"
+        ],
+        "hash": "07678eb331fcbf702f429e24c4e7dd3a47e5aa6e30b9864a2da6498643b04692",
+        "sources": [
+         {
+          "event": "o/1",
+          "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+          "kind": "register"
+         }
+        ]
+       },
+       "n1": {
+        "absent": [],
+        "fact": [
+         "?",
+         "o",
+         "house",
+         "human"
+        ],
+        "hash": "691263753f4c3b74b29c3b08c27fd624456d31c400751fd2136c57f6257e2795",
+        "premises": [
+         "n0"
+        ],
+        "rule": "r0"
+       }
+      },
+      "proved": 1,
+      "rules": {
+       "r0": {
+        "hash": "dbdb0b8726e209c533b4a77a620cb37952be7990a99bb27a3bc82b94097b2aec",
+        "origin": "line 1",
+        "text": "?(W, P, K) :- writer(W, P, K)."
+       }
+      },
+      "through": {
+       "event": "wb/2",
+       "hash": "e4afa0d3cdc474da45724f8db9a48107c5eea76b1cbe5e13cd2b9d33ce402387",
+       "kind": "claim",
+       "time": "2026-01-01T00:05:00Z"
+      },
+      "truncated": false,
+      "variables": [
+       "W",
+       "P",
+       "K"
+      ],
+      "view": {
+       "compartments": [
+        "b"
+       ],
+       "reader": "wb"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "file": "probes_SC.py",
+   "name": "limit_writer_seq_gap",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    "/state[1]/digest: 2d1587725b57df65749cb2a5f29695c88073c09981590e408322e87a66a4 vs a5450bfbfb0e15965b77f8f2b5632376f7557f2e6e258cd36d1b59dbbde7",
+    "/state[1]/state/claims/c:a7311e6c877525deb6ea8c477537bfe3c955985e7f2ca0293d2a746914cb17d9/first_event: wab/2 vs wab/3"
+   ],
+   "hidden": {
+    "b_claim": [
+     "ok",
+     "c:a7311e6c877525deb6ea8c477537bfe3c955985e7f2ca0293d2a746914cb17d9"
+    ],
+    "state": [
+     "ok",
+     {
+      "digest": "a5450bfbfb0e15965b77f8f2b5632376f7557f2e6e258cd36d1b59dbbde75c66",
+      "ok": true,
+      "state": {
+       "appeals": {},
+       "appointments": {},
+       "claims": {
+        "c:a7311e6c877525deb6ea8c477537bfe3c955985e7f2ca0293d2a746914cb17d9": {
+         "abstains": [],
+         "author": "wab",
+         "balance": {
+          "refutes": 0,
+          "supports": 0
+         },
+         "body": {
+          "compartment": "b",
+          "confidence": 5000,
+          "frame": "f",
+          "origin": "derived",
+          "speaker": "wab",
+          "stance": "asserted",
+          "statement": "b two",
+          "statement_kind": "describe",
+          "truth": "unknown"
+         },
+         "corroborated_by": [],
+         "defeated": false,
+         "disputed": false,
+         "effective_truth": "unknown",
+         "first_event": "wab/3",
+         "independent_groups": [
+          "model:m"
+         ],
+         "order": 1,
+         "record_time": "2026-01-01T00:05:00Z",
+         "refutes": [],
+         "source_recorded_by": null,
+         "superseded_by": [],
+         "supersedes": [],
+         "supports": []
+        },
+        "c:eaf4a3110ce4c42c776c77bcf2d44800489f0867d0841682fdbdbf6a8bc9ca59": {
+         "abstains": [],
+         "author": "wab",
+         "balance": {
+          "refutes": 0,
+          "supports": 0
+         },
+         "body": {
+          "compartment": "b",
+          "confidence": 5000,
+          "frame": "f",
+          "origin": "derived",
+          "speaker": "wab",
+          "stance": "asserted",
+          "statement": "b one",
+          "statement_kind": "describe",
+          "truth": "unknown"
+         },
+         "corroborated_by": [],
+         "defeated": false,
+         "disputed": false,
+         "effective_truth": "unknown",
+         "first_event": "wab/1",
+         "independent_groups": [
+          "model:m"
+         ],
+         "order": 0,
+         "record_time": "2026-01-01T00:03:00Z",
+         "refutes": [],
+         "source_recorded_by": null,
+         "superseded_by": [],
+         "supersedes": [],
+         "supports": []
+        }
+       },
+       "episodes": {},
+       "handoffs": {},
+       "positions": {},
+       "schema_version": 7,
+       "supersessions": {},
+       "writers": {
+        "o": {
+         "capabilities": [
+          "owner"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "human:o",
+         "kind": "human",
+         "party": "house"
+        },
+        "rb": {
+         "capabilities": [
+          "write"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "operator": "o",
+         "party": "q"
+        },
+        "wab": {
+         "capabilities": [
+          "write"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "operator": "o",
+         "party": "p"
+        }
+       }
+      }
+     }
+    ]
+   },
+   "without": {
+    "b_claim": [
+     "ok",
+     "c:a7311e6c877525deb6ea8c477537bfe3c955985e7f2ca0293d2a746914cb17d9"
+    ],
+    "state": [
+     "ok",
+     {
+      "digest": "2d1587725b57df65749cb2a5f29695c88073c09981590e408322e87a66a450f2",
+      "ok": true,
+      "state": {
+       "appeals": {},
+       "appointments": {},
+       "claims": {
+        "c:a7311e6c877525deb6ea8c477537bfe3c955985e7f2ca0293d2a746914cb17d9": {
+         "abstains": [],
+         "author": "wab",
+         "balance": {
+          "refutes": 0,
+          "supports": 0
+         },
+         "body": {
+          "compartment": "b",
+          "confidence": 5000,
+          "frame": "f",
+          "origin": "derived",
+          "speaker": "wab",
+          "stance": "asserted",
+          "statement": "b two",
+          "statement_kind": "describe",
+          "truth": "unknown"
+         },
+         "corroborated_by": [],
+         "defeated": false,
+         "disputed": false,
+         "effective_truth": "unknown",
+         "first_event": "wab/2",
+         "independent_groups": [
+          "model:m"
+         ],
+         "order": 1,
+         "record_time": "2026-01-01T00:05:00Z",
+         "refutes": [],
+         "source_recorded_by": null,
+         "superseded_by": [],
+         "supersedes": [],
+         "supports": []
+        },
+        "c:eaf4a3110ce4c42c776c77bcf2d44800489f0867d0841682fdbdbf6a8bc9ca59": {
+         "abstains": [],
+         "author": "wab",
+         "balance": {
+          "refutes": 0,
+          "supports": 0
+         },
+         "body": {
+          "compartment": "b",
+          "confidence": 5000,
+          "frame": "f",
+          "origin": "derived",
+          "speaker": "wab",
+          "stance": "asserted",
+          "statement": "b one",
+          "statement_kind": "describe",
+          "truth": "unknown"
+         },
+         "corroborated_by": [],
+         "defeated": false,
+         "disputed": false,
+         "effective_truth": "unknown",
+         "first_event": "wab/1",
+         "independent_groups": [
+          "model:m"
+         ],
+         "order": 0,
+         "record_time": "2026-01-01T00:03:00Z",
+         "refutes": [],
+         "source_recorded_by": null,
+         "superseded_by": [],
+         "supersedes": [],
+         "supports": []
+        }
+       },
+       "episodes": {},
+       "handoffs": {},
+       "positions": {},
+       "schema_version": 7,
+       "supersessions": {},
+       "writers": {
+        "o": {
+         "capabilities": [
+          "owner"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "human:o",
+         "kind": "human",
+         "party": "house"
+        },
+        "rb": {
+         "capabilities": [
+          "write"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "operator": "o",
+         "party": "q"
+        },
+        "wab": {
+         "capabilities": [
+          "write"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "operator": "o",
+         "party": "p"
+        }
+       }
+      }
+     }
+    ]
+   }
+  },
+  {
+   "file": "probes_SC.py",
+   "name": "lease_hidden_target",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    "/setup: length 2 vs 3"
+   ],
+   "hidden": {
+    "setup": [
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "owner"
+        ],
+        "compartments": [
+         "a",
+         "b"
+        ],
+        "kind": "human",
+        "party": "house",
+        "schema_version": 7,
+        "writer": "o"
+       },
+       "event_id": "o/1",
+       "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "kind": "register",
+       "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+       "record_time": "2026-01-01T00:00:00Z",
+       "seq": 0,
+       "writer": "o",
+       "writer_seq": 1
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "schedule"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "gb"
+       },
+       "event_id": "o/2",
+       "hash": "751051a84038fe19cdd524ccd1da29a203e4cdcb7ddde7f1317038ed0e8312c7",
+       "kind": "register",
+       "prev": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "record_time": "2026-01-01T00:01:00Z",
+       "seq": 1,
+       "writer": "o",
+       "writer_seq": 2
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "ta"
+       },
+       "event_id": "o/3",
+       "hash": "233400d8f867c1604a1ef51c87ec98f782847d8b4d76dc71d559d5e99622aabb",
+       "kind": "register",
+       "prev": "751051a84038fe19cdd524ccd1da29a203e4cdcb7ddde7f1317038ed0e8312c7",
+       "record_time": "2026-01-01T00:02:00Z",
+       "seq": 2,
+       "writer": "o",
+       "writer_seq": 3
+      }
+     ]
+    ],
+    "lease": [
+     "err",
+     "E_UNKNOWN_WRITER",
+     "E_UNKNOWN_WRITER: writer 'ta' is not registered"
+    ]
+   },
+   "without": {
+    "setup": [
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "owner"
+        ],
+        "compartments": [
+         "a",
+         "b"
+        ],
+        "kind": "human",
+        "party": "house",
+        "schema_version": 7,
+        "writer": "o"
+       },
+       "event_id": "o/1",
+       "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "kind": "register",
+       "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+       "record_time": "2026-01-01T00:00:00Z",
+       "seq": 0,
+       "writer": "o",
+       "writer_seq": 1
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "schedule"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "gb"
+       },
+       "event_id": "o/2",
+       "hash": "751051a84038fe19cdd524ccd1da29a203e4cdcb7ddde7f1317038ed0e8312c7",
+       "kind": "register",
+       "prev": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "record_time": "2026-01-01T00:01:00Z",
+       "seq": 1,
+       "writer": "o",
+       "writer_seq": 2
+      }
+     ]
+    ],
+    "lease": [
+     "err",
+     "E_UNKNOWN_WRITER",
+     "E_UNKNOWN_WRITER: writer 'ta' is not registered"
+    ]
+   }
+  },
+  {
+   "file": "probes_SC.py",
+   "name": "lease_frame_blocked",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    "/lease: length 2 vs 3",
+    "/setup: length 5 vs 6",
+    "/write[2]: E_LEASE: a write in leased frame 'f' names its lease ('gb/1' vs E_LEASE: frame 'f' is leased to 'ta' until 2036-01-01T00:00:"
+   ],
+   "hidden": {
+    "setup": [
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "owner"
+        ],
+        "compartments": [
+         "a",
+         "b"
+        ],
+        "kind": "human",
+        "party": "house",
+        "schema_version": 7,
+        "writer": "o"
+       },
+       "event_id": "o/1",
+       "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "kind": "register",
+       "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+       "record_time": "2026-01-01T00:00:00Z",
+       "seq": 0,
+       "writer": "o",
+       "writer_seq": 1
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "schedule"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "ga"
+       },
+       "event_id": "o/2",
+       "hash": "978988ff7078eb9ecfea041b145e467feac0439b80d39beee0725eaf555fa923",
+       "kind": "register",
+       "prev": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "record_time": "2026-01-01T00:01:00Z",
+       "seq": 1,
+       "writer": "o",
+       "writer_seq": 2
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "ta"
+       },
+       "event_id": "o/3",
+       "hash": "d7b8ee52192c64310c304603d4768a687605e5b4d8d3c1a5ed7769bbc065ca80",
+       "kind": "register",
+       "prev": "978988ff7078eb9ecfea041b145e467feac0439b80d39beee0725eaf555fa923",
+       "record_time": "2026-01-01T00:02:00Z",
+       "seq": 2,
+       "writer": "o",
+       "writer_seq": 3
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "schedule"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "q",
+        "writer": "gb"
+       },
+       "event_id": "o/4",
+       "hash": "7ff1404d36f1f9bf0799543863eaba5b421b7d5247d001ac3d9a759864ed3028",
+       "kind": "register",
+       "prev": "d7b8ee52192c64310c304603d4768a687605e5b4d8d3c1a5ed7769bbc065ca80",
+       "record_time": "2026-01-01T00:03:00Z",
+       "seq": 3,
+       "writer": "o",
+       "writer_seq": 4
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "q",
+        "writer": "tb"
+       },
+       "event_id": "o/5",
+       "hash": "f8ccf080c3c25a5cbb561da75fe3fa53b1de1121bc81b01b5949b99ef46a49c4",
+       "kind": "register",
+       "prev": "7ff1404d36f1f9bf0799543863eaba5b421b7d5247d001ac3d9a759864ed3028",
+       "record_time": "2026-01-01T00:04:00Z",
+       "seq": 4,
+       "writer": "o",
+       "writer_seq": 5
+      }
+     ],
+     [
+      "ok",
+      "ga/1"
+     ]
+    ],
+    "lease": [
+     "err",
+     "E_LEASED",
+     "E_LEASED: frame 'f' is already leased"
+    ],
+    "write": [
+     "err",
+     "E_LEASE",
+     "E_LEASE: frame 'f' is leased to 'ta' until 2036-01-01T00:00:00Z"
+    ]
+   },
+   "without": {
+    "setup": [
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "owner"
+        ],
+        "compartments": [
+         "a",
+         "b"
+        ],
+        "kind": "human",
+        "party": "house",
+        "schema_version": 7,
+        "writer": "o"
+       },
+       "event_id": "o/1",
+       "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "kind": "register",
+       "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+       "record_time": "2026-01-01T00:00:00Z",
+       "seq": 0,
+       "writer": "o",
+       "writer_seq": 1
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "schedule"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "ga"
+       },
+       "event_id": "o/2",
+       "hash": "978988ff7078eb9ecfea041b145e467feac0439b80d39beee0725eaf555fa923",
+       "kind": "register",
+       "prev": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "record_time": "2026-01-01T00:01:00Z",
+       "seq": 1,
+       "writer": "o",
+       "writer_seq": 2
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "ta"
+       },
+       "event_id": "o/3",
+       "hash": "d7b8ee52192c64310c304603d4768a687605e5b4d8d3c1a5ed7769bbc065ca80",
+       "kind": "register",
+       "prev": "978988ff7078eb9ecfea041b145e467feac0439b80d39beee0725eaf555fa923",
+       "record_time": "2026-01-01T00:02:00Z",
+       "seq": 2,
+       "writer": "o",
+       "writer_seq": 3
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "schedule"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "q",
+        "writer": "gb"
+       },
+       "event_id": "o/4",
+       "hash": "7ff1404d36f1f9bf0799543863eaba5b421b7d5247d001ac3d9a759864ed3028",
+       "kind": "register",
+       "prev": "d7b8ee52192c64310c304603d4768a687605e5b4d8d3c1a5ed7769bbc065ca80",
+       "record_time": "2026-01-01T00:03:00Z",
+       "seq": 3,
+       "writer": "o",
+       "writer_seq": 4
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "q",
+        "writer": "tb"
+       },
+       "event_id": "o/5",
+       "hash": "f8ccf080c3c25a5cbb561da75fe3fa53b1de1121bc81b01b5949b99ef46a49c4",
+       "kind": "register",
+       "prev": "7ff1404d36f1f9bf0799543863eaba5b421b7d5247d001ac3d9a759864ed3028",
+       "record_time": "2026-01-01T00:04:00Z",
+       "seq": 4,
+       "writer": "o",
+       "writer_seq": 5
+      }
+     ]
+    ],
+    "lease": [
+     "ok",
+     "gb/1"
+    ],
+    "write": [
+     "err",
+     "E_LEASE",
+     "E_LEASE: a write in leased frame 'f' names its lease ('gb/1')"
+    ]
+   }
+  },
+  {
+   "file": "probes_SC.py",
+   "name": "lease_release_guess",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    "/release[1]: E_REF vs E_CAPABILITY",
+    "/release[2]: E_REF: lease 'ga/1' does not exist or is not accessible vs E_CAPABILITY: a lease is released by its holder, whoever gra",
+    "/release_fixed[1]: E_REF vs E_CAPABILITY",
+    "/release_fixed[2]: E_REF: lease 'ga/1' does not exist or is not accessible vs E_CAPABILITY: a lease is released by its holder, whoever gra",
+    "/setup: length 5 vs 6"
+   ],
+   "hidden": {
+    "setup": [
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "owner"
+        ],
+        "compartments": [
+         "a",
+         "b"
+        ],
+        "kind": "human",
+        "party": "house",
+        "schema_version": 7,
+        "writer": "o"
+       },
+       "event_id": "o/1",
+       "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "kind": "register",
+       "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+       "record_time": "2026-01-01T00:00:00Z",
+       "seq": 0,
+       "writer": "o",
+       "writer_seq": 1
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "schedule"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "ga"
+       },
+       "event_id": "o/2",
+       "hash": "978988ff7078eb9ecfea041b145e467feac0439b80d39beee0725eaf555fa923",
+       "kind": "register",
+       "prev": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "record_time": "2026-01-01T00:01:00Z",
+       "seq": 1,
+       "writer": "o",
+       "writer_seq": 2
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "ta"
+       },
+       "event_id": "o/3",
+       "hash": "d7b8ee52192c64310c304603d4768a687605e5b4d8d3c1a5ed7769bbc065ca80",
+       "kind": "register",
+       "prev": "978988ff7078eb9ecfea041b145e467feac0439b80d39beee0725eaf555fa923",
+       "record_time": "2026-01-01T00:02:00Z",
+       "seq": 2,
+       "writer": "o",
+       "writer_seq": 3
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "schedule"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "q",
+        "writer": "gb"
+       },
+       "event_id": "o/4",
+       "hash": "7ff1404d36f1f9bf0799543863eaba5b421b7d5247d001ac3d9a759864ed3028",
+       "kind": "register",
+       "prev": "d7b8ee52192c64310c304603d4768a687605e5b4d8d3c1a5ed7769bbc065ca80",
+       "record_time": "2026-01-01T00:03:00Z",
+       "seq": 3,
+       "writer": "o",
+       "writer_seq": 4
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "q",
+        "writer": "tb"
+       },
+       "event_id": "o/5",
+       "hash": "f8ccf080c3c25a5cbb561da75fe3fa53b1de1121bc81b01b5949b99ef46a49c4",
+       "kind": "register",
+       "prev": "7ff1404d36f1f9bf0799543863eaba5b421b7d5247d001ac3d9a759864ed3028",
+       "record_time": "2026-01-01T00:04:00Z",
+       "seq": 4,
+       "writer": "o",
+       "writer_seq": 5
+      }
+     ],
+     [
+      "ok",
+      "ga/1"
+     ]
+    ],
+    "release": [
+     "err",
+     "E_CAPABILITY",
+     "E_CAPABILITY: a lease is released by its holder, whoever granted it, or the owner"
+    ],
+    "release_fixed": [
+     "err",
+     "E_CAPABILITY",
+     "E_CAPABILITY: a lease is released by its holder, whoever granted it, or the owner"
+    ]
+   },
+   "without": {
+    "setup": [
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "owner"
+        ],
+        "compartments": [
+         "a",
+         "b"
+        ],
+        "kind": "human",
+        "party": "house",
+        "schema_version": 7,
+        "writer": "o"
+       },
+       "event_id": "o/1",
+       "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "kind": "register",
+       "prev": "0000000000000000000000000000000000000000000000000000000000000000",
+       "record_time": "2026-01-01T00:00:00Z",
+       "seq": 0,
+       "writer": "o",
+       "writer_seq": 1
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "schedule"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "ga"
+       },
+       "event_id": "o/2",
+       "hash": "978988ff7078eb9ecfea041b145e467feac0439b80d39beee0725eaf555fa923",
+       "kind": "register",
+       "prev": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+       "record_time": "2026-01-01T00:01:00Z",
+       "seq": 1,
+       "writer": "o",
+       "writer_seq": 2
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "a"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "p",
+        "writer": "ta"
+       },
+       "event_id": "o/3",
+       "hash": "d7b8ee52192c64310c304603d4768a687605e5b4d8d3c1a5ed7769bbc065ca80",
+       "kind": "register",
+       "prev": "978988ff7078eb9ecfea041b145e467feac0439b80d39beee0725eaf555fa923",
+       "record_time": "2026-01-01T00:02:00Z",
+       "seq": 2,
+       "writer": "o",
+       "writer_seq": 3
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write",
+         "schedule"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "q",
+        "writer": "gb"
+       },
+       "event_id": "o/4",
+       "hash": "7ff1404d36f1f9bf0799543863eaba5b421b7d5247d001ac3d9a759864ed3028",
+       "kind": "register",
+       "prev": "d7b8ee52192c64310c304603d4768a687605e5b4d8d3c1a5ed7769bbc065ca80",
+       "record_time": "2026-01-01T00:03:00Z",
+       "seq": 3,
+       "writer": "o",
+       "writer_seq": 4
+      }
+     ],
+     [
+      "ok",
+      {
+       "body": {
+        "capabilities": [
+         "write"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "kind": "model",
+        "model": "m",
+        "operator": "o",
+        "party": "q",
+        "writer": "tb"
+       },
+       "event_id": "o/5",
+       "hash": "f8ccf080c3c25a5cbb561da75fe3fa53b1de1121bc81b01b5949b99ef46a49c4",
+       "kind": "register",
+       "prev": "7ff1404d36f1f9bf0799543863eaba5b421b7d5247d001ac3d9a759864ed3028",
+       "record_time": "2026-01-01T00:04:00Z",
+       "seq": 4,
+       "writer": "o",
+       "writer_seq": 5
+      }
+     ]
+    ],
+    "release": [
+     "err",
+     "E_REF",
+     "E_REF: lease 'ga/1' does not exist or is not accessible"
+    ],
+    "release_fixed": [
+     "err",
+     "E_REF",
+     "E_REF: lease 'ga/1' does not exist or is not accessible"
+    ]
+   }
+  },
+  {
+   "file": "probes_SC.py",
+   "name": "through_lease_release_revoke",
+   "status": "same",
+   "crosses": false,
+   "diff_paths": [],
+   "hidden": {
+    "state": [
+     "ok",
+     {
+      "digest": "1fad3b3b458117aa1e27e4c71bec025ea3bbb57fea51e55120b9ddfd706679ca",
+      "ok": true,
+      "state": {
+       "appeals": {},
+       "appointments": {},
+       "claims": {
+        "c:35481ef6f0ec13c4f129967bf03b94f90e2c75052c8132434d99e83c06887412": {
+         "abstains": [],
+         "author": "tb",
+         "balance": {
+          "refutes": 0,
+          "supports": 0
+         },
+         "body": {
+          "compartment": "b",
+          "confidence": 5000,
+          "frame": "f",
+          "origin": "derived",
+          "speaker": "tb",
+          "stance": "asserted",
+          "statement": "b visible",
+          "statement_kind": "describe",
+          "truth": "unknown"
+         },
+         "corroborated_by": [],
+         "defeated": false,
+         "disputed": false,
+         "effective_truth": "unknown",
+         "first_event": "tb/1",
+         "independent_groups": [
+          "model:m"
+         ],
+         "order": 0,
+         "record_time": "2026-01-01T00:06:00Z",
+         "refutes": [],
+         "source_recorded_by": null,
+         "superseded_by": [],
+         "supersedes": [],
+         "supports": []
+        }
+       },
+       "episodes": {},
+       "handoffs": {},
+       "positions": {},
+       "schema_version": 7,
+       "supersessions": {},
+       "writers": {
+        "gb": {
+         "capabilities": [
+          "write",
+          "schedule"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "operator": "o",
+         "party": "q"
+        },
+        "o": {
+         "capabilities": [
+          "owner"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "human:o",
+         "kind": "human",
+         "party": "house"
+        },
+        "tb": {
+         "capabilities": [
+          "write"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "operator": "o",
+         "party": "q"
+        }
+       }
+      }
+     }
+    ],
+    "as_of": [
+     "ok",
+     {
+      "digest": "1fad3b3b458117aa1e27e4c71bec025ea3bbb57fea51e55120b9ddfd706679ca",
+      "ok": true,
+      "state": {
+       "appeals": {},
+       "appointments": {},
+       "claims": {
+        "c:35481ef6f0ec13c4f129967bf03b94f90e2c75052c8132434d99e83c06887412": {
+         "abstains": [],
+         "author": "tb",
+         "balance": {
+          "refutes": 0,
+          "supports": 0
+         },
+         "body": {
+          "compartment": "b",
+          "confidence": 5000,
+          "frame": "f",
+          "origin": "derived",
+          "speaker": "tb",
+          "stance": "asserted",
+          "statement": "b visible",
+          "statement_kind": "describe",
+          "truth": "unknown"
+         },
+         "corroborated_by": [],
+         "defeated": false,
+         "disputed": false,
+         "effective_truth": "unknown",
+         "first_event": "tb/1",
+         "independent_groups": [
+          "model:m"
+         ],
+         "order": 0,
+         "record_time": "2026-01-01T00:06:00Z",
+         "refutes": [],
+         "source_recorded_by": null,
+         "superseded_by": [],
+         "supersedes": [],
+         "supports": []
+        }
+       },
+       "episodes": {},
+       "handoffs": {},
+       "positions": {},
+       "schema_version": 7,
+       "supersessions": {},
+       "writers": {
+        "gb": {
+         "capabilities": [
+          "write",
+          "schedule"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "operator": "o",
+         "party": "q"
+        },
+        "o": {
+         "capabilities": [
+          "owner"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "human:o",
+         "kind": "human",
+         "party": "house"
+        },
+        "tb": {
+         "capabilities": [
+          "write"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "operator": "o",
+         "party": "q"
+        }
+       }
+      }
+     }
+    ],
+    "query": [
+     "ok",
+     {
+      "answers": [
+       {
+        "proof": "n1",
+        "proof_hash": "847ebb7bef8121ace8049c4ff043478d1dc26226ad9ef0c4ef3f8d9f2ab46719",
+        "values": [
+         "gb",
+         "q",
+         "model"
+        ]
+       },
+       {
+        "proof": "n3",
+        "proof_hash": "691263753f4c3b74b29c3b08c27fd624456d31c400751fd2136c57f6257e2795",
+        "values": [
+         "o",
+         "house",
+         "human"
+        ]
+       },
+       {
+        "proof": "n5",
+        "proof_hash": "f7febdd82dafde0f2a9fc1b4d7ceaf7d2c869f2849a0365359ff55b584aafbd5",
+        "values": [
+         "tb",
+         "q",
+         "model"
+        ]
+       }
+      ],
+      "as_of": "2026-01-01T00:06:00Z",
+      "facts": 6,
+      "nodes": {
+       "n0": {
+        "fact": [
+         "writer",
+         "gb",
+         "q",
+         "model"
+        ],
+        "hash": "f5a6d9a8f0edcc39e459089cb8d2fa7b20d0c5da217899955977d82fdf989d28",
+        "sources": [
+         {
+          "event": "o/4",
+          "hash": "7ff1404d36f1f9bf0799543863eaba5b421b7d5247d001ac3d9a759864ed3028",
+          "kind": "register"
+         }
+        ]
+       },
+       "n1": {
+        "absent": [],
+        "fact": [
+         "?",
+         "gb",
+         "q",
+         "model"
+        ],
+        "hash": "847ebb7bef8121ace8049c4ff043478d1dc26226ad9ef0c4ef3f8d9f2ab46719",
+        "premises": [
+         "n0"
+        ],
+        "rule": "r0"
+       },
+       "n2": {
+        "fact": [
+         "writer",
+         "o",
+         "house",
+         "human"
+        ],
+        "hash": "07678eb331fcbf702f429e24c4e7dd3a47e5aa6e30b9864a2da6498643b04692",
+        "sources": [
+         {
+          "event": "o/1",
+          "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+          "kind": "register"
+         }
+        ]
+       },
+       "n3": {
+        "absent": [],
+        "fact": [
+         "?",
+         "o",
+         "house",
+         "human"
+        ],
+        "hash": "691263753f4c3b74b29c3b08c27fd624456d31c400751fd2136c57f6257e2795",
+        "premises": [
+         "n2"
+        ],
+        "rule": "r0"
+       },
+       "n4": {
+        "fact": [
+         "writer",
+         "tb",
+         "q",
+         "model"
+        ],
+        "hash": "fec70e394c6bdc47095b8273117d33e97af7eb675e39c1d7fa0f8b9e89d31ffb",
+        "sources": [
+         {
+          "event": "o/5",
+          "hash": "f8ccf080c3c25a5cbb561da75fe3fa53b1de1121bc81b01b5949b99ef46a49c4",
+          "kind": "register"
+         }
+        ]
+       },
+       "n5": {
+        "absent": [],
+        "fact": [
+         "?",
+         "tb",
+         "q",
+         "model"
+        ],
+        "hash": "f7febdd82dafde0f2a9fc1b4d7ceaf7d2c869f2849a0365359ff55b584aafbd5",
+        "premises": [
+         "n4"
+        ],
+        "rule": "r0"
+       }
+      },
+      "proved": 3,
+      "rules": {
+       "r0": {
+        "hash": "dbdb0b8726e209c533b4a77a620cb37952be7990a99bb27a3bc82b94097b2aec",
+        "origin": "line 1",
+        "text": "?(W, P, K) :- writer(W, P, K)."
+       }
+      },
+      "through": {
+       "event": "tb/1",
+       "hash": "c1c215ae183446a52ed0f9adad3e1e504f7f0916addfaf5dc60b6dd2c80b167c",
+       "kind": "claim",
+       "time": "2026-01-01T00:06:00Z"
+      },
+      "truncated": false,
+      "variables": [
+       "W",
+       "P",
+       "K"
+      ],
+      "view": {
+       "compartments": [
+        "b"
+       ],
+       "reader": "tb"
+      }
+     }
+    ]
+   },
+   "without": {
+    "state": [
+     "ok",
+     {
+      "digest": "1fad3b3b458117aa1e27e4c71bec025ea3bbb57fea51e55120b9ddfd706679ca",
+      "ok": true,
+      "state": {
+       "appeals": {},
+       "appointments": {},
+       "claims": {
+        "c:35481ef6f0ec13c4f129967bf03b94f90e2c75052c8132434d99e83c06887412": {
+         "abstains": [],
+         "author": "tb",
+         "balance": {
+          "refutes": 0,
+          "supports": 0
+         },
+         "body": {
+          "compartment": "b",
+          "confidence": 5000,
+          "frame": "f",
+          "origin": "derived",
+          "speaker": "tb",
+          "stance": "asserted",
+          "statement": "b visible",
+          "statement_kind": "describe",
+          "truth": "unknown"
+         },
+         "corroborated_by": [],
+         "defeated": false,
+         "disputed": false,
+         "effective_truth": "unknown",
+         "first_event": "tb/1",
+         "independent_groups": [
+          "model:m"
+         ],
+         "order": 0,
+         "record_time": "2026-01-01T00:06:00Z",
+         "refutes": [],
+         "source_recorded_by": null,
+         "superseded_by": [],
+         "supersedes": [],
+         "supports": []
+        }
+       },
+       "episodes": {},
+       "handoffs": {},
+       "positions": {},
+       "schema_version": 7,
+       "supersessions": {},
+       "writers": {
+        "gb": {
+         "capabilities": [
+          "write",
+          "schedule"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "operator": "o",
+         "party": "q"
+        },
+        "o": {
+         "capabilities": [
+          "owner"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "human:o",
+         "kind": "human",
+         "party": "house"
+        },
+        "tb": {
+         "capabilities": [
+          "write"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "operator": "o",
+         "party": "q"
+        }
+       }
+      }
+     }
+    ],
+    "as_of": [
+     "ok",
+     {
+      "digest": "1fad3b3b458117aa1e27e4c71bec025ea3bbb57fea51e55120b9ddfd706679ca",
+      "ok": true,
+      "state": {
+       "appeals": {},
+       "appointments": {},
+       "claims": {
+        "c:35481ef6f0ec13c4f129967bf03b94f90e2c75052c8132434d99e83c06887412": {
+         "abstains": [],
+         "author": "tb",
+         "balance": {
+          "refutes": 0,
+          "supports": 0
+         },
+         "body": {
+          "compartment": "b",
+          "confidence": 5000,
+          "frame": "f",
+          "origin": "derived",
+          "speaker": "tb",
+          "stance": "asserted",
+          "statement": "b visible",
+          "statement_kind": "describe",
+          "truth": "unknown"
+         },
+         "corroborated_by": [],
+         "defeated": false,
+         "disputed": false,
+         "effective_truth": "unknown",
+         "first_event": "tb/1",
+         "independent_groups": [
+          "model:m"
+         ],
+         "order": 0,
+         "record_time": "2026-01-01T00:06:00Z",
+         "refutes": [],
+         "source_recorded_by": null,
+         "superseded_by": [],
+         "supersedes": [],
+         "supports": []
+        }
+       },
+       "episodes": {},
+       "handoffs": {},
+       "positions": {},
+       "schema_version": 7,
+       "supersessions": {},
+       "writers": {
+        "gb": {
+         "capabilities": [
+          "write",
+          "schedule"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "operator": "o",
+         "party": "q"
+        },
+        "o": {
+         "capabilities": [
+          "owner"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "human:o",
+         "kind": "human",
+         "party": "house"
+        },
+        "tb": {
+         "capabilities": [
+          "write"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "operator": "o",
+         "party": "q"
+        }
+       }
+      }
+     }
+    ],
+    "query": [
+     "ok",
+     {
+      "answers": [
+       {
+        "proof": "n1",
+        "proof_hash": "847ebb7bef8121ace8049c4ff043478d1dc26226ad9ef0c4ef3f8d9f2ab46719",
+        "values": [
+         "gb",
+         "q",
+         "model"
+        ]
+       },
+       {
+        "proof": "n3",
+        "proof_hash": "691263753f4c3b74b29c3b08c27fd624456d31c400751fd2136c57f6257e2795",
+        "values": [
+         "o",
+         "house",
+         "human"
+        ]
+       },
+       {
+        "proof": "n5",
+        "proof_hash": "f7febdd82dafde0f2a9fc1b4d7ceaf7d2c869f2849a0365359ff55b584aafbd5",
+        "values": [
+         "tb",
+         "q",
+         "model"
+        ]
+       }
+      ],
+      "as_of": "2026-01-01T00:06:00Z",
+      "facts": 6,
+      "nodes": {
+       "n0": {
+        "fact": [
+         "writer",
+         "gb",
+         "q",
+         "model"
+        ],
+        "hash": "f5a6d9a8f0edcc39e459089cb8d2fa7b20d0c5da217899955977d82fdf989d28",
+        "sources": [
+         {
+          "event": "o/4",
+          "hash": "7ff1404d36f1f9bf0799543863eaba5b421b7d5247d001ac3d9a759864ed3028",
+          "kind": "register"
+         }
+        ]
+       },
+       "n1": {
+        "absent": [],
+        "fact": [
+         "?",
+         "gb",
+         "q",
+         "model"
+        ],
+        "hash": "847ebb7bef8121ace8049c4ff043478d1dc26226ad9ef0c4ef3f8d9f2ab46719",
+        "premises": [
+         "n0"
+        ],
+        "rule": "r0"
+       },
+       "n2": {
+        "fact": [
+         "writer",
+         "o",
+         "house",
+         "human"
+        ],
+        "hash": "07678eb331fcbf702f429e24c4e7dd3a47e5aa6e30b9864a2da6498643b04692",
+        "sources": [
+         {
+          "event": "o/1",
+          "hash": "97a2c9306af31fdd86b4a7f6b6a1f796fda52896dcd929e20557382d1e8af2ed",
+          "kind": "register"
+         }
+        ]
+       },
+       "n3": {
+        "absent": [],
+        "fact": [
+         "?",
+         "o",
+         "house",
+         "human"
+        ],
+        "hash": "691263753f4c3b74b29c3b08c27fd624456d31c400751fd2136c57f6257e2795",
+        "premises": [
+         "n2"
+        ],
+        "rule": "r0"
+       },
+       "n4": {
+        "fact": [
+         "writer",
+         "tb",
+         "q",
+         "model"
+        ],
+        "hash": "fec70e394c6bdc47095b8273117d33e97af7eb675e39c1d7fa0f8b9e89d31ffb",
+        "sources": [
+         {
+          "event": "o/5",
+          "hash": "f8ccf080c3c25a5cbb561da75fe3fa53b1de1121bc81b01b5949b99ef46a49c4",
+          "kind": "register"
+         }
+        ]
+       },
+       "n5": {
+        "absent": [],
+        "fact": [
+         "?",
+         "tb",
+         "q",
+         "model"
+        ],
+        "hash": "f7febdd82dafde0f2a9fc1b4d7ceaf7d2c869f2849a0365359ff55b584aafbd5",
+        "premises": [
+         "n4"
+        ],
+        "rule": "r0"
+       }
+      },
+      "proved": 3,
+      "rules": {
+       "r0": {
+        "hash": "dbdb0b8726e209c533b4a77a620cb37952be7990a99bb27a3bc82b94097b2aec",
+        "origin": "line 1",
+        "text": "?(W, P, K) :- writer(W, P, K)."
+       }
+      },
+      "through": {
+       "event": "tb/1",
+       "hash": "c1c215ae183446a52ed0f9adad3e1e504f7f0916addfaf5dc60b6dd2c80b167c",
+       "kind": "claim",
+       "time": "2026-01-01T00:06:00Z"
+      },
+      "truncated": false,
+      "variables": [
+       "W",
+       "P",
+       "K"
+      ],
+      "view": {
+       "compartments": [
+        "b"
+       ],
+       "reader": "tb"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "file": "probes_SC.py",
+   "name": "clock_far_future",
+   "status": "same",
+   "crosses": false,
+   "diff_paths": [],
+   "hidden": {
+    "b": [
+     "ok",
+     "c:71e8d73d3db6bf68655b8dbf8bae14992c0ed45ed25b29b97230e5e3bd5ee6b7"
+    ],
+    "as_of": [
+     "ok",
+     {
+      "digest": "db4c15ec469226263fa1e15997a58c00e07f656b2c469f267ab5836f5975613c",
+      "ok": true,
+      "state": {
+       "appeals": {},
+       "appointments": {},
+       "claims": {
+        "c:71e8d73d3db6bf68655b8dbf8bae14992c0ed45ed25b29b97230e5e3bd5ee6b7": {
+         "abstains": [],
+         "author": "wb",
+         "balance": {
+          "refutes": 0,
+          "supports": 0
+         },
+         "body": {
+          "compartment": "b",
+          "confidence": 5000,
+          "frame": "f",
+          "origin": "derived",
+          "speaker": "wb",
+          "stance": "asserted",
+          "statement": "now",
+          "statement_kind": "describe",
+          "truth": "unknown"
+         },
+         "corroborated_by": [],
+         "defeated": false,
+         "disputed": false,
+         "effective_truth": "unknown",
+         "first_event": "wb/1",
+         "independent_groups": [
+          "model:m"
+         ],
+         "order": 0,
+         "record_time": "2026-10-29T21:18:26Z",
+         "refutes": [],
+         "source_recorded_by": null,
+         "superseded_by": [],
+         "supersedes": [],
+         "supports": []
+        }
+       },
+       "episodes": {},
+       "handoffs": {},
+       "positions": {},
+       "schema_version": 7,
+       "supersessions": {},
+       "writers": {
+        "o": {
+         "capabilities": [
+          "owner"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "human:o",
+         "kind": "human",
+         "party": "house"
+        },
+        "wb": {
+         "capabilities": [
+          "write"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "operator": "o",
+         "party": "q"
+        }
+       }
+      }
+     }
+    ]
+   },
+   "without": {
+    "b": [
+     "ok",
+     "c:71e8d73d3db6bf68655b8dbf8bae14992c0ed45ed25b29b97230e5e3bd5ee6b7"
+    ],
+    "as_of": [
+     "ok",
+     {
+      "digest": "db4c15ec469226263fa1e15997a58c00e07f656b2c469f267ab5836f5975613c",
+      "ok": true,
+      "state": {
+       "appeals": {},
+       "appointments": {},
+       "claims": {
+        "c:71e8d73d3db6bf68655b8dbf8bae14992c0ed45ed25b29b97230e5e3bd5ee6b7": {
+         "abstains": [],
+         "author": "wb",
+         "balance": {
+          "refutes": 0,
+          "supports": 0
+         },
+         "body": {
+          "compartment": "b",
+          "confidence": 5000,
+          "frame": "f",
+          "origin": "derived",
+          "speaker": "wb",
+          "stance": "asserted",
+          "statement": "now",
+          "statement_kind": "describe",
+          "truth": "unknown"
+         },
+         "corroborated_by": [],
+         "defeated": false,
+         "disputed": false,
+         "effective_truth": "unknown",
+         "first_event": "wb/1",
+         "independent_groups": [
+          "model:m"
+         ],
+         "order": 0,
+         "record_time": "2026-10-29T21:18:26Z",
+         "refutes": [],
+         "source_recorded_by": null,
+         "superseded_by": [],
+         "supersedes": [],
+         "supports": []
+        }
+       },
+       "episodes": {},
+       "handoffs": {},
+       "positions": {},
+       "schema_version": 7,
+       "supersessions": {},
+       "writers": {
+        "o": {
+         "capabilities": [
+          "owner"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "human:o",
+         "kind": "human",
+         "party": "house"
+        },
+        "wb": {
+         "capabilities": [
+          "write"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "operator": "o",
+         "party": "q"
+        }
+       }
+      }
+     }
+    ]
+   }
+  },
+  {
+   "file": "probes_SC.py",
+   "name": "limit_clock_within_skew",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    "/as_of[1]/digest: db4c15ec469226263fa1e15997a58c00e07f656b2c469f267ab5836f5975 vs 89dedfd2bf8183be68ff93057e66b9ddf8e82fd098f2afdcc0210270debb",
+    "/as_of[1]/state/claims/c:71e8d73d3db6bf68655b8dbf8bae14992c0ed45ed25b29b97230e5e3bd5ee6b7: absent on one side",
+    "/b: length 2 vs 3"
+   ],
+   "hidden": {
+    "b": [
+     "err",
+     "E_CLOCK",
+     "E_CLOCK: record_time is earlier than the previous event"
+    ],
+    "as_of": [
+     "ok",
+     {
+      "digest": "89dedfd2bf8183be68ff93057e66b9ddf8e82fd098f2afdcc0210270debb25cf",
+      "ok": true,
+      "state": {
+       "appeals": {},
+       "appointments": {},
+       "claims": {},
+       "episodes": {},
+       "handoffs": {},
+       "positions": {},
+       "schema_version": 7,
+       "supersessions": {},
+       "writers": {
+        "o": {
+         "capabilities": [
+          "owner"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "human:o",
+         "kind": "human",
+         "party": "house"
+        },
+        "wb": {
+         "capabilities": [
+          "write"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "operator": "o",
+         "party": "q"
+        }
+       }
+      }
+     }
+    ]
+   },
+   "without": {
+    "b": [
+     "ok",
+     "c:71e8d73d3db6bf68655b8dbf8bae14992c0ed45ed25b29b97230e5e3bd5ee6b7"
+    ],
+    "as_of": [
+     "ok",
+     {
+      "digest": "db4c15ec469226263fa1e15997a58c00e07f656b2c469f267ab5836f5975613c",
+      "ok": true,
+      "state": {
+       "appeals": {},
+       "appointments": {},
+       "claims": {
+        "c:71e8d73d3db6bf68655b8dbf8bae14992c0ed45ed25b29b97230e5e3bd5ee6b7": {
+         "abstains": [],
+         "author": "wb",
+         "balance": {
+          "refutes": 0,
+          "supports": 0
+         },
+         "body": {
+          "compartment": "b",
+          "confidence": 5000,
+          "frame": "f",
+          "origin": "derived",
+          "speaker": "wb",
+          "stance": "asserted",
+          "statement": "now",
+          "statement_kind": "describe",
+          "truth": "unknown"
+         },
+         "corroborated_by": [],
+         "defeated": false,
+         "disputed": false,
+         "effective_truth": "unknown",
+         "first_event": "wb/1",
+         "independent_groups": [
+          "model:m"
+         ],
+         "order": 0,
+         "record_time": "2026-10-29T21:18:26Z",
+         "refutes": [],
+         "source_recorded_by": null,
+         "superseded_by": [],
+         "supersedes": [],
+         "supports": []
+        }
+       },
+       "episodes": {},
+       "handoffs": {},
+       "positions": {},
+       "schema_version": 7,
+       "supersessions": {},
+       "writers": {
+        "o": {
+         "capabilities": [
+          "owner"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "human:o",
+         "kind": "human",
+         "party": "house"
+        },
+        "wb": {
+         "capabilities": [
+          "write"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "operator": "o",
+         "party": "q"
+        }
+       }
+      }
+     }
+    ]
+   }
+  },
+  {
+   "file": "probes_SC.py",
+   "name": "lease_advances_clock",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    "/b: length 2 vs 3"
+   ],
+   "hidden": {
+    "b": [
+     "err",
+     "E_CLOCK",
+     "E_CLOCK: record_time is earlier than the previous event"
+    ]
+   },
+   "without": {
+    "b": [
+     "ok",
+     "c:71e8d73d3db6bf68655b8dbf8bae14992c0ed45ed25b29b97230e5e3bd5ee6b7"
+    ]
+   }
+  },
+  {
+   "file": "probes_SZ.py",
+   "name": "operator_view",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    "/b/operator: absent on one side"
+   ],
+   "hidden": {
+    "b": {
+     "capabilities": [
+      "write"
+     ],
+     "compartments": [
+      "b"
+     ],
+     "group": "model:m",
+     "kind": "model",
+     "model": "m",
+     "party": "p"
+    },
+    "owner": {
+     "capabilities": [
+      "owner"
+     ],
+     "compartments": [
+      "b"
+     ],
+     "group": "human:owner",
+     "kind": "human",
+     "party": "p"
+    }
+   },
+   "without": {
+    "b": {
+     "capabilities": [
+      "write"
+     ],
+     "compartments": [
+      "b"
+     ],
+     "group": "model:m",
+     "kind": "model",
+     "model": "m",
+     "operator": "owner",
+     "party": "p"
+    },
+    "owner": {
+     "capabilities": [
+      "owner"
+     ],
+     "compartments": [
+      "b"
+     ],
+     "group": "human:owner",
+     "kind": "human",
+     "party": "p"
+    }
+   }
+  },
+  {
+   "file": "probes_SZ.py",
+   "name": "operator_query",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    "/answers: length 1 vs 0",
+    "/facts: 3 vs 1",
+    "/nodes/n0: absent on one side",
+    "/nodes/n1: absent on one side",
+    "/proved: 1 vs 0"
+   ],
+   "hidden": {
+    "answers": [],
+    "as_of": "2025-01-01T00:00:00Z",
+    "facts": 1,
+    "nodes": {},
+    "proved": 0,
+    "rules": {},
+    "through": {
+     "event": "owner/3",
+     "hash": "32c69a7e07d3e1a206851e685e6552c50725f430d9c169728ac1dbe552a0523c",
+     "kind": "register",
+     "time": "2025-01-01T00:00:00Z"
+    },
+    "truncated": false,
+    "variables": [
+     "V"
+    ],
+    "view": {
+     "compartments": [
+      "b"
+     ],
+     "reader": "b"
+    }
+   },
+   "without": {
+    "answers": [
+     {
+      "proof": "n1",
+      "proof_hash": "18ae2b4fed9fd5b8d164b9735bb9f17a8b30ff159cf4b4c37a7fdec143d135b8",
+      "values": [
+       "owner"
+      ]
+     }
+    ],
+    "as_of": "2025-01-01T00:00:00Z",
+    "facts": 3,
+    "nodes": {
+     "n0": {
+      "fact": [
+       "identity",
+       "b",
+       "operator",
+       "owner"
+      ],
+      "hash": "05848c567ac0c1393f441eb5fc43ee7172959ddfbf07d8ada6f08647fbce4215",
+      "sources": [
+       {
+        "event": "owner/2",
+        "hash": "f88efb046f786caffdf22b541a75ac1c37337b9a685cc9334691ffafaf7cc57f",
+        "kind": "register"
+       }
+      ]
+     },
+     "n1": {
+      "absent": [],
+      "fact": [
+       "?",
+       "owner"
+      ],
+      "hash": "18ae2b4fed9fd5b8d164b9735bb9f17a8b30ff159cf4b4c37a7fdec143d135b8",
+      "premises": [
+       "n0"
+      ],
+      "rule": "r0"
+     }
+    },
+    "proved": 1,
+    "rules": {
+     "r0": {
+      "hash": "2307cd58758252498b258f7021658236379ebb4684cdafc0fc9d75a0ce8bc931",
+      "origin": "line 1",
+      "text": "?(V) :- identity(\"b\", \"operator\", V)."
+     }
+    },
+    "through": {
+     "event": "owner/2",
+     "hash": "f88efb046f786caffdf22b541a75ac1c37337b9a685cc9334691ffafaf7cc57f",
+     "kind": "register",
+     "time": "2025-01-01T00:00:00Z"
+    },
+    "truncated": false,
+    "variables": [
+     "V"
+    ],
+    "view": {
+     "compartments": [
+      "b"
+     ],
+     "reader": "b"
+    }
+   }
+  },
+  {
+   "file": "probes_SZ.py",
+   "name": "session",
+   "status": "same",
+   "crosses": false,
+   "diff_paths": [],
+   "hidden": [
+    "ok",
+    "registered"
+   ],
+   "without": [
+    "ok",
+    "registered"
+   ]
+  },
+  {
+   "file": "probes_SZ.py",
+   "name": "writer_ids",
+   "status": "error",
+   "error": "GateError: E_SPAWN: an instance's id is 'c-<k>', k a whole number"
+  },
+  {
+   "file": "probes_SZ.py",
+   "name": "counts_write_seq",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    "/: 3 vs 5"
+   ],
+   "hidden": 5,
+   "without": 3
+  },
+  {
+   "file": "probes_SZ.py",
+   "name": "counts_view_seq",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    "/digest: e799ee2f60376c09c282b8e53024b763bc4ae051a9c83d29ecee8bdf55c2 vs 10547025a5fdb6f6e31f2acc8abb77d10426d1ad354e7b0d7e8749537c9f",
+    "/state/claims/c:8cefb954136fd68711e7fc865e705cbdadb235afb0432930e58e32e15df5a6af/first_event: b/2 vs b/3"
+   ],
+   "hidden": {
+    "digest": "10547025a5fdb6f6e31f2acc8abb77d10426d1ad354e7b0d7e8749537c9f86e1",
+    "ok": true,
+    "state": {
+     "appeals": {},
+     "appointments": {},
+     "claims": {
+      "c:36b7495ec1ba29ae34ba5af46f292e90d815ec7ee594be31418849d1fe2b2c76": {
+       "abstains": [],
+       "author": "b",
+       "balance": {
+        "refutes": 0,
+        "supports": 0
+       },
+       "body": {
+        "compartment": "b",
+        "confidence": 5000,
+        "frame": "f",
+        "origin": "derived",
+        "speaker": "b",
+        "stance": "asserted",
+        "statement": "first",
+        "statement_kind": "describe",
+        "truth": "unknown"
+       },
+       "corroborated_by": [],
+       "defeated": false,
+       "disputed": false,
+       "effective_truth": "unknown",
+       "first_event": "b/1",
+       "independent_groups": [
+        "model:m"
+       ],
+       "order": 0,
+       "record_time": "2025-01-01T00:01:00Z",
+       "refutes": [],
+       "source_recorded_by": null,
+       "superseded_by": [],
+       "supersedes": [],
+       "supports": []
+      },
+      "c:8cefb954136fd68711e7fc865e705cbdadb235afb0432930e58e32e15df5a6af": {
+       "abstains": [],
+       "author": "b",
+       "balance": {
+        "refutes": 0,
+        "supports": 0
+       },
+       "body": {
+        "compartment": "b",
+        "confidence": 5000,
+        "frame": "f",
+        "origin": "derived",
+        "speaker": "b",
+        "stance": "asserted",
+        "statement": "second",
+        "statement_kind": "describe",
+        "truth": "unknown"
+       },
+       "corroborated_by": [],
+       "defeated": false,
+       "disputed": false,
+       "effective_truth": "unknown",
+       "first_event": "b/3",
+       "independent_groups": [
+        "model:m"
+       ],
+       "order": 1,
+       "record_time": "2025-01-01T00:03:00Z",
+       "refutes": [],
+       "source_recorded_by": null,
+       "superseded_by": [],
+       "supersedes": [],
+       "supports": []
+      }
+     },
+     "episodes": {},
+     "handoffs": {},
+     "positions": {},
+     "schema_version": 7,
+     "supersessions": {},
+     "writers": {
+      "b": {
+       "capabilities": [
+        "write"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "group": "model:m",
+       "kind": "model",
+       "model": "m",
+       "operator": "owner",
+       "party": "p"
+      },
+      "owner": {
+       "capabilities": [
+        "owner"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "group": "human:owner",
+       "kind": "human",
+       "party": "p"
+      }
+     }
+    }
+   },
+   "without": {
+    "digest": "e799ee2f60376c09c282b8e53024b763bc4ae051a9c83d29ecee8bdf55c2f938",
+    "ok": true,
+    "state": {
+     "appeals": {},
+     "appointments": {},
+     "claims": {
+      "c:36b7495ec1ba29ae34ba5af46f292e90d815ec7ee594be31418849d1fe2b2c76": {
+       "abstains": [],
+       "author": "b",
+       "balance": {
+        "refutes": 0,
+        "supports": 0
+       },
+       "body": {
+        "compartment": "b",
+        "confidence": 5000,
+        "frame": "f",
+        "origin": "derived",
+        "speaker": "b",
+        "stance": "asserted",
+        "statement": "first",
+        "statement_kind": "describe",
+        "truth": "unknown"
+       },
+       "corroborated_by": [],
+       "defeated": false,
+       "disputed": false,
+       "effective_truth": "unknown",
+       "first_event": "b/1",
+       "independent_groups": [
+        "model:m"
+       ],
+       "order": 0,
+       "record_time": "2025-01-01T00:01:00Z",
+       "refutes": [],
+       "source_recorded_by": null,
+       "superseded_by": [],
+       "supersedes": [],
+       "supports": []
+      },
+      "c:8cefb954136fd68711e7fc865e705cbdadb235afb0432930e58e32e15df5a6af": {
+       "abstains": [],
+       "author": "b",
+       "balance": {
+        "refutes": 0,
+        "supports": 0
+       },
+       "body": {
+        "compartment": "b",
+        "confidence": 5000,
+        "frame": "f",
+        "origin": "derived",
+        "speaker": "b",
+        "stance": "asserted",
+        "statement": "second",
+        "statement_kind": "describe",
+        "truth": "unknown"
+       },
+       "corroborated_by": [],
+       "defeated": false,
+       "disputed": false,
+       "effective_truth": "unknown",
+       "first_event": "b/2",
+       "independent_groups": [
+        "model:m"
+       ],
+       "order": 1,
+       "record_time": "2025-01-01T00:03:00Z",
+       "refutes": [],
+       "source_recorded_by": null,
+       "superseded_by": [],
+       "supersedes": [],
+       "supports": []
+      }
+     },
+     "episodes": {},
+     "handoffs": {},
+     "positions": {},
+     "schema_version": 7,
+     "supersessions": {},
+     "writers": {
+      "b": {
+       "capabilities": [
+        "write"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "group": "model:m",
+       "kind": "model",
+       "model": "m",
+       "operator": "owner",
+       "party": "p"
+      },
+      "owner": {
+       "capabilities": [
+        "owner"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "group": "human:owner",
+       "kind": "human",
+       "party": "p"
+      }
+     }
+    }
+   }
+  },
+  {
+   "file": "probes_SZ.py",
+   "name": "counts_writer_seq",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    "/: b/2 vs b/3"
+   ],
+   "hidden": "b/3",
+   "without": "b/2"
+  },
+  {
+   "file": "probes_SZ.py",
+   "name": "lease_unknown_writer",
+   "status": "same",
+   "crosses": false,
+   "diff_paths": [],
+   "hidden": [
+    "error",
+    "E_UNKNOWN_WRITER",
+    "E_UNKNOWN_WRITER: writer 'h' is not registered"
+   ],
+   "without": [
+    "error",
+    "E_UNKNOWN_WRITER",
+    "E_UNKNOWN_WRITER: writer 'h' is not registered"
+   ]
+  },
+  {
+   "file": "probes_SZ.py",
+   "name": "lease_leased",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    ": length 2 vs 3"
+   ],
+   "hidden": [
+    "error",
+    "E_LEASED",
+    "E_LEASED: frame 'frame1' is already leased"
+   ],
+   "without": [
+    "ok",
+    "leased"
+   ]
+  },
+  {
+   "file": "probes_SZ.py",
+   "name": "through_lease",
+   "status": "same",
+   "crosses": false,
+   "diff_paths": [],
+   "hidden": {
+    "digest": "bbf93d7d8ff37b6b69ca05ff193812539d8dfaeb5fa48e7f405aa3cb2352f6b8",
+    "ok": true,
+    "state": {
+     "appeals": {},
+     "appointments": {},
+     "claims": {
+      "c:53923daec60ba37840b80fe2987ef67820a29879ca536f67fbd5d1180a3230e9": {
+       "abstains": [],
+       "author": "b",
+       "balance": {
+        "refutes": 0,
+        "supports": 0
+       },
+       "body": {
+        "compartment": "b",
+        "confidence": 5000,
+        "frame": "f",
+        "origin": "derived",
+        "speaker": "b",
+        "stance": "asserted",
+        "statement": "b-event",
+        "statement_kind": "describe",
+        "truth": "unknown"
+       },
+       "corroborated_by": [],
+       "defeated": false,
+       "disputed": false,
+       "effective_truth": "unknown",
+       "first_event": "b/1",
+       "independent_groups": [
+        "model:m"
+       ],
+       "order": 0,
+       "record_time": "2025-01-01T00:01:00Z",
+       "refutes": [],
+       "source_recorded_by": null,
+       "superseded_by": [],
+       "supersedes": [],
+       "supports": []
+      }
+     },
+     "episodes": {},
+     "handoffs": {},
+     "positions": {},
+     "schema_version": 7,
+     "supersessions": {},
+     "writers": {
+      "b": {
+       "capabilities": [
+        "write"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "group": "model:m",
+       "kind": "model",
+       "model": "m",
+       "operator": "owner",
+       "party": "p"
+      },
+      "owner": {
+       "capabilities": [
+        "owner"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "group": "human:owner",
+       "kind": "human",
+       "party": "p"
+      }
+     }
+    }
+   },
+   "without": {
+    "digest": "bbf93d7d8ff37b6b69ca05ff193812539d8dfaeb5fa48e7f405aa3cb2352f6b8",
+    "ok": true,
+    "state": {
+     "appeals": {},
+     "appointments": {},
+     "claims": {
+      "c:53923daec60ba37840b80fe2987ef67820a29879ca536f67fbd5d1180a3230e9": {
+       "abstains": [],
+       "author": "b",
+       "balance": {
+        "refutes": 0,
+        "supports": 0
+       },
+       "body": {
+        "compartment": "b",
+        "confidence": 5000,
+        "frame": "f",
+        "origin": "derived",
+        "speaker": "b",
+        "stance": "asserted",
+        "statement": "b-event",
+        "statement_kind": "describe",
+        "truth": "unknown"
+       },
+       "corroborated_by": [],
+       "defeated": false,
+       "disputed": false,
+       "effective_truth": "unknown",
+       "first_event": "b/1",
+       "independent_groups": [
+        "model:m"
+       ],
+       "order": 0,
+       "record_time": "2025-01-01T00:01:00Z",
+       "refutes": [],
+       "source_recorded_by": null,
+       "superseded_by": [],
+       "supersedes": [],
+       "supports": []
+      }
+     },
+     "episodes": {},
+     "handoffs": {},
+     "positions": {},
+     "schema_version": 7,
+     "supersessions": {},
+     "writers": {
+      "b": {
+       "capabilities": [
+        "write"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "group": "model:m",
+       "kind": "model",
+       "model": "m",
+       "operator": "owner",
+       "party": "p"
+      },
+      "owner": {
+       "capabilities": [
+        "owner"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "group": "human:owner",
+       "kind": "human",
+       "party": "p"
+      }
+     }
+    }
+   }
+  },
+  {
+   "file": "probes_SZ.py",
+   "name": "clock",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    ": length 2 vs 3"
+   ],
+   "hidden": [
+    "error",
+    "E_CLOCK",
+    "E_CLOCK: record_time is earlier than the previous event"
+   ],
+   "without": [
+    "ok",
+    "c:02f2aa51a26732a28101121b885bcb472b197783034d1e3913b46f88f96c7c2c"
+   ]
+  },
+  {
+   "file": "probes_SZ.py",
+   "name": "as_of",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    "/digest: 528b2d53e9e7e635b7121bf2c9ff8e1ec6d9ae0e67900c824f4686303d7b vs d75af46ffe7f6a0d60d22fecca704b207f54cb06cec8e355a31b0fb51ccb",
+    "/state/claims/c:02f2aa51a26732a28101121b885bcb472b197783034d1e3913b46f88f96c7c2c: absent on one side"
+   ],
+   "hidden": {
+    "digest": "d75af46ffe7f6a0d60d22fecca704b207f54cb06cec8e355a31b0fb51ccb06cf",
+    "ok": true,
+    "state": {
+     "appeals": {},
+     "appointments": {},
+     "claims": {},
+     "episodes": {},
+     "handoffs": {},
+     "positions": {},
+     "schema_version": 7,
+     "supersessions": {},
+     "writers": {
+      "b": {
+       "capabilities": [
+        "write"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "group": "model:m",
+       "kind": "model",
+       "model": "m",
+       "operator": "owner",
+       "party": "p"
+      },
+      "owner": {
+       "capabilities": [
+        "owner"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "group": "human:owner",
+       "kind": "human",
+       "party": "p"
+      }
+     }
+    }
+   },
+   "without": {
+    "digest": "528b2d53e9e7e635b7121bf2c9ff8e1ec6d9ae0e67900c824f4686303d7bcc88",
+    "ok": true,
+    "state": {
+     "appeals": {},
+     "appointments": {},
+     "claims": {
+      "c:02f2aa51a26732a28101121b885bcb472b197783034d1e3913b46f88f96c7c2c": {
+       "abstains": [],
+       "author": "b",
+       "balance": {
+        "refutes": 0,
+        "supports": 0
+       },
+       "body": {
+        "compartment": "b",
+        "confidence": 5000,
+        "frame": "f",
+        "origin": "derived",
+        "speaker": "b",
+        "stance": "asserted",
+        "statement": "b-early",
+        "statement_kind": "describe",
+        "truth": "unknown"
+       },
+       "corroborated_by": [],
+       "defeated": false,
+       "disputed": false,
+       "effective_truth": "unknown",
+       "first_event": "b/1",
+       "independent_groups": [
+        "model:m"
+       ],
+       "order": 0,
+       "record_time": "2025-01-03T00:00:00Z",
+       "refutes": [],
+       "source_recorded_by": null,
+       "superseded_by": [],
+       "supersedes": [],
+       "supports": []
+      }
+     },
+     "episodes": {},
+     "handoffs": {},
+     "positions": {},
+     "schema_version": 7,
+     "supersessions": {},
+     "writers": {
+      "b": {
+       "capabilities": [
+        "write"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "group": "model:m",
+       "kind": "model",
+       "model": "m",
+       "operator": "owner",
+       "party": "p"
+      },
+      "owner": {
+       "capabilities": [
+        "owner"
+       ],
+       "compartments": [
+        "b"
+       ],
+       "group": "human:owner",
+       "kind": "human",
+       "party": "p"
+      }
+     }
+    }
+   }
+  },
+  {
+   "file": "probes_SZ.py",
+   "name": "name",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    ": length 2 vs 3"
+   ],
+   "hidden": [
+    "error",
+    "E_IDENTITY",
+    "E_IDENTITY: the name 'n' belongs to another party's writer"
+   ],
+   "without": [
+    "ok",
+    "registered"
+   ]
+  },
+  {
+   "file": "probes_SZ.py",
+   "name": "lease_cross_sides",
+   "status": "same",
+   "crosses": false,
+   "diff_paths": [],
+   "hidden": [
+    "ok",
+    "leased"
+   ],
+   "without": [
+    "ok",
+    "leased"
+   ]
+  },
+  {
+   "file": "probes_SO.py",
+   "name": "operator",
+   "status": "same",
+   "crosses": false,
+   "diff_paths": [],
+   "hidden": [
+    "ok",
+    {
+     "bot-b": {
+      "capabilities": [
+       "write",
+       "spawn",
+       "schedule"
+      ],
+      "compartments": [
+       "b"
+      ],
+      "group": "model:m",
+      "kind": "model",
+      "model": "m",
+      "operator": "owner",
+      "party": "party-b"
+     },
+     "c-x": {
+      "capabilities": [
+       "write",
+       "spawn"
+      ],
+      "compartments": [
+       "b"
+      ],
+      "group": "model:m",
+      "kind": "model",
+      "model": "m",
+      "operator": "owner",
+      "party": "party-b"
+     },
+     "owner": {
+      "capabilities": [
+       "owner"
+      ],
+      "compartments": [
+       "b"
+      ],
+      "group": "human:owner",
+      "kind": "human",
+      "party": "house"
+     }
+    }
+   ],
+   "without": [
+    "ok",
+    {
+     "bot-b": {
+      "capabilities": [
+       "write",
+       "spawn",
+       "schedule"
+      ],
+      "compartments": [
+       "b"
+      ],
+      "group": "model:m",
+      "kind": "model",
+      "model": "m",
+      "operator": "owner",
+      "party": "party-b"
+     },
+     "c-x": {
+      "capabilities": [
+       "write",
+       "spawn"
+      ],
+      "compartments": [
+       "b"
+      ],
+      "group": "model:m",
+      "kind": "model",
+      "model": "m",
+      "operator": "owner",
+      "party": "party-b"
+     },
+     "owner": {
+      "capabilities": [
+       "owner"
+      ],
+      "compartments": [
+       "b"
+      ],
+      "group": "human:owner",
+      "kind": "human",
+      "party": "house"
+     }
+    }
+   ]
+  },
+  {
+   "file": "probes_SO.py",
+   "name": "operator_datalog",
+   "status": "same",
+   "crosses": false,
+   "diff_paths": [],
+   "hidden": [
+    "ok",
+    {
+     "answers": [
+      {
+       "proof": "n1",
+       "proof_hash": "c3bd6cd0a690c9872a71151b453ca13efe3549f93ec0ff8235acf07a54319f9f",
+       "values": [
+        "owner"
+       ]
+      }
+     ],
+     "as_of": "2026-01-01T00:00:03Z",
+     "facts": 5,
+     "nodes": {
+      "n0": {
+       "fact": [
+        "identity",
+        "bot-b",
+        "operator",
+        "owner"
+       ],
+       "hash": "1e79303e6277de849777d330a53ef7ca1a03c8f458696e7cbc258ce8abbd212d",
+       "sources": [
+        {
+         "event": "owner/3",
+         "hash": "1d9d703da85526f010553e74f6d54e244adba424a0fc8196d861d1f7fccb9b8c",
+         "kind": "register"
+        }
+       ]
+      },
+      "n1": {
+       "absent": [],
+       "fact": [
+        "?",
+        "owner"
+       ],
+       "hash": "c3bd6cd0a690c9872a71151b453ca13efe3549f93ec0ff8235acf07a54319f9f",
+       "premises": [
+        "n0"
+       ],
+       "rule": "r0"
+      }
+     },
+     "proved": 1,
+     "rules": {
+      "r0": {
+       "hash": "a4fc0f928258770102487cba2c7805a1cf7a4c772b06a54469b821e840a29639",
+       "origin": "line 1",
+       "text": "?(V) :- identity(\"bot-b\", \"operator\", V)."
+      }
+     },
+     "through": {
+      "event": "owner/4",
+      "hash": "dbc07e650aad3e16a4531195a036b884220f8e4ba9d76a8a15f2a97ce020cb07",
+      "kind": "register",
+      "time": "2026-01-01T00:00:03Z"
+     },
+     "truncated": false,
+     "variables": [
+      "V"
+     ],
+     "view": {
+      "compartments": [
+       "b"
+      ],
+      "reader": "bot-b"
+     }
+    }
+   ],
+   "without": [
+    "ok",
+    {
+     "answers": [
+      {
+       "proof": "n1",
+       "proof_hash": "c3bd6cd0a690c9872a71151b453ca13efe3549f93ec0ff8235acf07a54319f9f",
+       "values": [
+        "owner"
+       ]
+      }
+     ],
+     "as_of": "2026-01-01T00:00:03Z",
+     "facts": 5,
+     "nodes": {
+      "n0": {
+       "fact": [
+        "identity",
+        "bot-b",
+        "operator",
+        "owner"
+       ],
+       "hash": "1e79303e6277de849777d330a53ef7ca1a03c8f458696e7cbc258ce8abbd212d",
+       "sources": [
+        {
+         "event": "owner/3",
+         "hash": "1d9d703da85526f010553e74f6d54e244adba424a0fc8196d861d1f7fccb9b8c",
+         "kind": "register"
+        }
+       ]
+      },
+      "n1": {
+       "absent": [],
+       "fact": [
+        "?",
+        "owner"
+       ],
+       "hash": "c3bd6cd0a690c9872a71151b453ca13efe3549f93ec0ff8235acf07a54319f9f",
+       "premises": [
+        "n0"
+       ],
+       "rule": "r0"
+      }
+     },
+     "proved": 1,
+     "rules": {
+      "r0": {
+       "hash": "a4fc0f928258770102487cba2c7805a1cf7a4c772b06a54469b821e840a29639",
+       "origin": "line 1",
+       "text": "?(V) :- identity(\"bot-b\", \"operator\", V)."
+      }
+     },
+     "through": {
+      "event": "owner/4",
+      "hash": "dbc07e650aad3e16a4531195a036b884220f8e4ba9d76a8a15f2a97ce020cb07",
+      "kind": "register",
+      "time": "2026-01-01T00:00:03Z"
+     },
+     "truncated": false,
+     "variables": [
+      "V"
+     ],
+     "view": {
+      "compartments": [
+       "b"
+      ],
+      "reader": "bot-b"
+     }
+    }
+   ]
+  },
+  {
+   "file": "probes_SO.py",
+   "name": "session_collision",
+   "status": "same",
+   "crosses": false,
+   "diff_paths": [],
+   "hidden": [
+    "E_SPAWN",
+    "E_SPAWN: an instance's id is 'bot-b-<k>', k a whole number"
+   ],
+   "without": [
+    "E_SPAWN",
+    "E_SPAWN: an instance's id is 'bot-b-<k>', k a whole number"
+   ]
+  },
+  {
+   "file": "probes_SO.py",
+   "name": "duplicate_id",
+   "status": "same",
+   "crosses": false,
+   "diff_paths": [],
+   "hidden": [
+    "E_SPAWN",
+    "E_SPAWN: an instance's id is 'bot-b-<k>', k a whole number"
+   ],
+   "without": [
+    "E_SPAWN",
+    "E_SPAWN: an instance's id is 'bot-b-<k>', k a whole number"
+   ]
+  },
+  {
+   "file": "probes_SO.py",
+   "name": "parent_namespace",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    "[0]: ok vs E_DUPLICATE",
+    "[1]: dict vs str"
+   ],
+   "hidden": [
+    "E_DUPLICATE",
+    "E_DUPLICATE: writer 'c-x-1' already registered"
+   ],
+   "without": [
+    "ok",
+    {
+     "body": {
+      "capabilities": [
+       "write"
+      ],
+      "compartments": [
+       "b"
+      ],
+      "kind": "model",
+      "model": "m",
+      "operator": "owner",
+      "party": "party-b",
+      "writer": "c-x-1"
+     },
+     "event_id": "c-x/1",
+     "hash": "413a66e5dcb147617e36e7f29c0e77e939efaade061f17b60aaf3e346613bc86",
+     "kind": "register",
+     "prev": "dbc07e650aad3e16a4531195a036b884220f8e4ba9d76a8a15f2a97ce020cb07",
+     "record_time": "2026-10-29T21:18:26Z",
+     "seq": 4,
+     "writer": "c-x",
+     "writer_seq": 1
+    }
+   ]
+  },
+  {
+   "file": "probes_SO.py",
+   "name": "global_event_count",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    "[1]/hash: 9869b2d3e315758c5d2b62f5fe7f7145560311bf8be3d169bfb9c496a290 vs 017834e541b55ff2ee733ae3c50edcb28c01e76f3e55bf1b281dcd4c5290",
+    "[1]/prev: dbc07e650aad3e16a4531195a036b884220f8e4ba9d76a8a15f2a97ce020 vs 555ec8b10fa9ea8faba448e7f295abebdcb7dfddffc9708628394f23cbec",
+    "[1]/seq: 4 vs 5"
+   ],
+   "hidden": [
+    "ok",
+    {
+     "body": {
+      "compartment": "b",
+      "confidence": 5000,
+      "frame": "f-b",
+      "origin": "derived",
+      "speaker": "bot-b",
+      "stance": "asserted",
+      "statement": "b event",
+      "statement_kind": "describe",
+      "truth": "unknown"
+     },
+     "event_id": "bot-b/1",
+     "hash": "017834e541b55ff2ee733ae3c50edcb28c01e76f3e55bf1b281dcd4c5290a14a",
+     "kind": "claim",
+     "prev": "555ec8b10fa9ea8faba448e7f295abebdcb7dfddffc9708628394f23cbec8f6a",
+     "record_time": "2026-01-01T00:00:05Z",
+     "seq": 5,
+     "writer": "bot-b",
+     "writer_seq": 1
+    }
+   ],
+   "without": [
+    "ok",
+    {
+     "body": {
+      "compartment": "b",
+      "confidence": 5000,
+      "frame": "f-b",
+      "origin": "derived",
+      "speaker": "bot-b",
+      "stance": "asserted",
+      "statement": "b event",
+      "statement_kind": "describe",
+      "truth": "unknown"
+     },
+     "event_id": "bot-b/1",
+     "hash": "9869b2d3e315758c5d2b62f5fe7f7145560311bf8be3d169bfb9c496a2900de4",
+     "kind": "claim",
+     "prev": "dbc07e650aad3e16a4531195a036b884220f8e4ba9d76a8a15f2a97ce020cb07",
+     "record_time": "2026-01-01T00:00:05Z",
+     "seq": 4,
+     "writer": "bot-b",
+     "writer_seq": 1
+    }
+   ]
+  },
+  {
+   "file": "probes_SO.py",
+   "name": "through",
+   "status": "same",
+   "crosses": false,
+   "diff_paths": [],
+   "hidden": [
+    "ok",
+    {
+     "digest": "90a55df83d2f2da5b8a45b6fd960e899dd346c5d8e6c8fa6b32c34b488351f0e",
+     "ok": true,
+     "state": {
+      "appeals": {},
+      "appointments": {},
+      "claims": {},
+      "episodes": {},
+      "handoffs": {},
+      "positions": {},
+      "schema_version": 7,
+      "supersessions": {},
+      "writers": {
+       "bot-b": {
+        "capabilities": [
+         "write",
+         "spawn",
+         "schedule"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "group": "model:m",
+        "kind": "model",
+        "model": "m",
+        "operator": "owner",
+        "party": "party-b"
+       },
+       "c-x": {
+        "capabilities": [
+         "write",
+         "spawn"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "group": "model:m",
+        "kind": "model",
+        "model": "m",
+        "operator": "owner",
+        "party": "party-b"
+       },
+       "owner": {
+        "capabilities": [
+         "owner"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "group": "human:owner",
+        "kind": "human",
+        "party": "house"
+       }
+      }
+     }
+    }
+   ],
+   "without": [
+    "ok",
+    {
+     "digest": "90a55df83d2f2da5b8a45b6fd960e899dd346c5d8e6c8fa6b32c34b488351f0e",
+     "ok": true,
+     "state": {
+      "appeals": {},
+      "appointments": {},
+      "claims": {},
+      "episodes": {},
+      "handoffs": {},
+      "positions": {},
+      "schema_version": 7,
+      "supersessions": {},
+      "writers": {
+       "bot-b": {
+        "capabilities": [
+         "write",
+         "spawn",
+         "schedule"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "group": "model:m",
+        "kind": "model",
+        "model": "m",
+        "operator": "owner",
+        "party": "party-b"
+       },
+       "c-x": {
+        "capabilities": [
+         "write",
+         "spawn"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "group": "model:m",
+        "kind": "model",
+        "model": "m",
+        "operator": "owner",
+        "party": "party-b"
+       },
+       "owner": {
+        "capabilities": [
+         "owner"
+        ],
+        "compartments": [
+         "b"
+        ],
+        "group": "human:owner",
+        "kind": "human",
+        "party": "house"
+       }
+      }
+     }
+    }
+   ]
+  },
+  {
+   "file": "probes_SO.py",
+   "name": "hidden_lease_target",
+   "status": "same",
+   "crosses": false,
+   "diff_paths": [],
+   "hidden": [
+    "E_UNKNOWN_WRITER",
+    "E_UNKNOWN_WRITER: writer 'hidden-target' is not registered"
+   ],
+   "without": [
+    "E_UNKNOWN_WRITER",
+    "E_UNKNOWN_WRITER: writer 'hidden-target' is not registered"
+   ]
+  },
+  {
+   "file": "probes_SO.py",
+   "name": "hidden_lease_holder",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    "[0]: ok vs E_LEASED",
+    "[1]: bot-b/1 vs E_LEASED: frame 'shared-frame' is already leased"
+   ],
+   "hidden": [
+    "E_LEASED",
+    "E_LEASED: frame 'shared-frame' is already leased"
+   ],
+   "without": [
+    "ok",
+    "bot-b/1"
+   ]
+  },
+  {
+   "file": "probes_SO.py",
+   "name": "global_clock",
+   "status": "crosses",
+   "crosses": true,
+   "diff_paths": [
+    "[0]: ok vs E_CLOCK",
+    "[1]: dict vs str"
+   ],
+   "hidden": [
+    "E_CLOCK",
+    "E_CLOCK: record_time is earlier than the previous event"
+   ],
+   "without": [
+    "ok",
+    {
+     "body": {
+      "compartment": "b",
+      "confidence": 5000,
+      "frame": "f-b",
+      "origin": "derived",
+      "speaker": "bot-b",
+      "stance": "asserted",
+      "statement": "b event",
+      "statement_kind": "describe",
+      "truth": "unknown"
+     },
+     "event_id": "bot-b/1",
+     "hash": "4e2b0ceb8a928c3fbae2358499e57fad0bfbf52ad25ea7dbf94c287167593435",
+     "kind": "claim",
+     "prev": "dbc07e650aad3e16a4531195a036b884220f8e4ba9d76a8a15f2a97ce020cb07",
+     "record_time": "2026-01-01T00:00:30Z",
+     "seq": 4,
+     "writer": "bot-b",
+     "writer_seq": 1
+    }
+   ]
+  },
+  {
+   "file": "probes_SO.py",
+   "name": "failed_write_side_effect",
+   "status": "same",
+   "crosses": false,
+   "diff_paths": [],
+   "hidden": [
+    "ok",
+    [
+     [
+      "E_ORG",
+      "E_ORG: only an owner, a governor or a holder of a position above may define it"
+     ],
+     {
+      "digest": "90a55df83d2f2da5b8a45b6fd960e899dd346c5d8e6c8fa6b32c34b488351f0e",
+      "ok": true,
+      "state": {
+       "appeals": {},
+       "appointments": {},
+       "claims": {},
+       "episodes": {},
+       "handoffs": {},
+       "positions": {},
+       "schema_version": 7,
+       "supersessions": {},
+       "writers": {
+        "bot-b": {
+         "capabilities": [
+          "write",
+          "spawn",
+          "schedule"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "operator": "owner",
+         "party": "party-b"
+        },
+        "c-x": {
+         "capabilities": [
+          "write",
+          "spawn"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "operator": "owner",
+         "party": "party-b"
+        },
+        "owner": {
+         "capabilities": [
+          "owner"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "human:owner",
+         "kind": "human",
+         "party": "house"
+        }
+       }
+      }
+     }
+    ]
+   ],
+   "without": [
+    "ok",
+    [
+     [
+      "E_ORG",
+      "E_ORG: only an owner, a governor or a holder of a position above may define it"
+     ],
+     {
+      "digest": "90a55df83d2f2da5b8a45b6fd960e899dd346c5d8e6c8fa6b32c34b488351f0e",
+      "ok": true,
+      "state": {
+       "appeals": {},
+       "appointments": {},
+       "claims": {},
+       "episodes": {},
+       "handoffs": {},
+       "positions": {},
+       "schema_version": 7,
+       "supersessions": {},
+       "writers": {
+        "bot-b": {
+         "capabilities": [
+          "write",
+          "spawn",
+          "schedule"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "operator": "owner",
+         "party": "party-b"
+        },
+        "c-x": {
+         "capabilities": [
+          "write",
+          "spawn"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "model:m",
+         "kind": "model",
+         "model": "m",
+         "operator": "owner",
+         "party": "party-b"
+        },
+        "owner": {
+         "capabilities": [
+          "owner"
+         ],
+         "compartments": [
+          "b"
+         ],
+         "group": "human:owner",
+         "kind": "human",
+         "party": "house"
+        }
+       }
+      }
+     }
+    ]
+   ]
+  }
+ ]
+}

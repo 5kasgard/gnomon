@@ -1,0 +1,27 @@
+.....................E................................................................................................................................................................................................................gnomon MCP server: /tmp/tmpssmy17sk/memory.jsonl as claude-c1
+.....................................................................
+======================================================================
+ERROR: test_8_instances_are_only_their_parents (test_auto.ReviewAuto.test_8_instances_are_only_their_parents)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/tmp/claude-0/wt/s-arm48-SC-mt/python/tests/test_auto.py", line 317, in test_8_instances_are_only_their_parents
+    self.m.register("john", "claude-x", party="anthropic", kind="model", model="claude-opus-5-5",
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                    operator="john", name="Claude", capabilities=["write", "spawn"], compartments=["lab"],
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                    record_time=t(3))
+                    ^^^^^^^^^^^^^^^^^
+  File "/tmp/claude-0/wt/s-arm48-SC-mt/python/gnomon/__init__.py", line 184, in register
+    return self.append(by, "register", body, record_time)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/claude-0/wt/s-arm48-SC-mt/python/gnomon/__init__.py", line 150, in append
+    return _unwrap(_native.call("gn_append", self.path, _dumps(draft)))["event"]
+           ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/tmp/claude-0/wt/s-arm48-SC-mt/python/gnomon/__init__.py", line 42, in _unwrap
+    raise GateError(result.get("code", "E_UNKNOWN"), result.get("message", ""))
+gnomon.GateError: E_DUPLICATE: id 'claude-x' lies in a spawner's namespace ('<id>-')
+
+----------------------------------------------------------------------
+Ran 299 tests in 21.440s
+
+FAILED (errors=1)

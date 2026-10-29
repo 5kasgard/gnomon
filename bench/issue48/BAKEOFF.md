@@ -111,3 +111,24 @@ crosses after it becomes a stated limit in the spec, and the PR goes up.
   11 SC probes also return a `setup` record of what the hidden side's own calls returned, which
   is not what B observes, so it would count a leak on any build. A probe crosses if its two
   worlds differ **with the `setup` field removed**. On main this changes no probe's verdict.
+
+## Results (`score.py` on `results/bakeoff/`; held-out probes run on every build)
+
+| Arm | Held-out crossing (of 35) | run.py channels crossing | Own suites | Main's unchanged tests | Old logs | Lines R/Py/spec |
+|---|---|---|---|---|---|---|
+| main | 35 | all 9 | pass | pass | – | 0 |
+| K combo3 (planner-led) | 22 | P14 R L C | pass | pass | same | 87/2/32 |
+| SC (Claude spec) | 19 | P14 R C | pass | 1 error (spawner named `claude-x`) | same | 123/25/49 |
+| SO (GPT spec) | 22 | P12 P12r P14 R C | pass | 3 errors (operator rule) | same | 108/0/36 |
+| **SZ (GLM 5.2 spec)** | **18** | P12 P12r P14 R V | pass | 3 errors (operator rule) | same | 149/0/40 |
+
+- Every arm passes measure 1 (own suites, replay).
+- **Measure 3 (side effects) is uninformative:** 19-20 for every arm, almost all from the
+  protocol bump itself (`schema_version`, hashes, digests). It cannot separate the arms.
+- **Decision by the rule:** SZ has the fewest crossings (18); SC is within two (19). The next
+  tie-breaks (side effects, then lines) both favour SZ (19 vs 20; 189 vs 197 lines), so the
+  verdict does not hinge on the noisy measure alone. **SZ goes to the red team.** One probe
+  apart is a direction, not a clear win.
+- Where SZ and SC differ: SZ closes the clock, `as_of`, the name channel and leases advancing
+  the clock; SC closes writer ids (three probes) and lease-release guessing. Every arm leaks
+  the count family (event ids, view and write sequences).

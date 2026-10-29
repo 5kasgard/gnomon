@@ -1,0 +1,24 @@
+G1 P12r variant (gate): crosses=True 
+  hidden:  E_DUPLICATE: E_DUPLICATE: writer 'c-x-1' already registered
+  without: ok {'body': {'capabilities': ['write'], 'compartments': ['b'], 'kind': 'model', 'model': 'm', 'operator': 'o', 'party': 
+G2 as_of cut short: crosses=True 
+  hidden:  escaped E_CLOCK: E_CLOCK: record_time is earlier than the previous event
+  without: ['b at 3']
+G3a lease advances B clock: crosses=True 
+  hidden:  E_CLOCK: E_CLOCK: record_time is earlier than the previous event
+  without: ok 'c:439ecd837312a851e4587bebc8ace6d887f09e7227d45a1ea2fd659cc1030b98'
+G3b own A write blocks own B write: crosses=True (same writer: it holds A)
+  hidden:  E_CLOCK: E_CLOCK: record_time is earlier than the previous event
+  without: ok 'c:5087a40aefbf7978a38f8e513564775473aea3baf13d1e5f09d9245478a3dcef'
+G4 lease on an A+B writer in B's through: crosses=True 
+  hidden:  {'event': 'sa/1', 'hash': '3d54261c8029fe2f669d05f51c5c67b6e7b67505bd12e8b6e99fa7c9e3832438', 'kind': 'lease', 'time': '2026-01-01T00:03:00Z'}
+  without: {'event': 'wb/1', 'hash': '20efeecc1bfadfa879da751aa5f27aa1fdb8fe2b9a238cf1c96fa2913909098a', 'kind': 'claim', 'time': '2026-01-01T00:02:00Z'}
+G4r release visibility: crosses=True (control: release of a visible lease should show)
+  hidden:  {'event': 'o/5', 'hash': '702020ac4d339abe2f24ba47e999d16389defc827a318f89154500c3b72c5370', 'kind': 'release', 'time': '2026-01-01T00:03:00Z'}
+  without: {'event': 'o/4', 'hash': 'f87f608e7c7729f2333f61977e29cf535d67bc7c7c90690e320afaa005f6a6c1', 'kind': 'lease', 'time': '2026-01-01T00:02:00Z'}
+G5 instance_for, hidden c-1: crosses=True (the instance id differs; the call must succeed both ways)
+  hidden:  ok 'c-2'
+  without: ok 'c-1'
+G6 global seq in a B write return: crosses=True 
+  hidden:  {'event_id': 'wb/1', 'seq': 6}
+  without: {'event_id': 'wb/1', 'seq': 3}
