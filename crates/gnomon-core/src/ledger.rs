@@ -1407,21 +1407,31 @@ fn check(
                         format!("an instance's id starts with '{writer}-'"),
                     ));
                 }
-                // From version 7 (issue #48, I2): the gate assigns the id. It
-                // is exactly '<parent>-<n>', n one more than the instances
-                // this parent has started (which it can count itself), so
-                // the sender chooses nothing and two spawners' ids can
-                // never meet.
+                // From version 7 (issue #48, I2b): the gate assigns the id. It
+                // is exactly '<parent>-<k>', k the smallest number above the
+                // instances this parent has started for which that id is
+                // free: skipping depends only on what owners registered. The
+                // duplicate check comes first, so a session that lost a race
+                // for an id is told so and retries.
                 if st.schema_version >= 7 {
-                    let started = st
+                    if st.writers.contains_key(r.writer) {
+                        return Err(err(
+                            "E_DUPLICATE",
+                            format!("writer '{}' already registered", r.writer),
+                        ));
+                    }
+                    let mut k = 1 + st
                         .writers
                         .values()
                         .filter(|x| x.instance_of.as_deref() == Some(writer))
                         .count();
-                    if r.writer != format!("{writer}-{}", started + 1) {
+                    while st.writers.contains_key(&format!("{writer}-{k}")) {
+                        k += 1;
+                    }
+                    if r.writer != format!("{writer}-{k}") {
                         return Err(err(
                             "E_SPAWN",
-                            format!("an instance's id is '{writer}-<n>', n one more than the instances '{writer}' has started"),
+                            format!("an instance's id is '{writer}-<k>', the first free number above the instances '{writer}' has started"),
                         ));
                     }
                 }

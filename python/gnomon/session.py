@@ -62,14 +62,12 @@ def instance_for(memory: Memory, parent: str, session: Optional[str] = None,
                 key = derived
     session = session or uuid.uuid4().hex[:16]
     key = key or session
-    # The gate (protocol version 7) assigns the id: one more than the
-    # instances this parent has started. Older logs allowed any free id, so
-    # if that one is taken (a gap in an old log) take the first free one.
-    first = 1 + sum(1 for w in writers.values() if w.get("instance_of") == parent)
-    for n in [first, *range(1, 1_000_000)]:
-        wid = f"{parent}-{n}"
-        if wid not in writers:
-            break
+    # The gate (protocol version 7, I2b) assigns the id: the first free
+    # `parent-<k>` with k above the count of this parent's instances.
+    k = 1 + sum(1 for w in writers.values() if w.get("instance_of") == parent)
+    while f"{parent}-{k}" in writers:
+        k += 1
+    wid = f"{parent}-{k}"
     if len(wid) > 32:
         raise GateError("E_BODY", f"'{parent}' is too long a writer id to start instances of (ids are at most "
                                   "32 characters, and an instance's is its parent's plus '-<n>')")

@@ -51,7 +51,7 @@ class GateAssignedIds(unittest.TestCase):
         self.assertEqual(inst(m, "c", "c-2", "a"), "E_SPAWN")
         self.assertEqual(inst(m, "c", "c-x-1", "a"), "E_SPAWN")
         self.assertEqual(inst(m, "c", "c-1", "a"), "accepted")
-        self.assertEqual(inst(m, "c", "c-1", "a"), "E_SPAWN")
+        self.assertEqual(inst(m, "c", "c-1", "a"), "E_DUPLICATE")
         self.assertEqual(inst(m, "c", "c-2", "a"), "accepted")
         self.assertEqual(inst(m, "c-x", "c-x-1", "b"), "accepted")
 
@@ -86,7 +86,7 @@ class GateAssignedIds(unittest.TestCase):
         m = make(self.path, version=6)
         inst(m, "c", "c-1", "a")
         inst(m, "c", "c-3", "a")
-        self.assertEqual(instance_for(m, "c", "s9"), "c-2")
+        self.assertEqual(instance_for(m, "c", "s9"), "c-4")
 
 
 if __name__ == "__main__":
