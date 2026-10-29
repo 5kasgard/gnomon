@@ -18,7 +18,7 @@ without `\n` is a torn write and is reported, never silently dropped.
 | `event_id` | string | exactly `<writer>/<writer_seq>` |
 | `writer` | identifier | a registered writer |
 | `writer_seq` | integer | exactly the writer's previous `writer_seq` + 1 (no reuse, no gaps) |
-| `record_time` | timestamp | `YYYY-MM-DDTHH:MM:SSZ`; never earlier than the previous event |
+| `record_time` | timestamp | `YYYY-MM-DDTHH:MM:SSZ`; never earlier than the previous event; a fresh write is refused (`E_FUTURE`) if more than 300 seconds ahead of the gate's clock (replay is not checked against the clock) |
 | `prev` | hex | `hash` of the previous event; 64 zeros for the first |
 | `kind` | string | one of the event kinds below |
 | `body` | object | validated per kind; unknown fields are refused |
@@ -913,7 +913,7 @@ model in a new session, another model, another app or a person.
 | `done`, `next`, `open` | no | 1–64 items each, each one line (repeats allowed) |
 | `refs` | no | up to 64 claims, episodes or handoffs it rests on, in its compartment |
 | `artifacts` | no | up to 64 `{uri, note?, sha256?}`: files, URLs, commits; uri without spaces, note one line |
-| `follows` | no | the handoff this one continues, in the same frame |
+| `follows` | no | the handoff this one continues, in the same frame; from protocol version 3, a handoff has at most one successor (`E_FORK`) |
 
 "One line" means no line breaks or tabs, so that no field can pass itself
 off as another line wherever it is shown, for example a fake "latest
@@ -923,6 +923,20 @@ Missing references and references to other compartments are refused alike
 (`E_REF`). A handoff is the writer's own account, not a claim about the
 world: it is attributed and kept, but never judged true or false. When it
 matters, the claims it rests on are what gets judged.
+
+**One successor (protocol version 3).** Two runs that both continue the
+same handoff would fork the chain, and resume would show only the newer
+branch, silently losing the other's work. From version 3 the second is
+refused with `E_FORK` ("follow the latest"); the writer resumes and
+follows the newest handoff instead. Logs at version 2 keep the old rule
+until upgraded with `schema_change`.
+
+**Time from the gate's side.** Record time never runs backwards, so one
+event dated far ahead would block every later write. A fresh write dated
+more than 300 seconds ahead of the gate's own clock is refused with
+`E_FUTURE`. Only fresh writes are checked against the clock: replay stays
+deterministic, and a log that already holds such an event still verifies
+(it stays blocked for later writes until it is rebuilt).
 
 **Resuming** (`Memory.resume`, MCP `resume`) gives, for a frame (by
 default the most recently active one the reader can see):
