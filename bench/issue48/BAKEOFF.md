@@ -96,3 +96,8 @@ crosses after it becomes a stated limit in the spec, and the PR goes up.
   (the SO operator setup never makes a B writer act for a hidden operator). Every limit probe
   crosses on main. Frozen, sha256 (12): `probes_SC.py` fb49c7b8b012, `probes_SZ.py`
   142531377ed6, `probes_SO.py` 51dbe1a58902, `FIXES.md` c2a8a835fc63, `run_all.py` 7462416c4e4c.
+- 2026-10-30: build SZ delivered (fresh Claude Sonnet, `spec_SZ_rules.md` and main only), branch
+  `arm48-SZ`: all eight rules; per-compartment clock with a whole-log `as_of` for v7 (which
+  skips the writer_seq check and drops events that cannot apply); snapshot magic `GNSNAP5`.
+  **One existing test changed** (`test_identity.ReviewM6.setUp` pinned to v6, as rule 1 refuses
+  its owner-registered writer's spawn at v7). Scored as a side effect.
