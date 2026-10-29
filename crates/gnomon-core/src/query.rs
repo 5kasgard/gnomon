@@ -533,10 +533,9 @@ impl<'a> Builder<'a> {
                 ("session", &w.session),
             ] {
                 if let Some(v) = v {
-                    // From version 7 (issue #48, O1): the operator is shown
+                    // Issue #48 (O1), on every log: the operator is shown
                     // only to a reader who shares a compartment with it.
                     if k == "operator"
-                        && st.schema_version >= 7
                         && !st.writers.get(v.as_str()).is_some_and(|o| o.compartments.iter().any(|c| self.sees(c)))
                     {
                         continue;
@@ -675,18 +674,14 @@ pub fn event_visible(ledger: &Ledger, visible: &[String], e: &Value) -> bool {
         // Issue #48 (V1): a lease and its release are visible to a reader
         // who shares a compartment with the leased writer; a revocation to
         // one who shares a compartment with its target. (Not a state
-        // change: only what `through` can show; gated on version 7 with the rest.)
-        // From protocol version 7; older logs count them for everyone, as before.
-        "lease" => st.schema_version < 7 || shares(field("writer")),
-        "release" => {
-            st.schema_version < 7
-                || st
-                    .leases
-                    .get(field("lease"))
-                    .map(|l| shares(&l.writer))
-                    .unwrap_or(false)
-        }
-        "revoke" => st.schema_version < 7 || shares(field("writer")),
+        // change: only what `through` can show.) On every log, whatever its version.
+        "lease" => shares(field("writer")),
+        "release" => st
+            .leases
+            .get(field("lease"))
+            .map(|l| shares(&l.writer))
+            .unwrap_or(false),
+        "revoke" => shares(field("writer")),
         _ => true,
     }
 }

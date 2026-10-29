@@ -63,10 +63,10 @@ class OperatorVisibility(unittest.TestCase):
                 outs.append((m.writers(compartments=["b"])["bot2"], ident(m)))
         self.assertEqual(outs[0], outs[1])
 
-    def test_version_6_logs_keep_showing_it(self):
+    def test_version_6_logs_hide_it_too(self):  # follow-up G: O1 applies to every log
         m = make(self.path, version=6)
-        self.assertEqual(m.writers(compartments=["b"])["bot"]["operator"], "op")
-        self.assertEqual(ident(m), [["op"]])
+        self.assertNotIn("operator", m.writers(compartments=["b"])["bot"])
+        self.assertEqual(ident(m), [])
 
 
 if __name__ == "__main__":

@@ -1474,14 +1474,13 @@ fn check(
             // (Checked within the party: a session id is the party's. And only
             // against writers sharing a compartment with this one: a refusal
             // must not tell a writer that a session exists where it cannot
-            // see, issue #48, S1: from version 7.)
+            // see, issue #48, S1: on every log.)
             if let Some(sess) = r.session {
                 if st.writers.values().any(|x| {
                     x.party == r.party
                         && x.session.as_deref() == Some(sess)
                         && x.surface.as_deref() == r.surface
-                        && (st.schema_version < 7
-                            || r.compartments.iter().any(|c| x.in_compartment(c)))
+                        && r.compartments.iter().any(|c| x.in_compartment(c))
                 }) {
                     return Err(err(
                         "E_IDENTITY",
@@ -3138,11 +3137,10 @@ impl State {
                     ("instance_of", &w.instance_of),
                 ] {
                     if let Some(v) = v {
-                        // From version 7 (issue #48, O1): a restricted view
+                        // Issue #48 (O1), on every log: a restricted view
                         // names the operator only to a reader who shares a
                         // compartment with it.
                         if k == "operator"
-                            && self.schema_version >= 7
                             && !self.writers.get(v.as_str()).is_some_and(|o| o.compartments.iter().any(|c| visible(c)))
                         {
                             continue;

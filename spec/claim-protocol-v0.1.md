@@ -81,7 +81,7 @@ their meaning.
 | `model` | models: required; tools: optional | the model it runs as reported by its runtime (not verified), or a tool's version |
 | `operator` | models and tools: required | the registered human it acts for |
 | `surface` | models and tools, optional | where it runs: claude-code, claude-app, api… |
-| `session` | models and tools, optional | the runtime's id for this session or agent; one writer per party, session and surface (`E_IDENTITY`); from protocol version 7 (issue #48) only among writers sharing a compartment with the registrant, so a refusal never tells of a session where the registrant cannot see |
+| `session` | models and tools, optional | the runtime's id for this session or agent; one writer per party, session and surface (`E_IDENTITY`); on every log (issue #48) only among writers sharing a compartment with the registrant, so a refusal never tells of a session where the registrant cannot see |
 
 Models, operators and sessions are printable ASCII without spaces; names
 follow the participant-name rules (no look-alike scripts, combining marks,
@@ -420,15 +420,15 @@ that hidden content exists.
 Reads can be restricted to a set of compartments. A restricted view contains
 nothing from other compartments: no claims, episodes, supersessions or
 event ids, and writers are listed only with the restricted compartments and
-without `last_seq`; from protocol version 7 (issue #48) a writer's `operator` is
+without `last_seq`; on every log (issue #48) a writer's `operator` is
 shown (in the view and as an `identity` fact) only if the operator shares a
 compartment with the reader. Its digest covers only what it shows, and it omits the
 log's event count and head hash, which describe the whole log.
 
-From protocol version 7 (issue #48) a query's `through` (where the reader's view
+On every log (issue #48) a query's `through` (where the reader's view
 ends) counts a lease or release only if the leased writer shares a compartment with
 the reader, and a revocation only if its target does; a schema change counts for
-everyone. Older logs count them for everyone, as before.
+everyone.
 
 From protocol version 7 (issue #48) the rule that record time never runs backwards
 compares an event's time only with events touching the writer's compartments (and
