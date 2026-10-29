@@ -416,7 +416,9 @@ that hidden content exists.
 Reads can be restricted to a set of compartments. A restricted view contains
 nothing from other compartments: no claims, episodes, supersessions or
 event ids, and writers are listed only with the restricted compartments and
-without `last_seq`. Its digest covers only what it shows, and it omits the
+without `last_seq`; from protocol version 7 (issue #48) a writer's `operator` is
+shown (in the view and as an `identity` fact) only if the operator shares a
+compartment with the reader. Its digest covers only what it shows, and it omits the
 log's event count and head hash, which describe the whole log.
 
 Known limit: event ids are `<writer>/<writer_seq>`, so gaps in a writer's

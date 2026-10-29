@@ -3050,6 +3050,15 @@ impl State {
                     ("instance_of", &w.instance_of),
                 ] {
                     if let Some(v) = v {
+                        // From version 7 (issue #48, O1): a restricted view
+                        // names the operator only to a reader who shares a
+                        // compartment with it.
+                        if k == "operator"
+                            && self.schema_version >= 7
+                            && !self.writers.get(v.as_str()).is_some_and(|o| o.compartments.iter().any(|c| visible(c)))
+                        {
+                            continue;
+                        }
                         fields.push((k, Value::str(v.clone())));
                     }
                 }
