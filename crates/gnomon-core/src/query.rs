@@ -533,6 +533,16 @@ impl<'a> Builder<'a> {
                 ("session", &w.session),
             ] {
                 if let Some(v) = v {
+                    // Version 7: an operator the reader cannot see is not named.
+                    if k == "operator"
+                        && st.schema_version >= 7
+                        && !st
+                            .writers
+                            .get(v.as_str())
+                            .is_some_and(|o| o.compartments.iter().any(|c| self.sees(c)))
+                    {
+                        continue;
+                    }
                     self.add(eng, "identity", vec![s(wid), s(k), s(v)], src)?;
                 }
             }
@@ -661,6 +671,28 @@ pub fn event_visible(ledger: &Ledger, visible: &[String], e: &Value) -> bool {
             .get(field("writer"))
             .map(|w| w.compartments.iter().any(|c| sees(c)))
             .unwrap_or(false),
+        // Version 7: a lease, release or revoke belongs to the compartments
+        // of the writers it names; before, everyone saw it.
+        k @ ("lease" | "release" | "revoke") if st.schema_version >= 7 => {
+            let writers: Vec<&str> = match k {
+                "lease" => st
+                    .leases
+                    .get(id)
+                    .map(|l| vec![l.writer.as_str(), l.by.as_str()])
+                    .unwrap_or_default(),
+                "release" => st
+                    .leases
+                    .get(field("lease"))
+                    .map(|l| vec![l.writer.as_str(), l.by.as_str()])
+                    .unwrap_or_default(),
+                _ => vec![field("writer")],
+            };
+            writers.iter().any(|x| {
+                st.writers
+                    .get(*x)
+                    .is_some_and(|w| w.compartments.iter().any(|c| sees(c)))
+            })
+        }
         _ => true,
     }
 }

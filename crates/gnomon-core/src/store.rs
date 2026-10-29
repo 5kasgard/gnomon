@@ -511,6 +511,8 @@ pub fn append(path: &Path, draft: Draft) -> Result<Value, StoreError> {
     f.write_all(line.as_bytes())?;
     f.sync_data()?;
     c.bytes.extend_from_slice(line.as_bytes());
+    // From version 7 a write's return does not tell the global position.
+    let hide_seq = c.ledger.state.schema_version >= 7;
     put_cache(key, c);
-    Ok(env)
+    Ok(if hide_seq { env.without("seq") } else { env })
 }
