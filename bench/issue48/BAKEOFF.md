@@ -72,3 +72,17 @@ crosses after it becomes a stated limit in the spec, and the PR goes up.
   not by any measured strength (no trusted comparison of these versions was found); the
   bake-off's tests decide. Each gets its own fresh builder, as SC did. The red team's
   non-Claude member is whichever of them did not write the winning spec.
+- 2026-10-30: two more non-Claude specs from the owner's second chat, same prompt unchanged
+  (Kimi was unavailable, so Kimi is dropped):
+  **SO, GPT (the full app model, not mini; OpenAI):** rules and pitfalls; its probes call two
+  helpers it never defined (`_fresh_v7`, `_hidden_action`), so they cannot run as delivered.
+  **SZ, GLM 5.2 (Zhipu):** spec and a runnable probe file, with API misuse (kind `bot`, models
+  without `model`/`operator`, a `position` body missing fields). sha256 (12): `spec_SO_full.txt`
+  be439e219d15, builder's `spec_SO_rules.md` 7287e2371c7e, `spec_SZ.md` ec1119ffdec8, builder's
+  `spec_SZ_rules.md` 21876a839732, `probes_SZ.py` f421d79070a3. Held out until the builds are done.
+- **Amendment (before any SO or SZ build, before any probe has run):** probe repair is done by
+  a fresh Claude Haiku agent that has seen no build, from main's API only: API misuse fixed,
+  SO's two helpers written from SO's own text, each change logged; it may not change what a
+  probe tests. Every repaired probe is run on main first: a probe that does not cross on main
+  (other than a declared limit, which should) tests nothing and is reported, not scored. SO's
+  probes are labelled "completed by Claude" (weaker evidence than probes run as delivered).
