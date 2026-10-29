@@ -39,12 +39,13 @@ use std::sync::OnceLock;
 
 use crate::json::Value;
 use crate::ledger::{
+    LeaseInfo,
     AppealInfo, AppointmentInfo, ClaimInfo, EpisodeInfo, HandoffInfo, Ledger, PositionInfo,
     Resolution, State, SupersessionInfo, VerdictInfo, WriterInfo,
 };
 use crate::sha256::digest;
 
-const MAGIC: &[u8; 8] = b"GNSNAP3\n";
+const MAGIC: &[u8; 8] = b"GNSNAP4\n";
 /// Magic, code hash, bytes covered, their hash, HMAC.
 const HEADER: usize = 8 + 32 + 8 + 32 + 32;
 
@@ -498,7 +499,16 @@ codec_struct!(State {
     appointments,
     appeals_by_claim,
     successors,
+    leases,
     schema_version
+});
+codec_struct!(LeaseInfo {
+    writer,
+    frame,
+    expires,
+    by,
+    record_time,
+    ended
 });
 codec_struct!(Ledger { events, state });
 

@@ -11,7 +11,7 @@ use crate::json::Value;
 /// to state their model and operator and resolves speakers strictly (see
 /// section 2a of the spec); version 1 logs replay under the rules they were
 /// written with, and move to version 2 with a `schema_change`.
-pub const SCHEMA_VERSION: i64 = 5;
+pub const SCHEMA_VERSION: i64 = 6;
 
 pub const STATEMENT_KINDS: &[&str] =
     &["describe", "promise", "permit", "command", "ask", "imagine"];
@@ -32,7 +32,7 @@ pub const VERDICT_METHODS: &[&str] = &[
     "computed",
 ];
 pub const WRITER_KINDS: &[&str] = &["human", "model", "tool"];
-pub const CAPABILITIES: &[&str] = &["owner", "write", "verify", "govern", "spawn"];
+pub const CAPABILITIES: &[&str] = &["owner", "write", "verify", "govern", "spawn", "schedule"];
 pub const EVENT_KINDS: &[&str] = &[
     "register",
     "position",
@@ -47,6 +47,8 @@ pub const EVENT_KINDS: &[&str] = &[
     "schema_change",
     "handoff",
     "revoke",
+    "lease",
+    "release",
 ];
 /// Contest rulings: old, new, both. Appeal rulings: reinstated, upheld.
 /// Either may be withdrawn by the party that raised it.
@@ -664,6 +666,7 @@ pub const CLAIM_FIELDS: &[&str] = &[
     "truth",
     "confidence",
     "frame",
+    "lease",
     "validity_domain",
     "valid_from",
     "valid_to",
@@ -919,6 +922,7 @@ pub fn handoff(body: &Value) -> GateResult<Handoff<'_>> {
         "refs",
         "artifacts",
         "follows",
+        "lease",
     ])?;
     let frame = f.text("frame", MAX_SHORT, false)?;
     one_line(frame, "handoff: 'frame'")?;
@@ -1088,6 +1092,34 @@ pub fn revoke(body: &Value) -> GateResult<Revoke<'_>> {
         writer: f.text("writer", MAX_SHORT, false)?,
         compartments: f.str_list("compartments", None, 1)?,
     })
+}
+
+pub struct Lease<'a> {
+    pub writer: &'a str,
+    pub frame: &'a str,
+    pub expires: &'a str,
+}
+
+/// `lease` (protocol version 6, issue #54): a time-bounded hold on a frame.
+pub fn lease(body: &Value) -> GateResult<Lease<'_>> {
+    let f = Fields::of(body, "lease")?;
+    f.only(&["writer", "frame", "expires", "reason"])?;
+    f.opt_text("reason", MAX_SHORT)?;
+    let frame = f.text("frame", MAX_SHORT, false)?;
+    one_line(frame, "lease: 'frame'")?;
+    let expires = f.text("expires", 40, false)?;
+    if !is_timestamp(expires) {
+        return Err(body_err("lease: 'expires' must be a timestamp like 2026-10-29T12:00:00Z"));
+    }
+    Ok(Lease { writer: f.text("writer", MAX_SHORT, false)?, frame, expires })
+}
+
+/// `release` (protocol version 6): end a lease early.
+pub fn release(body: &Value) -> GateResult<&str> {
+    let f = Fields::of(body, "release")?;
+    f.only(&["lease", "reason"])?;
+    f.opt_text("reason", MAX_SHORT)?;
+    f.text("lease", MAX_SHORT, false)
 }
 
 pub fn schema_change(body: &Value) -> GateResult<i64> {
