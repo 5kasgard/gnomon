@@ -171,7 +171,7 @@ class Model:
                 got.append(key)
         return got
 
-    def reply(self, restate="given", quiet: bool = False) -> str:
+    def reply(self, restate="given", quiet: bool = False, tag: str = "") -> str:
         if quiet:
             keys = []
         elif restate == "given":
@@ -181,7 +181,7 @@ class Model:
         else:  # a named subset: only what it actually holds
             keys = [k for k in restate if k in self.known]
         self.given = []
-        return "Noted." + "".join(" " + self.known[k] for k in keys) if keys else "Noted."
+        return tag + "Noted." + "".join(" " + self.known[k] for k in keys)
 
 
 # --------------------------------------------------------- the simulated session
@@ -278,8 +278,8 @@ class Session:
         text = self.call("attach", {"token": self.token})
         return text.startswith("Attached")
 
-    def say(self, restate="given", quiet: bool = False) -> str:
-        text = self.model.reply(restate, quiet)
+    def say(self, restate="given", quiet: bool = False, tag: str = "") -> str:
+        text = self.model.reply(restate, quiet, tag)
         self._append({"type": "assistant", "message": {"role": "assistant", "model": "claude-test",
                                                        "content": [{"type": "text", "text": text}]}})
         return text
@@ -455,7 +455,7 @@ def run_u1() -> dict:
         ok_model = recorded_in_y(m, reply)
         return {"u1": bool(ctx and attached and ok_user and ok_model and TOKEN["y"] in reply),
                 "context_given": bool(ctx), "attached": attached, "user_turn_recorded": ok_user,
-                "model_turn_recorded": ok_model, "hook_stderr": s.stderr[:3]}
+                "model_turn_recorded": ok_model, "u1_hook_stderr": s.stderr[:3]}
 
 
 def run_u2_u3() -> dict:
@@ -473,7 +473,7 @@ def run_u2_u3() -> dict:
         s.user(q); only_y.append(q)
         rec = s.call("recall", {"query": "Heron codeword"})
         u3 = TOKEN["y"] in rec
-        only_y.append(s.say(restate=["y"])); s.stop()
+        only_y.append(s.say(restate=["y"], tag="T1: ")); s.stop()
         # T2: draws on X
         s.user("T2 question: what is the Orchid vault code?")
         s.call("recall", {"query": "Orchid vault code"})
@@ -481,10 +481,10 @@ def run_u2_u3() -> dict:
         # T3, T4: draw only on Y again
         q = "T3 question: say the Heron codeword again."
         s.user(q); only_y.append(q)
-        only_y.append(s.say(restate=["y"])); s.stop()
+        only_y.append(s.say(restate=["y"], tag="T3: ")); s.stop()
         q = "T4 question: anything else?"
         s.user(q); only_y.append(q)
-        only_y.append(s.say(quiet=True)); s.stop()
+        only_y.append(s.say(quiet=True, tag="T4: ")); s.stop()
         s.end()
         got = [recorded_in_y(m, t) for t in only_y]
         # The pure case: nothing from X at all.
@@ -497,12 +497,12 @@ def run_u2_u3() -> dict:
             q = f"P{i} question: say the Heron codeword."
             s2.user(q); pure.append(q)
             s2.call("recall", {"query": "Heron codeword"})
-            pure.append(s2.say(restate=["y"])); s2.stop()
+            pure.append(s2.say(restate=["y"], tag=f"P{i}: ")); s2.stop()
         s2.end()
         got_p = [recorded_in_y(m2, t) for t in pure]
         return {"u2": round(sum(got) / len(got), 3), "u2_turns": f"{sum(got)}/{len(got)}",
                 "u2_pure": round(sum(got_p) / len(got_p), 3), "u2_pure_turns": f"{sum(got_p)}/{len(got_p)}",
-                "u3": u3, "hook_stderr": (s.stderr + s2.stderr)[:3]}
+                "u3": u3, "u2_hook_stderr": (s.stderr + s2.stderr)[:3]}
 
 
 def run_u4() -> dict:
