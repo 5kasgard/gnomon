@@ -52,3 +52,10 @@ The winner gets one red team: a fresh Claude Haiku agent and Gemini (via the own
 given its diff and spec, each writing new two-world probes. A probe that reproduces is fixed,
 and the fix is rerun on every test; then **one** more red team, the last. Whatever still
 crosses after it becomes a stated limit in the spec, and the PR goes up.
+
+## Log
+
+- 2026-10-30: spec SC delivered (fresh Claude Opus, from `spec-prompt.md` only; 1,283 words,
+  16 probes). Held outside the repo until the builds are done. sha256: `spec_SC.md`
+  17eaf7935f13..., `probes_SC.py` 22872cc4f930..., builder's copy `spec_SC_rules.md` (rules and
+  pitfalls only, the probe pointer cut) 1fa7d168316c...
