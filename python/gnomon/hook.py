@@ -248,6 +248,123 @@ def _redact(text: str, secrets_: list) -> str:
     return text
 
 
+# --------------------------------------------- where a session's words came from
+# What a session was given through Gnomon (the results of Gnomon MCP tools in
+# its transcript, the context this hook added, and what a sub-agent was
+# given) is compared, word for word, with what the other compartments the
+# writer holds contain. A session that was given any of it is marked as
+# having drawn on that compartment, for the rest of the session: the host
+# gives no way to tell when the model stops using what it read. The match
+# is verbatim (a run of WINDOW words, or a claim id), so a paraphrase is not seen.
+
+WINDOW = 5  # words in a run that counts as the same words
+
+
+class Sources:
+    """The words and claim ids of the compartments (other than `home`) that `writer` holds."""
+
+    def __init__(self, memory: Memory, writer: str, home: str):
+        comps = [c for c in memory.writers().get(writer, {}).get("compartments", []) if c != home]
+        self.windows: dict = {c: set() for c in comps}
+        self.short: dict = {c: [] for c in comps}
+        self.ids: dict = {c: [] for c in comps}
+        if not comps:
+            return
+        st = memory.state(compartments=comps)["state"]
+
+        def add(comp: str, text: Any) -> None:
+            if not isinstance(text, str):
+                return
+            words = text.split()
+            if len(words) >= WINDOW:
+                self.windows[comp].update(" ".join(words[i:i + WINDOW]) for i in range(len(words) - WINDOW + 1))
+            elif len(" ".join(words)) >= 12:
+                self.short[comp].append(" ".join(words))
+
+        for cid, c in st["claims"].items():
+            self.ids[c["body"]["compartment"]].append(cid[:18])
+            add(c["body"]["compartment"], c["body"].get("statement"))
+        for e in st["episodes"].values():
+            add(e["body"]["compartment"], e["body"].get("content"))
+        for h in st["handoffs"].values():
+            b = h["body"]
+            for t in [b.get("summary"), b.get("goal"), *b.get("done", []), *b.get("next", []), *b.get("open", [])]:
+                add(b["compartment"], t)
+
+    def drawn(self, text: str) -> set:
+        """The compartments whose words or claim ids `text` contains."""
+        words = text.split()
+        runs = {" ".join(words[i:i + WINDOW]) for i in range(len(words) - WINDOW + 1)}
+        flat = " ".join(words)
+        return {c for c in self.windows
+                if runs & self.windows[c] or any(i in text for i in self.ids[c]) or any(t in flat for t in self.short[c])}
+
+
+def _gnomon_results(transcript: str, start: int = 0) -> list:
+    """The results of Gnomon MCP tool calls in a Claude Code transcript, from
+    byte `start`: [(offset the entry ends at, text)]. A call is Gnomon's if
+    its tool is an MCP tool of a server whose name contains 'gnomon'."""
+    try:
+        with open(transcript, "rb") as f:
+            data = f.read()
+    except OSError:
+        return []
+    names, out, pos = {}, [], 0
+    for raw in data.split(b"\n")[:-1]:
+        pos += len(raw) + 1
+        try:
+            entry = json.loads(raw.decode("utf-8", "replace"))
+        except ValueError:
+            continue
+        msg = entry.get("message") if isinstance(entry, dict) else None
+        content = msg.get("content") if isinstance(msg, dict) else None
+        for block in content if isinstance(content, list) else []:
+            if not isinstance(block, dict):
+                continue
+            if block.get("type") == "tool_use":
+                names[block.get("id")] = str(block.get("name", ""))
+            elif block.get("type") == "tool_result" and pos > start:
+                name = names.get(block.get("tool_use_id"), "").lower()
+                if name.startswith("mcp__") and "gnomon" in name:
+                    body = block.get("content")
+                    if isinstance(body, list):
+                        body = "\n".join(b.get("text", "") for b in body if isinstance(b, dict))
+                    out.append((pos, body if isinstance(body, str) else ""))
+    return out
+
+
+def _taint_path(log: str, session: str) -> Path:
+    return _state_path(log, session).with_suffix(".drawn")
+
+
+def _load_taint(log: str, session: str) -> set:
+    try:
+        return set(json.loads(_taint_path(log, session).read_text(encoding="utf-8")))
+    except (OSError, ValueError, TypeError):
+        return set()
+
+
+def _save_taint(log: str, session: str, comps: set) -> None:
+    p = _taint_path(log, session)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    tmp = p.with_suffix(".drawn.tmp")
+    tmp.write_text(json.dumps(sorted(comps)), encoding="utf-8")
+    os.replace(tmp, p)
+
+
+def note_drawn(memory: Memory, log: str, writer: str, session: str, home: str, texts: list) -> None:
+    """Mark the session as having drawn on whatever compartments `texts`
+    (context the hook added, a sub-agent's Gnomon results) came from."""
+    texts = [t for t in texts if t]
+    if not texts:
+        return
+    src = Sources(memory, writer, home)
+    drew = set().union(*(src.drawn(t) for t in texts))
+    if drew:
+        with _locked(log, session):
+            _save_taint(log, session, _load_taint(log, session) | drew)
+
+
 def record(memory: Memory, log: str, writer: str, session: str, transcript: str, compartment: str,
            with_tools: bool = False) -> list:
     """Record the turns added since the last call; returns episode ids.
@@ -356,12 +473,16 @@ def main(argv: Optional[list] = None) -> int:
         transcript = event.get("transcript_path")
         if name == "PreCompact":
             _mark_compaction(a.log, session)
+        if name == "SubagentStop" and event.get("agent_transcript_path"):
+            note_drawn(memory, a.log, writer, session, compartment,
+                       [t for _, t in _gnomon_results(str(event["agent_transcript_path"]))])
         if name in ("Stop", "SubagentStop", "PreCompact", "SessionEnd") and transcript:
             record(memory, a.log, writer, session, transcript, compartment, a.with_tools)
         elif name == "SessionStart":
             if transcript:  # a resumed session: catch up on anything unrecorded
                 record(memory, a.log, writer, session, transcript, compartment, a.with_tools)
             ctx = start_context(memory, a.log, writer, a.frame, max(200, a.budget), a.situation_budget)
+            note_drawn(memory, a.log, writer, session, compartment, [ctx])
             print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": ctx}}))
         elif name == "UserPromptSubmit" and a.per_message > 0 and (event.get("prompt") or "").strip():
             from .consolidate import Tiers, span_key
@@ -369,6 +490,7 @@ def main(argv: Optional[list] = None) -> int:
             c = Tiers(memory, writer).context(event["prompt"], budget=a.per_message, directive_budget=0,
                                               exclude=held)
             if c["view"]:
+                note_drawn(memory, a.log, writer, session, compartment, [c["text"]])
                 _save_pushed(a.log, session, held | {span_key(v) for v in c["view"]})
                 print(json.dumps({"hookSpecificOutput": {"hookEventName": "UserPromptSubmit",
                                                          "additionalContext": c["text"]}}))
