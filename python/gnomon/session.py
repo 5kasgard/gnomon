@@ -26,20 +26,42 @@ from . import GateError, Memory
 
 
 def instance_for(memory: Memory, parent: str, session: Optional[str] = None,
-                 surface: Optional[str] = None) -> str:
+                 surface: Optional[str] = None, compartments: Optional[list] = None) -> str:
     """The writer for `session`, an instance of `parent`: the existing one
-    if this session has one, otherwise a new one (`parent-<n>`)."""
+    if this session has one, otherwise a new one (`parent-<n>`). With
+    `compartments`, a new instance holds only those (a subset of its
+    parent's). An existing instance of the session is reused only if it holds
+    exactly those; a session whose instance holds more (one made before
+    compartments were pinned) gets a further, narrower instance, which the
+    lookup then finds first."""
     writers = memory.writers()
     if parent not in writers:
         raise GateError("E_UNKNOWN_WRITER", f"writer '{parent}' is not registered")
     p = writers[parent]
     if "spawn" not in p["capabilities"]:
         raise GateError("E_CAPABILITY", f"'{parent}' needs the 'spawn' capability to start session instances")
+    comps = p["compartments"] if compartments is None else list(compartments)
+    if any(c not in p["compartments"] for c in comps):
+        raise GateError("E_COMPARTMENT", f"'{parent}' does not hold {', '.join(c for c in comps if c not in p['compartments'])}")
+    key = session  # the session id the new instance is registered under
     if session:
-        for wid, w in writers.items():
-            if w.get("instance_of") == parent and w.get("session") == session:
-                return wid
+        mine = [(wid, w) for wid, w in writers.items() if w.get("instance_of") == parent and w.get("session") == session]
+        if compartments is None:
+            if mine:
+                return mine[0][0]
+        else:
+            # The core allows one writer per session id, so a session whose
+            # existing instance holds more than `comps` gets a further one under
+            # a derived id, and the lookup finds it by that id.
+            derived = f"{session}~{'+'.join(sorted(comps))}"
+            for wid, w in writers.items():
+                if w.get("instance_of") == parent and w.get("session") in (session, derived) \
+                        and sorted(w["compartments"]) == sorted(comps):
+                    return wid
+            if mine:
+                key = derived
     session = session or uuid.uuid4().hex[:16]
+    key = key or session
     for n in range(1, 1_000_000):
         wid = f"{parent}-{n}"
         if wid not in writers:
@@ -50,12 +72,12 @@ def instance_for(memory: Memory, parent: str, session: Optional[str] = None,
     caps = [c for c in p["capabilities"] if c not in ("owner", "govern", "spawn")]
     try:
         memory.register(parent, wid, party=p["party"], kind=p["kind"], capabilities=caps,
-                        compartments=p["compartments"], name=p.get("name"), model=p.get("model"),
-                        operator=p.get("operator"), surface=p.get("surface") or surface, session=session)
+                        compartments=comps, name=p.get("name"), model=p.get("model"),
+                        operator=p.get("operator"), surface=p.get("surface") or surface, session=key)
     except GateError as e:
         if e.code != "E_DUPLICATE":
             raise
-        return instance_for(memory, parent, session, surface)  # another session took that id first
+        return instance_for(memory, parent, session, surface, compartments)  # another session took that id first
     return wid
 
 
