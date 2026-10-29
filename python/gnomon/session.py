@@ -67,6 +67,21 @@ def instance_for(memory: Memory, parent: str, session: Optional[str] = None,
     return wid
 
 
+def _auto_marker(log: str, template: str) -> Path:
+    return Path(str(log) + ".d") / "auto" / template.replace("/", "_")
+
+
+def mark_auto(log: str, template: str) -> None:
+    """Record that auto mode (the hook) runs this template."""
+    m = _auto_marker(log, template)
+    m.parent.mkdir(parents=True, exist_ok=True)
+    m.touch()
+
+
+def runs_auto(log: str, template: str) -> bool:
+    return _auto_marker(log, template).exists()
+
+
 TOKEN_TTL = 24 * 3600  # seconds
 
 

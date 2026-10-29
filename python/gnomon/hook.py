@@ -44,7 +44,7 @@ from typing import Any, Optional
 
 from . import GateError, Memory, title
 from .ingest import record_messages
-from .session import instance_for, issue_token, outstanding_tokens
+from .session import instance_for, issue_token, mark_auto, outstanding_tokens
 
 MAX_EPISODE = 90_000  # characters per recorded episode (the core allows 100,000)
 
@@ -350,6 +350,7 @@ def main(argv: Optional[list] = None) -> int:
         session = str(event.get("session_id") or "")
         if not session:
             return 0
+        mark_auto(a.log, a.writer)
         memory = Memory(a.log)
         held = memory.writers().get(a.writer, {}).get("compartments") or [None]
         compartment = a.compartment or held[0]
