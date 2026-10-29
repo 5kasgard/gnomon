@@ -447,6 +447,14 @@ class Memory:
             body["note"] = note
         return self.append(writer, "verdict", body, record_time)
 
+    def revoke(self, writer: str, target: str, compartments: Iterable[str], reason: str,
+               record_time: Optional[str] = None) -> dict:
+        """End `target`'s access to `compartments` from now on (protocol
+        version 5, issue #49): the owner only; the target's instances lose
+        them too; what it wrote before stays on record."""
+        body = {"writer": target, "compartments": list(compartments), "reason": reason}
+        return self.append(writer, "revoke", body, record_time)
+
     def supersede(self, writer: str, old: str, new: str, kind: str, evidence: Iterable[str],
                   reason: str, record_time: Optional[str] = None) -> dict:
         body = {"old": old, "new": new, "kind": kind, "evidence": list(evidence), "reason": reason}
@@ -559,7 +567,7 @@ class Memory:
 
 
 #: The protocol version new memories start at (see the spec, section 2a).
-SCHEMA_VERSION = 4
+SCHEMA_VERSION = 5
 
 
 def _cut(text: str, n: int) -> str:

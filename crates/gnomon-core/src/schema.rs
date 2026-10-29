@@ -11,7 +11,7 @@ use crate::json::Value;
 /// to state their model and operator and resolves speakers strictly (see
 /// section 2a of the spec); version 1 logs replay under the rules they were
 /// written with, and move to version 2 with a `schema_change`.
-pub const SCHEMA_VERSION: i64 = 4;
+pub const SCHEMA_VERSION: i64 = 5;
 
 pub const STATEMENT_KINDS: &[&str] =
     &["describe", "promise", "permit", "command", "ask", "imagine"];
@@ -46,6 +46,7 @@ pub const EVENT_KINDS: &[&str] = &[
     "appeal",
     "schema_change",
     "handoff",
+    "revoke",
 ];
 /// Contest rulings: old, new, both. Appeal rulings: reinstated, upheld.
 /// Either may be withdrawn by the party that raised it.
@@ -1069,6 +1070,23 @@ pub fn appeal(body: &Value) -> GateResult<Appeal<'_>> {
     Ok(Appeal {
         claim: f.text("claim", 80, false)?,
         evidence: f.str_list("evidence", None, 1)?,
+    })
+}
+
+pub struct Revoke<'a> {
+    pub writer: &'a str,
+    pub compartments: Vec<&'a str>,
+}
+
+/// `revoke` (protocol version 5, issue #49): end a writer's access to
+/// compartments from this point on.
+pub fn revoke(body: &Value) -> GateResult<Revoke<'_>> {
+    let f = Fields::of(body, "revoke")?;
+    f.only(&["writer", "compartments", "reason"])?;
+    f.text("reason", MAX_SHORT, false)?;
+    Ok(Revoke {
+        writer: f.text("writer", MAX_SHORT, false)?,
+        compartments: f.str_list("compartments", None, 1)?,
     })
 }
 
