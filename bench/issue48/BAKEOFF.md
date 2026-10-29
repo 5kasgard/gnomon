@@ -89,3 +89,10 @@ crosses after it becomes a stated limit in the spec, and the PR goes up.
 - 2026-10-30, owner: Gemini Argon stays a reviewer (and for small questions), not a builder or
   long spec writer. **Amendment:** the red team's non-Claude member is Gemini Argon, given only
   the winning diff and its spec (a review-sized prompt).
+- 2026-10-30: probes repaired by a fresh Claude Haiku agent (no build seen): SC 16, SZ 14, SO 11
+  probes; 37 fixes logged (largest class: compartments and parties lowercased, as the gate
+  requires). On main 35 cross; 6 do not and are **not scored**: SC `clock_far_future`, SZ
+  `through_lease`, SO `operator`, `operator_datalog`, `through`, `failed_write_side_effect`
+  (the SO operator setup never makes a B writer act for a hidden operator). Every limit probe
+  crosses on main. Frozen, sha256 (12): `probes_SC.py` fb49c7b8b012, `probes_SZ.py`
+  142531377ed6, `probes_SO.py` 51dbe1a58902, `FIXES.md` c2a8a835fc63, `run_all.py` 7462416c4e4c.
