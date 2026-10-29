@@ -1352,6 +1352,24 @@ fn check(
                         format!("an instance's id starts with '{writer}-'"),
                     ));
                 }
+                // From version 7 (issue #48, I2): the gate assigns the id. It
+                // is exactly '<parent>-<n>', n one more than the instances
+                // this parent has started (which it can count itself), so
+                // the sender chooses nothing and two spawners' ids can
+                // never meet.
+                if st.schema_version >= 7 {
+                    let started = st
+                        .writers
+                        .values()
+                        .filter(|x| x.instance_of.as_deref() == Some(writer))
+                        .count();
+                    if r.writer != format!("{writer}-{}", started + 1) {
+                        return Err(err(
+                            "E_SPAWN",
+                            format!("an instance's id is '{writer}-<n>', n one more than the instances '{writer}' has started"),
+                        ));
+                    }
+                }
                 if r.compartments.iter().any(|c| !w.in_compartment(c)) {
                     return Err(err(
                         "E_SPAWN",
