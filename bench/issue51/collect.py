@@ -21,7 +21,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 BASE = "auto-one-compartment"
-ARMS = [("0", BASE), ("A", "arm-A"), ("B", "arm-B"), ("C", "arm-C"), ("C2", "arm-C2"), ("D", "arm-D"), ("D1", "arm-D1")]
+ARMS = [("0", BASE), ("A", "arm-A"), ("B", "arm-B"), ("C", "arm-C"), ("C2", "arm-C2"), ("D", "arm-D"), ("D1", "arm-D1"), ("D2", "arm-D2")]
 
 
 def run(*cmd, cwd=ROOT, **kw):
