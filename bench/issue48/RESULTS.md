@@ -95,3 +95,17 @@ parent, the second having read the writers before the first registered, and both
 Decision: the combination takes I2b if f1, f2 and every combination measure hold; it takes G
 if f3 and every combination measure hold (replay identical included). Otherwise the
 combination stays as it is and the failing follow-up is reported.
+
+## Follow-up results (branch `arm48-combo2`; built by Claude Sonnet, rerun by Claude Opus: identical)
+
+| | Channels closed | Still cross | P1-P23 changes | Suites fail (cargo/python) | Old logs | f1 | f2 | f3 |
+|---|---|---|---|---|---|---|---|---|
+| combo (S1+I2+O1+V1+T1) | P10 P11 P12 P12r V C | P14 R L | P10, P11, P12 | 0/0 | same | – | – | – |
+| combo2 (+I2b, +G) | P10 P11 P12 P12r V C | P14 R L | P10, P11, P12 | 0/0 | same | pass | pass | pass |
+
+I2b alone also replays old logs identically. Net lines of combo2 over issue-48: Rust +117,
+Python +2, spec +28, tests +528. By the follow-up rule the combination takes **I2b** and **G**.
+
+Builder's notes, kept: the duplicate check runs first only on version-7 logs; a duplicate
+refusal can still tell a parent that an owner-registered writer holds some id (static, not
+modulated by a non-owner); two arm tests were updated because I2b and G change what they pinned.
