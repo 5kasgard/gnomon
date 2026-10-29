@@ -447,7 +447,9 @@ can learn that such an event exists.
 
 Known limit (channel L, open, with the owner): leases on a frame name are not
 compartment-scoped. A live lease on a frame in a compartment a scheduler cannot
-see still makes that scheduler's lease on the same frame name fail (`E_LEASED`).
+see still makes that scheduler's lease on the same frame name fail (`E_LEASED`),
+though the holder is no longer named and a hidden writer is no longer told apart
+from a missing one.
 
 **Revocation (protocol version 5).** Access granted by mistake, or to a
 writer that later misbehaves, is withdrawn with `revoke` (`writer`,
@@ -468,7 +470,10 @@ the holder's instances or the owner write claims and handoffs in that frame,
 and the holder names the lease in each (`lease`); naming a released or
 expired lease is refused (`E_LEASE`), so a stale process still holding an old
 token is fenced off (Kleppmann 2016). A second lease on a frame with a live
-one is refused (`E_LEASED`). A fresh write naming a lease is also checked
+one is refused (`E_LEASED`). From protocol version 7 (issue #48) a scheduler leases
+only to a writer it shares a compartment with (a hidden writer and a missing one
+both get `E_UNKNOWN_WRITER`), and `E_LEASED` names the holder and expiry only if
+the holder shares a compartment with the scheduler. A fresh write naming a lease is also checked
 against the gate's clock, so it cannot be dated back to before expiry; replay
 uses record time only and stays deterministic. When a lease ends the frame is
 free again: if a scheduler crashes, its leases still expire. The `lease`
