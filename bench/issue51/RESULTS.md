@@ -52,3 +52,17 @@ standalone server still work? (Expected: no; reported either way, as D1's known 
 
 Decision: D1 replaces D if it closes all eight roads with no widening and passes the existing
 suite unchanged; otherwise both D and D1 go to the owner with their costs.
+
+## Follow-up test D2 (registered after D1's results and the Gemini review, before D2 is built)
+
+**D2** = D1 without the marker file: the per-session MCP server refuses unattached use only when
+started with `--require-attach`, and auto mode's documented MCP configuration (README, and
+`settings()` if it prints one) includes it. A resumed session whose instance holds more than Y
+gets a fresh one-compartment instance instead of going unrecorded, with a note on stderr.
+
+Measures: as D1 (roads 1-8 with the flag set, widening, u1-u5, size, full suite), plus **u6**: a
+resumed pre-upgrade session is recorded, and nothing from X reaches Y. Road 7 is also run
+**without** the flag and reported, as the misconfiguration case.
+
+Decision: D2 replaces D1 if it closes all eight roads with the flag set, with no widening, u1-u4
+and u6 true, and the suite passing; u5 is expected true.
