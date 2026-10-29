@@ -589,7 +589,8 @@ impl<'a> Builder<'a> {
 /// Can the reader see this event? Its compartment decides: a claim's,
 /// an episode's, a verdict's claim's, a dispute's, an appeal's; a
 /// registration is visible if the writer shares a compartment with the
-/// reader; a schema change belongs to everyone.
+/// reader; a lease, release or revocation if the writer it concerns shares one
+/// (issue #48); a schema change belongs to everyone.
 pub fn event_visible(ledger: &Ledger, visible: &[String], e: &Value) -> bool {
     let st = &ledger.state;
     let sees = |c: &str| visible.iter().any(|x| x == c);
@@ -604,6 +605,12 @@ pub fn event_visible(ledger: &Ledger, visible: &[String], e: &Value) -> bool {
         st.claims
             .get(c)
             .map(|c| sees(&c.compartment))
+            .unwrap_or(false)
+    };
+    let shares = |w: &str| {
+        st.writers
+            .get(w)
+            .map(|w| w.compartments.iter().any(|c| sees(c)))
             .unwrap_or(false)
     };
     match e.get("kind").and_then(|v| v.as_str()).unwrap_or("") {
@@ -656,11 +663,18 @@ pub fn event_visible(ledger: &Ledger, visible: &[String], e: &Value) -> bool {
                     .map(|x| sees(&x.compartment))
                     .unwrap_or(false)
         }
-        "register" => st
-            .writers
-            .get(field("writer"))
-            .map(|w| w.compartments.iter().any(|c| sees(c)))
+        "register" => shares(field("writer")),
+        // Issue #48 (V1): a lease and its release are visible to a reader
+        // who shares a compartment with the leased writer; a revocation to
+        // one who shares a compartment with its target. (Not a state
+        // change: only what `through` can show, so no protocol bump.)
+        "lease" => shares(field("writer")),
+        "release" => st
+            .leases
+            .get(field("lease"))
+            .map(|l| shares(&l.writer))
             .unwrap_or(false),
+        "revoke" => shares(field("writer")),
         _ => true,
     }
 }
