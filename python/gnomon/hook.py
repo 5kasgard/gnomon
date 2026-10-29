@@ -44,7 +44,7 @@ from typing import Any, Optional
 
 from . import GateError, Memory, title
 from .ingest import record_messages
-from .session import instance_for, issue_token, outstanding_tokens
+from .session import instance_for, issue_token, mark_auto, outstanding_tokens
 
 MAX_EPISODE = 90_000  # characters per recorded episode (the core allows 100,000)
 
@@ -350,9 +350,13 @@ def main(argv: Optional[list] = None) -> int:
         session = str(event.get("session_id") or "")
         if not session:
             return 0
+        mark_auto(a.log, a.writer)
         memory = Memory(a.log)
-        writer = instance_for(memory, a.writer, session, surface="claude-code")
-        compartment = a.compartment or memory.writers()[writer]["compartments"][0]
+        held = memory.writers().get(a.writer, {}).get("compartments") or [None]
+        compartment = a.compartment or held[0]
+        # The session's writer holds only the compartment it is recorded in,
+        # so nothing it reads through Gnomon can come from another.
+        writer = instance_for(memory, a.writer, session, surface="claude-code", compartments=[compartment])
         transcript = event.get("transcript_path")
         if name == "PreCompact":
             _mark_compaction(a.log, session)

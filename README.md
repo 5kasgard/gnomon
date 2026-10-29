@@ -106,6 +106,8 @@ resuming, including the end of the last conversation, fitted to a token
 budget so it never crowds out the work. After every reply, the new turns
 are saved exactly, attributed to that session and to you.
 
+In auto mode a session holds only the compartment it is recorded in (`--compartment`, default the template's first), and an unattached per-session MCP server refuses use for a template the hook runs.
+
 For hosts configured with JSON (e.g. Claude Desktop):
 
 ```json

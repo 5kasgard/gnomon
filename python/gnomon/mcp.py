@@ -30,7 +30,7 @@ import uuid
 
 from . import GateError, Memory, VIEWS, __version__, _native, claim, checkers, proofs, title
 from .ingest import ingest, record_messages
-from .session import instance_for, redeem_token
+from .session import instance_for, redeem_token, runs_auto
 
 MODERN = ["2026-07-28"]
 LEGACY = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"]
@@ -449,6 +449,10 @@ class Server:
         if name == "attach":
             return self.t_attach(args)
         if self.parent is not None and self.writer == self.parent:
+            if runs_auto(self.log, self.parent):
+                # Auto mode runs this template: it may hold compartments the session's writer does not.
+                raise ToolError("this session has no writer yet: call `attach` with the token in your session "
+                                "context first")
             self._start_instance()
         fn: Callable[[dict], tuple[str, Any]] = getattr(self, "t_" + name)
         self.results += 1

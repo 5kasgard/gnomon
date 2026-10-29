@@ -701,6 +701,7 @@ runs them):
   - **Never recorded:** any outstanding token that appears in recorded text
     is replaced with "[attach token]".
   - So the binding never rests on what a model says about itself.
+  - **One compartment:** the session's writer holds only the compartment it is recorded in, so nothing it reads through Gnomon comes from another. A resumed session whose writer holds more is not recorded (the hook says so on stderr).
 - **Stop, PreCompact, SessionEnd:** the turns added to the host's
   transcript since the last time are recorded as episodes. The model's
   turns go under its registered name (or its id) bound to its writer, and
