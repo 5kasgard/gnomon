@@ -109,3 +109,23 @@ Python +2, spec +28, tests +528. By the follow-up rule the combination takes **I
 Builder's notes, kept: the duplicate check runs first only on version-7 logs; a duplicate
 refusal can still tell a parent that an owner-registered writer holds some id (static, not
 modulated by a non-owner); two arm tests were updated because I2b and G change what they pinned.
+
+## Follow-up 3 (registered after the Gemini review and its checks, before it is built)
+
+Evidence (`gemini_checks.py`): T1 does not close channel C (G2 moves it into `as_of`, which also
+becomes wrong for every reader; G3a still crosses through leases). I2b leaves a P12r variant
+open (G1). L1 closes the existence half of L at no cost.
+
+Branch `arm48-combo3` from `arm48-combo2`:
+- **drop T1** (C becomes a documented limit, as P14/R; the snapshot magic returns to main's);
+- **I2c:** I2b, with the id checked first to be exactly `<parent>-<integer>` (`E_SPAWN`
+  otherwise), then the duplicate check, then the exact k;
+- **add L1** as built on `arm48-L1`.
+
+Measures: every combination measure (run.py), plus `gemini_checks.py`. Expected: G1 does not
+cross; G2 and G3a cross as channel C (limit), G4 as L (limit), G6 as the count family (limit);
+G5 succeeds in both worlds; `as_of` returns `b at 3` in the world without the hidden event.
+Suites and replay as before.
+
+Decision: the combination becomes combo3 if every expectation holds. Otherwise combo2 minus T1
+and the failing piece is reported.

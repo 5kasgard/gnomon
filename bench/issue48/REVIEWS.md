@@ -44,3 +44,59 @@ Handling (checked by `review_checks.py` and two ad hoc runs on main, 629d7e1):
 - I2 unbuildable: disputed (the parent sees its own instances); built as written.
 - O2, Q1, two-world measure, exceptions, P13/P14 fixed returns: all applied in amendment 1.
 - P15 markers: not changed; the two-world measure replaces marker matching for the new channels.
+
+## arm48-combo2, Gemini (Argon, thinking high; non-Claude, via the owner's chat), 2026-10-30, verbatim
+
+ * Untested leaks in touched paths:
+   * P12r regression in I2b (register): In ledger.rs, st.writers.contains_key(r.writer) runs before r.writer != "{writer}-{k}", after checking only the "{writer}-" prefix. When hidden spawner c-x (in A) registers c-x-1, spawner c (in B) registering c-x-1 passes the prefix check and gets E_DUPLICATE if c-x-1 exists, versus E_SPAWN if not.
+   * T1 as_of cross-compartment blinding: Because as_of stops at the first event dated after the cut, an A-only event with a future record_time truncates a B-only reader's as_of(now) replay, hiding subsequent B events dated before now.
+   * T1 clock bleed (check, touched): floor_v7 takes the maximum across all of w.compartments, not the event's target compartment. An A-only write advances clock["A"], making a {A, B} writer's B-write fail with E_CLOCK. Similarly, touched on lease, release, and revoke updates all compartments of the target writer, and any event kind omitted from touched hits _, advancing the global "" clock checked by everyone.
+   * V1 multi-compartment and release leaks (event_visible): If writer w holds {A, B}, A-only lease, revoke, or register events on w still shift a B-only reader's through. Also, if commit removes released leases from st.leases, st.leases.get(field("lease")) returns None, hiding releases everywhere.
+ * Diff bugs and risks:
+   * Broken instance_for under restricted views (session.py): The gate computes k from global st.writers, whereas instance_for reads caller-visible writers. If c-1 is owner-registered in hidden compartment A, a B-restricted caller never sees c-1, computes k=1 (c-1), and fails with E_DUPLICATE (with the retry loop removed). instance_for also applies v7 k-counting unconditionally to v6 logs.
+   * as_of truncation: Prefix-stopping breaks as_of once timestamps are ordered only within compartments.
+ * Experimental flaws:
+   * Masking global seq: The builder found write returns leak global seq (total log events) and excluded it from the comparator so arms could pass.
+   * Inconsistent test rules: Rejecting Q1 (2 failures) and O2 (3 failures) because existing tests hardcoded leaky expectations—while updating 2 tests in combo2 for I2b/G—is inconsistent.
+   * Dropping L1: Discarding L1 left E_UNKNOWN_WRITER existence probing and E_LEASED holder/expiry leaks unpatched despite zero test failures.
+   * Unrestricted f1: f1 tested instance_for on an unrestricted Memory, masking the restricted-view bug.
+ * Keeping P14/R and deferring L:
+   * Not defensible. Global seq reveals exact hidden write volume on every write, and fixing E_UNKNOWN_WRITER plus E_LEASED metadata requires no owner decision.
+   * Instead: Merge L1 now and key leases by (compartment, frame); strip global seq from restricted returns; and adopt Q1 (updating the two hardcoded test assertions).
+ * Verdict: Merge with changes:
+   * Require r.writer to match "{writer}-{n}" (integer n, no extra hyphens) before checking E_DUPLICATE.
+   * Scope floor_v7 to the event's target compartment(s), and filter as_of by timestamp rather than stopping at the first out-of-order event.
+   * Include L1, strip global seq from restricted returns, and increment k on E_DUPLICATE retries in instance_for.
+
+Handling (each claim run two-world by `gemini_checks.py`, on main and on arm48-combo2;
+outputs `gemini_checks_main.txt`, `gemini_checks_combo2.txt`):
+
+- **P12r variant (G1): reproduces.** `c` asking for `c-x-1` gets `E_DUPLICATE` or `E_SPAWN`
+  depending on a hidden spawn; I2b does not close it. Fix accepted (integer suffix first).
+- **as_of (G2): reproduces, and is worse than stated.** Under T1 an A event dated later cuts
+  B's `as_of` view short, for every reader (a correctness bug, not only a leak). On main the
+  same scenario crosses through `E_CLOCK` instead. So T1 moves channel C into `as_of`.
+- **Clock bleed via leases (G3a): reproduces,** on main and under T1 alike. With G2, T1 does
+  not close C. The `_` fall-through is `schema_change` only: owner-only and global by design.
+  A two-compartment writer blocked by its own A write (G3b) reproduces, but that writer holds
+  A; it is the R family (a B-side process acting as a shared writer).
+- **V1 and a writer in A and B (G4): reproduces;** it comes from leases having no compartment
+  (channel L). **Releases hidden everywhere: does not reproduce** (released leases are kept,
+  marked ended; G4r).
+- **instance_for under restricted views (G5): does not reproduce.** `instance_for` reads
+  `memory.writers()` unrestricted, as the hook and MCP server call it; with a hidden
+  owner-registered `c-1` it starts `c-2` and succeeds. The retry on `E_DUPLICATE` is still in
+  place. The id differs only by what an owner registered (owner as sender). On version-6 logs
+  the k it computes is accepted by the old rule (any free id).
+- **Global seq in returns (G6): reproduces** (seq 6 vs 3 for a B-only writer). Excluded from
+  the harness comparison openly in the builder's report and stated in the spec's limit; fair
+  that it is stronger than R (any writer, not only a shared one).
+- **Inconsistent test rules: partly.** The two tests changed in combo2 are the experiment's own
+  new arm tests (`test_issue_48_i2.py`, `test_issue_48_o1.py`); O2 and Q1 broke pre-existing
+  tests, which measure 3 holds unchanged. Whether those pre-existing tests only pin leaky
+  expectations was not checked; noted.
+- **L1: fair.** It closes the existence half with no failures; the rule required the whole
+  channel. Taken in follow-up 3 (below).
+- **Count family (P14, R, seq) as a limit: disputed, recorded.** Counts carry no content; Q1
+  does not cover seq, and hiding seq means changing every restricted view. Kept as a limit,
+  open to the owner.
