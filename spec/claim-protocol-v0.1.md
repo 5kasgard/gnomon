@@ -1090,26 +1090,15 @@ token:
 
 `bench/tokens.py` measures the cost per item shown.
 
-## 15. The firm: teams of models
+## 15. Organisations in the record
 
-A request that can be split is work for a firm. `gnomon.firm` (MCP
-`plan_team`) shapes one: who does each part, who checks it, who it
-escalates to, how many managers on how many floors, and what that is
-expected to cost and risk next to one top-tier agent doing it all.
-
-| A firm has | Here it is |
-|---|---|
-| Pay grades | Tiers priced from the published per-token prices (Haiku, Sonnet, Opus), read on the date in `PRICES_READ`. |
-| Desks | Context windows. Staff desks stay under Haiku's 100,000-token price rise; a manager's desk sets how many reports fit on it. |
-| Floors | Levels of management: a new floor when one floor of managers would have more than a desk's worth of reports. |
-| The executive | The top tier plans the split and integrates the parts: a mistake there costs every part. |
-| Quality control | An exact check (tests, arithmetic, dates: free and certain), a reviewing tier (priced, with a stated catch and false-alarm rate), or none. |
-| Escalation | A cascade: the cheapest tier first, the next only when a check fails. |
-| The night shift | Work that is not urgent goes to the Batch API at half price. |
-| Work orders | A question in a `firm/<kind>` frame, posted by whoever assigns the work. |
-| Track records and promotion | A result is a claim in the same frame, by a model, that `answers` a work order posted by someone outside the worker's group. It counts once, settled by the verdicts on it from groups other than the worker's: one vote per group, majority wins, ties count for nothing. Per tier and kind of work, these update a Beta prior; who is hired for what follows the record. |
-| Integrity | No one posts their own work orders or judges their own model's work; only writers of kind `model` whose model id starts with a tier's prefix (`claude-haiku-`, …) count; the record is only what the reader can see. Gnomon refuses a party's verdict on its own party's claims, so models that review each other must be registered as parties of their own. |
-| Shift changes | Handoffs (section 13). |
+Teams of models and tools (pricing who does each part, the forms
+alphabet, companies) are specified in Polymechania
+(github.com/5kasgard/polymechania, `spec/polymechania-v0.1.md`), which
+keeps its books here: a work order is a question in a `firm/<kind>`
+frame, a result is a claim that `answers` it, and verdicts on results
+from outside the worker's group are its track record. What Gnomon itself
+enforces is the structure:
 
 **Organisations in the record.** Three events make an organisation's
 structure part of the verified log, with authority checked by the gate:
@@ -1131,155 +1120,12 @@ left. No one appoints themselves; anyone may resign. Queries see
 the independent checker establishes `position` and `holds` by folding the
 log itself, so a holding that has since ended no longer checks.
 
-**A company** (`gnomon.company`) runs on these. It is founded with
-positions that keep the powers apart: the CEO plans and delivers; the
-Chief of Staff allocates work and budget; the Head of People hires and
-reviews; the Head of IT keeps the tools. The Head of Assurance reports to
-no one but the owners, so the gate lets no one in production appoint or
-dismiss it. Staff are instances of a template writer per model tier,
-hired into titles by someone above: titles, not models, are held, and the
-record decides who keeps them. The company's compartment is its internal
-record and memory (work orders, results, memos, decisions, the structure
-chosen for each order); a client is a writer outside the company posting a
-work order there; a subcontractor is a writer of another party, whose
-verdicts count as independent. Personnel reviews propose probation,
-dismissal or promotion by stated thresholds over results judged from
-outside the worker's group; escalating or saying a part could not be done
-is never counted against anyone, and a leaver writes a handoff before the
-appointment ends.
-
-**The decision.** For one unit of work, every option is priced: each tier
-alone, and each rising cascade under each kind of check the work allows.
-Its cost is expected spend on tokens, plus the expected loss
-(`stakes_usd` for a wrong result kept unnoticed; `detected_usd`, by default
-the same, for a part known not to be done because its last attempt was
-flagged), plus `step_usd` for each expected sequential round. The cheapest
-total wins; ties go to the option more likely right. A tier whose context
-window cannot hold a part is never given it. Parts run in parallel; the
-planner (writing work orders in requests of at most 32,000 tokens), the
-integrator (reading the top floor) and the floors of managers (each reading
-its own reports) are added on top. Inputs are validated: finite, in range,
-a known check.
-
-**The baseline** is one top-tier agent doing every part in turn with the
-best checks it can use, re-reading its work so far as prompt-cache hits
-(compacted to its desk once it outgrows it) and writing each part's prompt
-to the cache. Plan and baseline report tokens, loss and rounds separately.
-
-**Stated assumptions**, each to be replaced by the record:
-
-- priors per tier (`PRIORS`, as pseudo-counts);
-- reviewers' catch and false-alarm rates (`REVIEW`);
-- attempts independent of each other (a part one tier got wrong is taken
-  to be no harder for the next, which flatters cascades);
-- summaries handed up a floor of 600 tokens.
-
-**The pilot** (`bench/firm_pilot`): 24 exactly specified Python tasks, 12
-routine and 12 hard, each given to a Haiku 5.5 and a Sonnet 5.5
-sub-agent and graded by hidden tests. All 48 passed. Recorded as work
-orders, results and test verdicts, they are the record `plan_team` plans
-from. No task needed escalation, so the cascade itself is not yet
-measured.
-
-The comparison with the baseline is only as good as these assumptions:
-with independent attempts, a cascade with an exact check is close to
-certain to win on loss. Real measurements decide.
-
 **Organisations** (positions, appointments, dismissals) belong to their
 compartment: the same name in two compartments is two organisations, and
 neither can learn of the other. Owners and governors act in an
 organisation only if their party founded it; anyone else acts through the
 positions they hold. Titles have no leading, trailing, doubled or unusual
 spaces.
-
-**Not yet:** running the agents (the host does that: Claude Code's
-subagents or the API), learning how failures correlate across tiers,
-pricing the risk of a bad plan or integration, latency beyond a price per
-round, and measurements of plans against single agents on real work.
-
-### 15.1 Forms: an alphabet, not one chart
-
-`plan_team` prices which models fill a structure; `gnomon.forms` chooses
-the structure. A form is a word over nineteen letters, each with a size:
-
-| | Letter | What it does |
-|---|---|---|
-| S | Solo | one agent, the whole context |
-| D | Divide | parts with isolated contexts and short, complete briefs |
-| C | Coordinate | a planner assigns parts up front |
-| Q | Queue | fixed order; each agent reads earlier finished work, picks its own role or abstains |
-| P | Propose | independent attempts, ideally across model families; no one reads another's |
-| V | Verify-select | an exact check picks |
-| A | Aggregate | one writer merges independent drafts |
-| R | Route | send to the clear expert and defer |
-| K | Critique-repair | a reviewer names a concrete fault; the author repairs |
-| B | Debate | full answers exchanged over rounds |
-| M | Market | members bid with their own estimates; abstaining is free |
-| G | Ground | coordination through the record: scores, failure causes, never full solutions |
-| E | Evolve | a scored population over generations |
-| H | Hierarchy | floors of managers for more parts than one planner can brief |
-| X | Escalate | cheapest capable tier first, up on a failed check |
-| T | Toolmaker | a capable model builds a cheap artifact (program, small model) once for a workload |
-| F | Floor | cheap workers answer what they are sure of; the rest go to one capable tier |
-| N | Batch | many items, and several questions per item, in one request |
-| I | Independent assurance | judges outside the workers' group, majority of distinct groups |
-
-Each letter records when it helps, when it hurts, and its evidence with a
-strength: *measured* (controlled experiments with language-model teams),
-*theory* (Amdahl, Ashby, Galbraith, Mintzberg, Condorcet, Conway, Goodhart,
-Hayek, stigmergy) or *hypothesis*. `compose(profile, dials)` spells a word
-by rules that each cite their evidence:
-
-- **Split only what a short brief can carry.** Low coupling: divide, with
-  as many workers as reach the knee of Amdahl's curve (60% of the best
-  speed-up at speed 0, 95% at speed 1). High coupling with a strong model:
-  one context (splitting cost the strongest model 0.23 on hard
-  constraints; Yu et al. 2026, 2607.16133).
-- **Assign; do not let workers claim.** Pre-assigned teams ran 1.36x
-  faster at the median against 0.88x for self-claiming ones (Mieczkowski
-  et al. 2026, 2603.12229).
-- **With an exact check, propose independently and select.** Reading each
-  other's full solutions erased model diversity within one round; debate
-  and critique lost with mixed families, selection kept a +0.19 diversity
-  gain (Ann et al. 2026, 2608.23541). Critique is added only when a failed
-  check names the fault.
-- **Defer to a known expert.** Deliberating teams fell 6-41% short of their
-  best member even when told who it was (Pappu et al. 2026, 2602.01011).
-- **Open-ended work: strong models take turns, weak ones get structure.**
-  Fixed order with self-chosen roles beat a coordinator by 14% on three
-  models; below a capability threshold the effect reverses (Dochkina 2026,
-  2603.28990). Never more than four voices: returns peak at 2-5 agents
-  (Li et al. 2026, 2606.00655).
-- **A workload gets a toolmaker, a floor and batches.** With thousands
-  of items under one instruction, the cheap worker is built once and
-  checked on a probe the model labels; it answers what it is confident
-  about and the rest go to one capable tier, 25-100 items per request.
-  Never more than two tiers (a third added nothing in 118 of 135
-  comparisons; arXiv 2605.06350). Measured in `bench/floor`: on spam a
-  linear model matched Claude Haiku for almost nothing; on five-star
-  reviews no cheap worker came close, and the floor saved only what it
-  gave up.
-- **Count, do not self-judge.** At equal tokens, repeated sampling with a
-  vote beat every method where a model assessed its own work (arXiv
-  2607.28576); selection by a computer check or an outside comparator
-  recovers most of what sampling exposes (2605.14163).
-- **Floors only past one planner's reach**, escalation when a check can
-  see failure, and assurance from outside the workers' group always.
-
-The dials, each 0 to 1: effort (attempts, members), breadth (model
-families), scrutiny (reviewers: 1, or 3 with majority), speed (workers),
-thrift (escalation, and the weight of cost in the reward). Every design
-lists what it rejected and why, and warns where the evidence runs out.
-
-**Learning which form pays.** The rules are priors: winners change with
-model bindings (Chen et al. 2026, 2607.25446), and the useful space is a
-short list of about six topologies whose winner varies per task (Yu et
-al. 2026, 2609.02264). `candidates` gives that short list (the composed
-form at lower and higher effort, and one agent alone), and `Learner`
-(LinUCB over ten interpretable task features) chooses among them,
-starting on the composed form and moving off it as the record shows
-another paying better, with reward = quality - thrift x cost / budget.
-The `design_team` MCP tool returns a design.
 
 ## 16. Not yet in v0.1
 
