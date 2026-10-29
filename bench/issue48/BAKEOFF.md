@@ -64,3 +64,11 @@ crosses after it becomes a stated limit in the spec, and the PR goes up.
   **one existing test edited** (`test_auto.py` test_8 renamed a spawner `claude-x` to
   `claudex`, which rule 3 forbids beside `claude`). Scored as a side effect: main's unchanged
   suite is run on every build too, and its failures are listed.
+- 2026-10-30: Gemini (Argon) disconnected three times while thinking on `spec-prompt.md`, even
+  when asked to answer across several messages; no spec. **Amendment (before any non-Claude
+  spec exists):** arm SG is replaced by specs from other non-Claude families in the owner's
+  second chat, same prompt unchanged: first **SK, Kimi K3.1 Pro** (Moonshot); optionally a
+  second, **SO, GPT-5.4 mini** (OpenAI) or **SZ, GLM 5.2** (Zhipu). Chosen by family diversity,
+  not by any measured strength (no trusted comparison of these versions was found); the
+  bake-off's tests decide. Each gets its own fresh builder, as SC did. The red team's
+  non-Claude member is whichever of them did not write the winning spec.
