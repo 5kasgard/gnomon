@@ -81,7 +81,7 @@ their meaning.
 | `model` | models: required; tools: optional | the model it runs as reported by its runtime (not verified), or a tool's version |
 | `operator` | models and tools: required | the registered human it acts for |
 | `surface` | models and tools, optional | where it runs: claude-code, claude-app, api… |
-| `session` | models and tools, optional | the runtime's id for this session or agent; one writer per party, session and surface (`E_IDENTITY`) |
+| `session` | models and tools, optional | the runtime's id for this session or agent; one writer per party, session and surface among writers sharing a compartment (`E_IDENTITY`; issue #48: a refusal never tells of a session where the registrant cannot see) |
 
 Models, operators and sessions are printable ASCII without spaces; names
 follow the participant-name rules (no look-alike scripts, combining marks,
