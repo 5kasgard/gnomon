@@ -288,7 +288,7 @@ class Memory:
             # Only an owner's page counts. Others can exist only from before
             # version 4 (an upgraded log); they are counted, never shown as binding.
             f = f"{family}/{resident}"
-            rows = sorted((c["order"], cid, c["first_event"].rsplit("/", 1)[0], c)
+            rows = sorted((c["order"], cid, c["first_event"].split("/", 1)[0], c)
                           for cid, c in st["claims"].items() if c["body"].get("frame") == f)
             mine = [r for r in rows if r[2] in owners]
             others = len(rows) - len(mine)
@@ -591,7 +591,7 @@ class Memory:
 
 
 #: The protocol version new memories start at (see the spec, section 2a).
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 
 def _cut(text: str, n: int) -> str:

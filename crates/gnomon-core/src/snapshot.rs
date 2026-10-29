@@ -45,7 +45,7 @@ use crate::ledger::{
 };
 use crate::sha256::digest;
 
-const MAGIC: &[u8; 8] = b"GNSNAP4\n";
+const MAGIC: &[u8; 8] = b"GNSNAP5\n";
 /// Magic, code hash, bytes covered, their hash, HMAC.
 const HEADER: usize = 8 + 32 + 8 + 32 + 32;
 
@@ -385,6 +385,7 @@ codec_struct!(WriterInfo {
     capabilities,
     compartments,
     last_seq,
+    seqs,
     name,
     model,
     operator,

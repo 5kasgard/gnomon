@@ -50,6 +50,10 @@ pub struct WriterInfo {
     pub capabilities: Vec<String>,
     pub compartments: Vec<String>,
     pub last_seq: i64,
+    /// From version 7 (issue #48, Q1): the writer's events numbered per
+    /// compartment, by compartment. `last_seq` then counts only the events
+    /// that belong to no single compartment.
+    pub seqs: BTreeMap<String, i64>,
     pub name: Option<String>,
     pub model: Option<String>,
     pub operator: Option<String>,
@@ -406,18 +410,23 @@ impl Ledger {
                 }
             }
         }
+        let scope = event_scope(&self.state, &draft.kind, &draft.body);
         let next_writer_seq = self
             .state
             .writers
             .get(&draft.writer)
-            .map(|w| w.last_seq + 1)
+            .map(|w| match &scope {
+                Some(c) => w.seqs.get(c).copied().unwrap_or(0) + 1,
+                None => w.last_seq + 1,
+            })
             .unwrap_or(1);
+        let event_id = match &scope {
+            Some(c) => format!("{}/{c}/{next_writer_seq}", draft.writer),
+            None => format!("{}/{next_writer_seq}", draft.writer),
+        };
         let env = Value::obj(vec![
             ("seq", Value::Int(self.events.len() as i64)),
-            (
-                "event_id",
-                Value::str(format!("{}/{}", draft.writer, next_writer_seq)),
-            ),
+            ("event_id", Value::str(event_id)),
             ("writer", Value::str(draft.writer)),
             ("writer_seq", Value::Int(next_writer_seq)),
             ("record_time", Value::str(draft.record_time)),
@@ -596,6 +605,8 @@ pub enum Change {
 pub struct Checked {
     writer: String,
     writer_seq: i64,
+    /// The compartment this event is numbered in (version 7), if any.
+    scope: Option<String>,
     change: Change,
 }
 
@@ -815,6 +826,39 @@ fn visible_item_compartment<'a>(st: &'a State, w: &WriterInfo, id: &str) -> Gate
         .ok_or_else(|| not_found("evidence", id))
 }
 
+/// The compartment an event is numbered in, from version 7 (issue #48, Q1):
+/// the one compartment it belongs to, so that a reader's view of a writer's
+/// events has no gaps from events in compartments it cannot see. Events with
+/// no single compartment (a registration touching several, a schema change)
+/// share the writer's plain counter; leases, releases and revocations always
+/// do, as every reader sees them.
+fn event_scope(st: &State, kind: &str, body: &Value) -> Option<String> {
+    if st.schema_version < 7 {
+        return None;
+    }
+    let text = |k: &str| body.get(k).and_then(|v| v.as_str()).unwrap_or("");
+    let of_claim = |c: &str| st.claims.get(c).map(|x| x.compartment.clone());
+    match kind {
+        "claim" | "episode" | "handoff" | "position" | "appoint" => body
+            .get("compartment")
+            .and_then(|v| v.as_str())
+            .map(String::from),
+        "verdict" | "appeal" => of_claim(text("claim")),
+        "supersede" => of_claim(text("old")),
+        "resolve" => st
+            .supersessions
+            .get(text("dispute"))
+            .map(|x| x.compartment.clone())
+            .or_else(|| st.appeals.get(text("dispute")).map(|x| x.compartment.clone())),
+        "dismiss" => st.appointments.get(text("appointment")).map(|x| x.compartment.clone()),
+        "register" => match body.get("compartments").and_then(|v| v.as_array()) {
+            Some(a) if a.len() == 1 => a[0].as_str().map(String::from),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
 fn commit(st: &mut State, checked: Checked, seq: usize) {
     match checked.change {
         Change::Register {
@@ -979,10 +1023,13 @@ fn commit(st: &mut State, checked: Checked, seq: usize) {
         }
     }
     // The event's writer exists now (genesis registers itself in this change).
-    st.writers
-        .get_mut(&checked.writer)
-        .expect("writer registered")
-        .last_seq = checked.writer_seq;
+    let w = st.writers.get_mut(&checked.writer).expect("writer registered");
+    match checked.scope {
+        Some(c) => {
+            w.seqs.insert(c, checked.writer_seq);
+        }
+        None => w.last_seq = checked.writer_seq,
+    }
 }
 
 /// Parties interested in `claim` through any ruled dispute involving it.
@@ -1251,21 +1298,34 @@ fn check(
     }
     let writer_seq = n(env, "writer_seq")?;
     let event_id = s(env, "event_id")?;
-    if event_id != format!("{writer}/{writer_seq}") {
+    let kind = s(env, "kind")?;
+    let body = env.get("body").expect("shape checked");
+    // From version 7 an event of one compartment is '<writer>/<compartment>/<n>',
+    // counted per compartment (issue #48, Q1); every other event is
+    // '<writer>/<n>' as before.
+    let scope = if expected_seq > 0 { event_scope(st, kind, body) } else { None };
+    let expected_id = match &scope {
+        Some(c) => format!("{writer}/{c}/{writer_seq}"),
+        None => format!("{writer}/{writer_seq}"),
+    };
+    if event_id != expected_id {
         return Err(err(
             "E_EVENT_ID",
-            "event_id must be '<writer>/<writer_seq>'",
+            if st.schema_version >= 7 {
+                "event_id must be '<writer>/<writer_seq>', or '<writer>/<compartment>/<writer_seq>' for an event of one compartment"
+            } else {
+                "event_id must be '<writer>/<writer_seq>'"
+            },
         ));
     }
-    let kind = s(env, "kind")?;
     if !schema::EVENT_KINDS.contains(&kind) {
         return Err(err("E_KIND", format!("unknown event kind '{kind}'")));
     }
-    let body = env.get("body").expect("shape checked");
     let done = |change| {
         Ok(Checked {
             writer: writer.to_string(),
             writer_seq,
+            scope: scope.clone(),
             change,
         })
     };
@@ -1301,12 +1361,16 @@ fn check(
             format!("writer '{writer}' is not registered"),
         )
     })?;
-    if writer_seq != w.last_seq + 1 {
+    let counted = match &scope {
+        Some(c) => w.seqs.get(c).copied().unwrap_or(0),
+        None => w.last_seq,
+    };
+    if writer_seq != counted + 1 {
+        let (num, whence) = (counted + 1, scope.as_ref().map(|c| format!(" in compartment '{c}'")).unwrap_or_default());
         return Err(err(
             "E_WRITER_SEQ",
             format!(
-                "writer '{writer}' must use writer_seq {} (got {writer_seq}); ids are never reused or skipped",
-                w.last_seq + 1
+                "writer '{writer}' must use writer_seq {num}{whence} (got {writer_seq}); ids are never reused or skipped"
             ),
         ));
     }
@@ -2455,6 +2519,7 @@ fn writer_info(r: &schema::Register) -> WriterInfo {
         capabilities: r.capabilities.iter().map(|c| c.to_string()).collect(),
         compartments: r.compartments.iter().map(|c| c.to_string()).collect(),
         last_seq: 0,
+        seqs: BTreeMap::new(),
         name: own(r.name),
         model: own(r.model),
         operator: own(r.operator),

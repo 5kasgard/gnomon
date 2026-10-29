@@ -419,8 +419,16 @@ event ids, and writers are listed only with the restricted compartments and
 without `last_seq`. Its digest covers only what it shows, and it omits the
 log's event count and head hash, which describe the whole log.
 
-Known limit: event ids are `<writer>/<writer_seq>`, so gaps in a writer's
-visible sequence reveal that it wrote hidden events (not what they were).
+From protocol version 7 (issue #48) a writer's events are numbered per compartment:
+an event that belongs to one compartment has the id `<writer>/<compartment>/<n>`,
+so a restricted view has no gaps and a write's returned id counts only its own
+compartment (an `E_WRITER_SEQ` message likewise). Events that belong to no single
+compartment (a registration of a writer in several, a lease, release, revoke, schema
+change) keep one plain counter `<writer>/<n>`.
+
+Known limit: in a version 6 or lower memory, and for the plain-counter events above,
+event ids are `<writer>/<writer_seq>`, so gaps in a writer's visible sequence reveal
+that it wrote hidden events (not what they were).
 
 **Revocation (protocol version 5).** Access granted by mistake, or to a
 writer that later misbehaves, is withdrawn with `revoke` (`writer`,
