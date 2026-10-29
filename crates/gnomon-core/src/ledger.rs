@@ -1374,7 +1374,20 @@ fn check(
             // An instance acts for a person who is already on record.
             if let Some(op) = r.operator {
                 match st.writers.get(op) {
-                    Some(o) if o.kind == "human" => {}
+                    Some(o) if o.kind == "human" => {
+                        // From version 7 (issue #48, O2), for every
+                        // registration: the operator is on hand in every
+                        // compartment the writer holds, so the writer's
+                        // operator is always visible wherever it is. The
+                        // refusal does not say which compartments the
+                        // operator holds.
+                        if st.schema_version >= 7 && r.compartments.iter().any(|c| !o.in_compartment(c)) {
+                            return Err(err(
+                                "E_IDENTITY",
+                                format!("operator '{op}' does not hold every compartment this writer holds"),
+                            ));
+                        }
+                    }
                     Some(_) => {
                         return Err(err("E_IDENTITY", format!("operator '{op}' is not a human")))
                     }
