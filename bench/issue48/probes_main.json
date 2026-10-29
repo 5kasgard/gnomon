@@ -1,0 +1,186 @@
+[
+  {
+    "id": "P1",
+    "channel": "C1",
+    "question": "Can a writer in A and B read A and copy it into B?",
+    "expected_if_sealed": "n/a (this is the road)",
+    "observed": "x read A and wrote into B; wb now sees ['Copied: The answer to item 7 is 42.']",
+    "crosses": true
+  },
+  {
+    "id": "P2",
+    "channel": "C1",
+    "question": "Can a verify-only writer in A and B carry content A->B (verdict note)?",
+    "expected_if_sealed": "n/a",
+    "observed": "verdict with A's content in its note accepted; note in B-scoped state: False; wb query sees 1 verdict(s)",
+    "crosses": true
+  },
+  {
+    "id": "P3",
+    "channel": "C2",
+    "question": "Claim in B 'about' a claim in A, by a writer in both?",
+    "expected_if_sealed": "E_REF",
+    "observed": "E_REF",
+    "crosses": false
+  },
+  {
+    "id": "P4",
+    "channel": "C2",
+    "question": "Handoff in B with refs to A, by a writer in both?",
+    "expected_if_sealed": "E_REF",
+    "observed": "E_REF",
+    "crosses": false
+  },
+  {
+    "id": "P5",
+    "channel": "C2",
+    "question": "Claim in B quoting an episode in A, by a writer in both?",
+    "expected_if_sealed": "E_COMPARTMENT or E_REF",
+    "observed": "E_COMPARTMENT",
+    "crosses": false
+  },
+  {
+    "id": "P6",
+    "channel": "C2",
+    "question": "Supersession with old in A and new in B?",
+    "expected_if_sealed": "E_COMPARTMENT",
+    "observed": "E_COMPARTMENT",
+    "crosses": false
+  },
+  {
+    "id": "P7",
+    "channel": "C2",
+    "question": "Verdict by a B-only writer on a claim in A?",
+    "expected_if_sealed": "E_REF",
+    "observed": "E_REF",
+    "crosses": false
+  },
+  {
+    "id": "P8",
+    "channel": "C2",
+    "question": "Episode in B binding a name to an A-only writer?",
+    "expected_if_sealed": "E_IDENTITY, same as a missing writer",
+    "observed": "bound to hidden writer: E_IDENTITY; bound to no writer: E_IDENTITY",
+    "crosses": false
+  },
+  {
+    "id": "P9",
+    "channel": "C3",
+    "question": "Does identical content in A and B corroborate across them (one claim)?",
+    "expected_if_sealed": "two different claims",
+    "observed": "ids equal: False",
+    "crosses": false
+  },
+  {
+    "id": "P10",
+    "channel": "C3",
+    "question": "Does a B-only reader see a writer's operator who lives only in A?",
+    "expected_if_sealed": "operator hidden or shown alike",
+    "observed": "writers(b) shows bot.operator='secretop'; query answers [['secretop']]",
+    "crosses": true
+  },
+  {
+    "id": "P11",
+    "channel": "C3",
+    "question": "Session-id collision: can an A-side spawner signal a B-side spawner of the same party?",
+    "expected_if_sealed": "B learns nothing about A",
+    "observed": "sent [1, 0, 1, 1], B decoded [1, 0, 1, 1] from E_IDENTITY refusals",
+    "crosses": true
+  },
+  {
+    "id": "P12",
+    "channel": "C3",
+    "question": "Writer-id namespace: can parent 'c' (in A) signal parent 'c-x' (in B)?",
+    "expected_if_sealed": "B learns nothing about A",
+    "observed": "sent [0, 1, 1], B decoded [0, 1, 1] from E_DUPLICATE refusals",
+    "crosses": true
+  },
+  {
+    "id": "P13",
+    "channel": "C3",
+    "question": "Name uniqueness across parties: does registering a name reveal a hidden writer?",
+    "expected_if_sealed": "only the owner registers other parties, so no non-owner channel",
+    "observed": "owner registering a B writer named like an A writer: E_IDENTITY (only the owner can see this)",
+    "crosses": false
+  },
+  {
+    "id": "P14",
+    "channel": "C3",
+    "question": "Writer-seq gaps: does a B-only reader see that a two-compartment writer acted in A?",
+    "expected_if_sealed": "known limit (spec section 5)",
+    "observed": "B sees x's events ['x/1', 'x/5']: the gap counts x's hidden events",
+    "crosses": true
+  },
+  {
+    "id": "P15",
+    "channel": "C4",
+    "question": "Do state, query, recall, frames, resume, discussion for a B-only reader show anything of A?",
+    "expected_if_sealed": "nothing",
+    "observed": "views that mention A's content or id: none",
+    "crosses": false
+  },
+  {
+    "id": "P16",
+    "channel": "C5",
+    "question": "Can the owner write into, or register a writer for, a compartment it is not in?",
+    "expected_if_sealed": "refused",
+    "observed": "owner writes to z directly: E_COMPARTMENT; owner registers a new owner identity in a and z: accepted",
+    "crosses": true
+  },
+  {
+    "id": "P17",
+    "channel": "C5",
+    "question": "Can a writer's compartments ever be removed (revocation)?",
+    "expected_if_sealed": "some way to close a road",
+    "observed": "re-registering x with fewer compartments: E_DUPLICATE; no revoke/deregister event kind exists in the core",
+    "crosses": true
+  },
+  {
+    "id": "P18",
+    "channel": "C6",
+    "question": "Does a spawned session instance inherit all of its template's compartments?",
+    "expected_if_sealed": "n/a (sizes the road)",
+    "observed": "instance claude-1 compartments ['a', 'b']",
+    "crosses": true
+  },
+  {
+    "id": "P19",
+    "channel": "C7",
+    "question": "Is there any check that the process appending as writer W is W (authentication)?",
+    "expected_if_sealed": "some check",
+    "observed": "appending as the owner from an arbitrary process: accepted (identity is by registration only, spec 16)",
+    "crosses": true
+  },
+  {
+    "id": "P20",
+    "channel": "C7",
+    "question": "Is compartment A's content readable from the raw log file by any process with file access?",
+    "expected_if_sealed": "encrypted per compartment",
+    "observed": "'The answer to item 7 is 42.' in plain text in the log: True",
+    "crosses": true
+  },
+  {
+    "id": "P21",
+    "channel": "C7",
+    "question": "Does an MCP session's writer read every compartment of its template?",
+    "expected_if_sealed": "n/a (sizes the road)",
+    "observed": "MCP recall as x (in a and b) returns A's content: False",
+    "crosses": false
+  },
+  {
+    "id": "P22",
+    "channel": "C4",
+    "question": "Do recall scores for a B-only reader depend on A's content (corpus statistics)?",
+    "expected_if_sealed": "scores identical whatever A holds",
+    "observed": "wb's scores before [1962655], after 30 'budget' claims in A [1962655]",
+    "crosses": false
+  },
+  {
+    "id": "P23",
+    "channel": "C6",
+    "question": "Auto mode: a session that read A (via MCP) and is recorded by the hook: where do its words go?",
+    "expected_if_sealed": "n/a (sizes the road): every word lands in one compartment, the template's first unless --compartment",
+    "observed": "the session's words about A were recorded in []; visible to B-only wb: False",
+    "crosses": false
+  }
+]
