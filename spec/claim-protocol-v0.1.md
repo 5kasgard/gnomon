@@ -94,7 +94,10 @@ surface if it has one; an id that starts with the parent's id and a hyphen
 (`claude-3` for `claude`); only compartments the parent is in; only
 capabilities the parent has, never `owner`, `govern` or `spawn`. So an
 instance can never take another identity or more power, and cannot probe
-for ids outside its parent's namespace. The MCP server uses this
+for ids outside its parent's namespace. From protocol version 7 (issue #48) the
+namespaces are disjoint: no other writer with `spawn` has an id that prefixes the
+instance's id and is longer than the parent's, so two spawners never name one id.
+The MCP server uses this
 (`--per-session`) so that every session gets its own writer, however the
 host is configured; a session that resumes keeps its writer.
 

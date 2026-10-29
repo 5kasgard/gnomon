@@ -1352,6 +1352,28 @@ fn check(
                         format!("an instance's id starts with '{writer}-'"),
                     ));
                 }
+                // From version 7 (issue #48, I1): ids are disjoint between
+                // spawners. The longest registered spawner id that prefixes
+                // the instance's id must be its own parent's, so no two
+                // spawners can ever name the same id (and a refusal here
+                // does not depend on which of them was asked first).
+                if st.schema_version >= 7 {
+                    let owner = st
+                        .writers
+                        .iter()
+                        .filter(|(id, x)| {
+                            x.capabilities.iter().any(|c| c == "spawn")
+                                && r.writer.starts_with(&format!("{id}-"))
+                        })
+                        .map(|(id, _)| id.as_str())
+                        .max_by_key(|id| id.len());
+                    if owner != Some(writer) {
+                        return Err(err(
+                            "E_SPAWN",
+                            format!("an instance's id starts with '{writer}-' and with no other spawner's id"),
+                        ));
+                    }
+                }
                 if r.compartments.iter().any(|c| !w.in_compartment(c)) {
                     return Err(err(
                         "E_SPAWN",
