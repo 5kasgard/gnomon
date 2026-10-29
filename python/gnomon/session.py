@@ -26,18 +26,26 @@ from . import GateError, Memory
 
 
 def instance_for(memory: Memory, parent: str, session: Optional[str] = None,
-                 surface: Optional[str] = None) -> str:
+                 surface: Optional[str] = None, compartments: Optional[list] = None) -> str:
     """The writer for `session`, an instance of `parent`: the existing one
-    if this session has one, otherwise a new one (`parent-<n>`)."""
+    if this session has one, otherwise a new one (`parent-<n>`). With
+    `compartments`, a new instance holds only those (a subset of its
+    parent's), and an existing one must hold exactly those."""
     writers = memory.writers()
     if parent not in writers:
         raise GateError("E_UNKNOWN_WRITER", f"writer '{parent}' is not registered")
     p = writers[parent]
     if "spawn" not in p["capabilities"]:
         raise GateError("E_CAPABILITY", f"'{parent}' needs the 'spawn' capability to start session instances")
+    comps = p["compartments"] if compartments is None else list(compartments)
+    if any(c not in p["compartments"] for c in comps):
+        raise GateError("E_COMPARTMENT", f"'{parent}' does not hold {', '.join(c for c in comps if c not in p['compartments'])}")
     if session:
         for wid, w in writers.items():
             if w.get("instance_of") == parent and w.get("session") == session:
+                if compartments is not None and sorted(w["compartments"]) != sorted(comps):
+                    raise GateError("E_COMPARTMENT", f"this session's writer {wid} holds {', '.join(w['compartments'])}, "
+                                                     f"not only {', '.join(comps)}: start a new session")
                 return wid
     session = session or uuid.uuid4().hex[:16]
     for n in range(1, 1_000_000):
@@ -50,12 +58,12 @@ def instance_for(memory: Memory, parent: str, session: Optional[str] = None,
     caps = [c for c in p["capabilities"] if c not in ("owner", "govern", "spawn")]
     try:
         memory.register(parent, wid, party=p["party"], kind=p["kind"], capabilities=caps,
-                        compartments=p["compartments"], name=p.get("name"), model=p.get("model"),
+                        compartments=comps, name=p.get("name"), model=p.get("model"),
                         operator=p.get("operator"), surface=p.get("surface") or surface, session=session)
     except GateError as e:
         if e.code != "E_DUPLICATE":
             raise
-        return instance_for(memory, parent, session, surface)  # another session took that id first
+        return instance_for(memory, parent, session, surface, compartments)  # another session took that id first
     return wid
 
 
