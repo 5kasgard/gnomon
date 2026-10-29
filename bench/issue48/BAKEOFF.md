@@ -132,3 +132,16 @@ crosses after it becomes a stated limit in the spec, and the PR goes up.
 - Where SZ and SC differ: SZ closes the clock, `as_of`, the name channel and leases advancing
   the clock; SC closes writer ids (three probes) and lease-release guessing. Every arm leaks
   the count family (event ids, view and write sequences).
+
+## Red team 1 (on SZ)
+
+**Claude Haiku (fresh; given only SZ's spec and diff; ran its probes on the build):** five
+findings, each **reproduced by the planner** (`redteam_haiku.py`, output `redteam_haiku_SZ.txt`):
+1. The clock is keyed by the writer's compartments, so a two-compartment writer's A write
+   blocks a different, B-only writer (`E_CLOCK`): channel C is not closed after all.
+2. A write into a frame leased by a hidden writer: `E_LEASE` names the holder and expiry.
+3. Naming a hidden lease: `E_LEASE ... held by 'h'` vs `E_REF` (existence and holder).
+4. A revoke of a hidden compartment moves a B reader's `through` (follows SZ's own rule 6).
+5. **Correctness:** a write dated before its writer's registration is accepted; `as_of` then
+   drops it (the full view has it).
+Verdict: do not merge as is. Gemini Argon's red team is pending.
