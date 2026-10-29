@@ -419,6 +419,14 @@ event ids, and writers are listed only with the restricted compartments and
 without `last_seq`. Its digest covers only what it shows, and it omits the
 log's event count and head hash, which describe the whole log.
 
+From protocol version 7 (issue #48) the rule that record time never runs backwards
+compares an event's time only with events touching the writer's compartments (and
+global ones such as a schema change), so an event in a compartment the writer is
+not in cannot make its write fail. Cost: the log's record times are then ordered
+only within a compartment, and an `as_of` view, which replays a prefix of the log,
+ends at the first event dated after the cut and can omit a later-appended event
+dated before it.
+
 Known limit: event ids are `<writer>/<writer_seq>`, so gaps in a writer's
 visible sequence reveal that it wrote hidden events (not what they were).
 
