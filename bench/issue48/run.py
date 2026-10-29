@@ -649,8 +649,8 @@ def classify(path: str) -> str:
     return "other"
 
 
-def size():
-    p = subprocess.run(["git", "diff", "--numstat", "main...HEAD"], cwd=ROOT, capture_output=True, text=True)
+def size(base="main"):
+    p = subprocess.run(["git", "diff", "--numstat", f"{base}...HEAD"], cwd=ROOT, capture_output=True, text=True)
     out = {k: {"added": 0, "deleted": 0, "net": 0} for k in ("rust", "python", "spec", "tests", "bench", "other")}
     for line in p.stdout.splitlines():
         a, d, path = line.split("\t", 2)
@@ -717,7 +717,9 @@ def main():
 
     if not a.skip_suites:
         res["suites"] = run_suites()
-    res["size"] = size()
+    res["size"] = size()  # against main, as the plan says (includes the harness and replay set on every branch)
+    if branch != "issue-48" and git("rev-parse", "--verify", "-q", "issue-48"):
+        res["size_arm_only"] = size("issue-48")  # what the arm itself adds on top of the test-plan branch
 
     outp = Path(a.out) if a.out else HERE / "results" / f"{branch}.json"
     outp.parent.mkdir(exist_ok=True)
@@ -739,7 +741,9 @@ def main():
         s = res["suites"]
         print(f"cargo: {s['cargo']['passed']} passed, {s['cargo']['failed']} failed (rc {s['cargo']['returncode']}); "
               f"python: ran {s['python']['ran']}, failures {s['python']['failures']}, errors {s['python']['errors']}")
-    print("size net:", {k: v["net"] for k, v in res["size"].items()})
+    print("size net (vs main):", {k: v["net"] for k, v in res["size"].items()})
+    if "size_arm_only" in res:
+        print("size net (arm only):", {k: v["net"] for k, v in res["size_arm_only"].items()})
     print("wrote", outp)
 
 
