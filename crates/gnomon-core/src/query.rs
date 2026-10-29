@@ -533,6 +533,14 @@ impl<'a> Builder<'a> {
                 ("session", &w.session),
             ] {
                 if let Some(v) = v {
+                    // From version 7 (issue #48, O1): the operator is shown
+                    // only to a reader who shares a compartment with it.
+                    if k == "operator"
+                        && st.schema_version >= 7
+                        && !st.writers.get(v.as_str()).is_some_and(|o| o.compartments.iter().any(|c| self.sees(c)))
+                    {
+                        continue;
+                    }
                     self.add(eng, "identity", vec![s(wid), s(k), s(v)], src)?;
                 }
             }
