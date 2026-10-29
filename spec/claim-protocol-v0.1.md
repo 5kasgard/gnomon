@@ -47,6 +47,7 @@ Confidence is expressed as integer basis points (0–10000).
 | `resolve` | to rule: `verify`, never a party with a stake; to withdraw: `write`, the party that raised it | ends a contest (`old`, `new`, `both`) or an appeal (`reinstated`, `upheld`); either may be `withdrawn` |
 | `appeal` | `write`; one open appeal per claim; once per party per claim | asks a neutral party to reinstate a refuted or defeated claim, citing outside support |
 | `schema_change` | `govern` | advances the schema version by exactly one |
+| `revoke` | the owner; from version 5; never against an owner | ends a writer's access to named compartments, for it and every instance started from it; reads and writes there are refused from then on, and what it wrote stays |
 
 The `owner` capability implies the others.
 
@@ -418,6 +419,16 @@ log's event count and head hash, which describe the whole log.
 
 Known limit: event ids are `<writer>/<writer_seq>`, so gaps in a writer's
 visible sequence reveal that it wrote hidden events (not what they were).
+
+**Revocation (protocol version 5).** Access granted by mistake, or to a
+writer that later misbehaves, is withdrawn with `revoke` (`writer`,
+`compartments`, `reason`). Only the owner may revoke, never another owner's
+access (that could lock the record), and only compartments the writer holds
+(`E_REVOKE` otherwise). The writer's instances lose the same compartments.
+Visibility follows a writer's current compartments, so its reads stop with
+its writes; everything it wrote before stays on record and keeps its
+compartment. There is no re-grant yet: give access again by registering a
+new writer.
 
 ## 6. Hidden channels
 
@@ -1304,8 +1315,8 @@ The `design_team` MCP tool returns a design.
 ## 16. Not yet in v0.1
 
 Grants that let someone other than the owner write a resident's standing
-instructions (`instruct:<w>`), which wait for revocation and expiry (issues
-#49, #54); signatures (writer identity is by registration only), multi-writer merge of
+instructions (`instruct:<w>`), which wait for expiry (issue #54); re-granting
+revoked access; signatures (writer identity is by registration only), multi-writer merge of
 independently written logs, storage in immutable segments with sync to
 object storage and client-side encryption, a hosted remote MCP endpoint
 with sign-in, a web viewer for people, arithmetic and aggregation in queries, HTTP

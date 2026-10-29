@@ -550,6 +550,12 @@ pub enum Change {
         party: String,
     },
     SchemaVersion(i64),
+    /// Compartments taken from these writers (one revoked writer and every
+    /// instance started from it).
+    Revoke {
+        writers: Vec<String>,
+        compartments: Vec<String>,
+    },
 }
 
 pub struct Checked {
@@ -851,6 +857,13 @@ fn commit(st: &mut State, checked: Checked, seq: usize) {
             });
         }
         Change::SchemaVersion(v) => st.schema_version = v,
+        Change::Revoke { writers, compartments } => {
+            for id in writers {
+                if let Some(w) = st.writers.get_mut(&id) {
+                    w.compartments.retain(|c| !compartments.contains(c));
+                }
+            }
+        }
     }
     // The event's writer exists now (genesis registers itself in this change).
     st.writers
@@ -2198,6 +2211,53 @@ fn check(
                 by: writer.to_string(),
                 reason: d.reason.to_string(),
                 time: record_time.to_string(),
+            })
+        }
+
+        "revoke" => {
+            // Issue #49: access granted by mistake, or to a writer that later
+            // misbehaves, can be withdrawn. From then on the writer neither
+            // reads nor writes those compartments (reads follow a writer's
+            // current compartments); everything it wrote before stays.
+            if st.schema_version < 5 {
+                return Err(err("E_SCHEMA_VERSION", "revoke needs protocol version 5"));
+            }
+            if !w.capabilities.iter().any(|c| c == "owner") {
+                return Err(err("E_CAPABILITY", "only the owner revokes"));
+            }
+            let r = schema::revoke(body)?;
+            let target = st
+                .writers
+                .get(r.writer)
+                .ok_or_else(|| err("E_UNKNOWN_WRITER", format!("writer '{}' is not registered", r.writer)))?;
+            if target.capabilities.iter().any(|c| c == "owner") {
+                return Err(err("E_REVOKE", "an owner's access is not revoked (it could lock the record)"));
+            }
+            for c in &r.compartments {
+                if !target.in_compartment(c) {
+                    return Err(err(
+                        "E_REVOKE",
+                        format!("'{}' is not in compartment '{c}'", r.writer),
+                    ));
+                }
+            }
+            // The writer and every instance started from it, at any depth.
+            let mut writers = vec![r.writer.to_string()];
+            let mut grew = true;
+            while grew {
+                grew = false;
+                for (id, x) in &st.writers {
+                    if let Some(parent) = &x.instance_of {
+                        if writers.contains(parent) && !writers.contains(id) {
+                            writers.push(id.clone());
+                            grew = true;
+                        }
+                    }
+                }
+            }
+            done(Change::Revoke {
+                writers,
+                compartments: r.compartments.iter().map(|c| c.to_string()).collect(),
             })
         }
 
