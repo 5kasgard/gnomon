@@ -86,3 +86,6 @@ crosses after it becomes a stated limit in the spec, and the PR goes up.
   probe tests. Every repaired probe is run on main first: a probe that does not cross on main
   (other than a declared limit, which should) tests nothing and is reported, not scored. SO's
   probes are labelled "completed by Claude" (weaker evidence than probes run as delivered).
+- 2026-10-30, owner: Gemini Argon stays a reviewer (and for small questions), not a builder or
+  long spec writer. **Amendment:** the red team's non-Claude member is Gemini Argon, given only
+  the winning diff and its spec (a review-sized prompt).
