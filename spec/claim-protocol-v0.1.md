@@ -48,8 +48,10 @@ Confidence is expressed as integer basis points (0–10000).
 | `appeal` | `write`; one open appeal per claim; once per party per claim | asks a neutral party to reinstate a refuted or defeated claim, citing outside support |
 | `schema_change` | `govern` | advances the schema version by exactly one |
 | `revoke` | the owner; from version 5; never against an owner | ends a writer's access to named compartments, for it and every instance started from it; reads and writes there are refused from then on, and what it wrote stays |
+| `lease` | `schedule` (or the owner); from version 6; never to oneself or an owner; one live lease per frame | gives a writer a hold on a frame until `expires` |
+| `release` | the lease's holder, whoever granted it, or the owner | ends a lease early |
 
-The `owner` capability implies the others.
+The `owner` capability implies the others; `schedule` (version 6) grants leases.
 
 ## 2a. Identity (M6)
 
@@ -429,6 +431,22 @@ Visibility follows a writer's current compartments, so its reads stop with
 its writes; everything it wrote before stays on record and keeps its
 compartment. There is no re-grant yet: give access again by registering a
 new writer.
+
+**Leases (protocol version 6).** A run is a short-lived writer with a
+grant, and the gate enforces the grant's deadline and who holds the work.
+`lease` (`writer`, `frame`, `expires`, `reason`) gives a writer a hold on a
+frame; its event id is the lease's fencing token. While a lease is live (not
+released, and `expires` later than the event's record time) only its holder,
+the holder's instances or the owner write claims and handoffs in that frame,
+and the holder names the lease in each (`lease`); naming a released or
+expired lease is refused (`E_LEASE`), so a stale process still holding an old
+token is fenced off (Kleppmann 2016). A second lease on a frame with a live
+one is refused (`E_LEASED`). A fresh write naming a lease is also checked
+against the gate's clock, so it cannot be dated back to before expiry; replay
+uses record time only and stays deterministic. When a lease ends the frame is
+free again: if a scheduler crashes, its leases still expire. The `lease`
+field is left out of a claim's id, so the same statement under two leases is
+one claim. Budgets are the engine's business, not the gate's.
 
 ## 6. Hidden channels
 
@@ -1315,7 +1333,7 @@ The `design_team` MCP tool returns a design.
 ## 16. Not yet in v0.1
 
 Grants that let someone other than the owner write a resident's standing
-instructions (`instruct:<w>`), which wait for expiry (issue #54); re-granting
+instructions (`instruct:<w>`) (they could now be leased); re-granting
 revoked access; signatures (writer identity is by registration only), multi-writer merge of
 independently written logs, storage in immutable segments with sync to
 object storage and client-side encryption, a hosted remote MCP endpoint
