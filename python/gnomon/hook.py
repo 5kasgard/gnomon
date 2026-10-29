@@ -392,7 +392,7 @@ def record(memory: Memory, log: str, writer: str, session: str, transcript: str,
         # What the session has drawn on so far, turn by turn (its own words
         # are the person's: only the model's turns carry what it read). Runs
         # of turns that drew on the same compartments are filed together,
-        # in the compartment they are recorded for and in each of those.
+        # in those compartments and not in the one they are recorded for.
         drawn = _load_taint(log, session)
         reads = _gnomon_results(transcript, start)
         src = Sources(memory, writer, compartment) if reads else None
@@ -418,7 +418,7 @@ def record(memory: Memory, log: str, writer: str, session: str, transcript: str,
         outstanding = outstanding_tokens(log)
         episodes = []
         for part_drew, part in parts:
-            targets = [compartment] + sorted(part_drew - {compartment}) if part_drew else [compartment]
+            targets = sorted(part_drew) if part_drew else [compartment]
             for chunk, stop in _chunks(part, start):
                 chunk = [(sp, _redact(tx, outstanding)) for sp, tx in chunk]
                 names = {sp for sp, _ in chunk}
