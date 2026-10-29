@@ -46,6 +46,7 @@ from . import GateError, Memory, title
 from .ingest import record_messages
 from .session import instance_for, issue_token, outstanding_tokens
 
+NOT_RECORDED = "[turn(s) not recorded: they drew on another compartment]"
 MAX_EPISODE = 90_000  # characters per recorded episode (the core allows 100,000)
 
 
@@ -389,6 +390,27 @@ def record(memory: Memory, log: str, writer: str, session: str, transcript: str,
             label = writer
         operator = w.get("operator")
         turns, end = read_turns(transcript, start, with_tools, label)
+        # What the session has drawn on so far, turn by turn (its own words
+        # are the person's: only the model's turns can carry what it read).
+        drawn = _load_taint(log, session)
+        reads = _gnomon_results(transcript, start)
+        src = Sources(memory, writer, compartment) if reads else None
+        reads = [(off, src.drawn(tx)) for off, tx in reads]
+        kept, i = [], 0
+        for speaker, text, stop in turns:
+            while i < len(reads) and reads[i][0] < stop:
+                drawn |= reads[i][1]
+                i += 1
+            if speaker == "User" or not drawn:
+                kept.append((speaker, text, stop))
+            elif kept and kept[-1][1] == NOT_RECORDED:
+                kept[-1] = (speaker, NOT_RECORDED, stop)
+            else:
+                kept.append((speaker, NOT_RECORDED, stop))
+        for _, d in reads[i:]:
+            drawn |= d
+        _save_taint(log, session, drawn)
+        turns = kept
         outstanding = outstanding_tokens(log)
         episodes = []
         for chunk, stop in _chunks(turns, start):
