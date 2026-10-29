@@ -2335,9 +2335,13 @@ fn check(
             }
             need(w, "schedule")?;
             let l = schema::lease(body)?;
+            // From version 7 (issue #48, L1): a scheduler leases only to a
+            // writer it shares a compartment with; one answer for "no such
+            // writer" and "not one you can see", so nothing is learnt.
             let target = st
                 .writers
                 .get(l.writer)
+                .filter(|t| st.schema_version < 7 || t.compartments.iter().any(|c| w.in_compartment(c)))
                 .ok_or_else(|| err("E_UNKNOWN_WRITER", format!("writer '{}' is not registered", l.writer)))?;
             if acts_for(st, writer, l.writer) {
                 return Err(err("E_LEASE", "a writer never leases to itself"));
@@ -2349,9 +2353,20 @@ fn check(
                 return Err(err("E_LEASE", "a lease must expire after it is granted"));
             }
             if let Some((id, held)) = live_lease(st, l.frame, record_time) {
+                // From version 7 (issue #48, L1): the holder and expiry are
+                // named only if the holder shares a compartment with the scheduler.
+                let seen = st.schema_version < 7
+                    || st
+                        .writers
+                        .get(held.writer.as_str())
+                        .is_some_and(|h| h.compartments.iter().any(|c| w.in_compartment(c)));
                 return Err(err(
                     "E_LEASED",
-                    format!("frame '{}' is already leased ('{id}', to '{}' until {})", l.frame, held.writer, held.expires),
+                    if seen {
+                        format!("frame '{}' is already leased ('{id}', to '{}' until {})", l.frame, held.writer, held.expires)
+                    } else {
+                        format!("frame '{}' is already leased", l.frame)
+                    },
                 ));
             }
             done(Change::Lease {
