@@ -2,7 +2,7 @@
  "arms": {
   "0": {
    "branch": "auto-one-compartment",
-   "commit": "8960912",
+   "commit": "7be318b",
    "channels": {
     "1": {
      "name": "MCP recall of X content",
@@ -117,6 +117,21 @@
      "instance": "t-1"
     }
    },
+   "road7_without_flag": {
+    "name": "MCP used without attach",
+    "leak": true,
+    "canary_given_to_model": true,
+    "canary_via": "tool:recall",
+    "widening": false,
+    "hook_exit_codes": [
+     0
+    ],
+    "hook_stderr": [],
+    "error": null,
+    "episodes_in_y": 2,
+    "instance": "t-1",
+    "flag_supported": false
+   },
    "widening_scenario": {
     "widening": false,
     "rx_sees_y_canary": false,
@@ -141,7 +156,26 @@
     "read_x": true,
     "write_y_refused": false,
     "u5": true,
-    "u5_first_call": "3 hit(s) among 3. Each: time, speaker: words <where; dates said>\n1. 2026-10-15 09:11 o: The Heron codeword is amberfalco"
+    "u5_first_call": "3 hit(s) among 3. Each: time, speaker: words <where; dates said>\n1. 2026-10-15 09:11 o: The Heron codeword is amberfalco",
+    "u6": false,
+    "recorded": true,
+    "x_readable_by_y_reader": true,
+    "canary_given_to_model": true,
+    "instance_before": [
+     "cx",
+     "cy"
+    ],
+    "instances_after": {
+     "t-1": [
+      "cx",
+      "cy"
+     ]
+    },
+    "hook_exit_codes": [
+     0
+    ],
+    "hook_stderr": [],
+    "error": null
    },
    "leaks": [
     "1",
@@ -174,7 +208,7 @@
   },
   "A": {
    "branch": "arm-A",
-   "commit": "ec182ec",
+   "commit": "be1c1cb",
    "channels": {
     "1": {
      "name": "MCP recall of X content",
@@ -321,6 +355,25 @@
      "instance": ""
     }
    },
+   "road7_without_flag": {
+    "name": "MCP used without attach",
+    "leak": false,
+    "canary_given_to_model": true,
+    "canary_via": "tool:recall",
+    "widening": false,
+    "hook_exit_codes": [
+     0
+    ],
+    "hook_stderr": [
+     "SessionStart: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment.",
+     "Stop: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment.",
+     "SessionEnd: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment."
+    ],
+    "error": null,
+    "episodes_in_y": 1,
+    "instance": "",
+    "flag_supported": false
+   },
    "widening_scenario": {
     "widening": false,
     "rx_sees_y_canary": false,
@@ -353,7 +406,30 @@
     "read_x": true,
     "write_y_refused": false,
     "u5": true,
-    "u5_first_call": "3 hit(s) among 3. Each: time, speaker: words <where; dates said>\n1. 2026-10-15 09:11 o: The Heron codeword is amberfalco"
+    "u5_first_call": "3 hit(s) among 3. Each: time, speaker: words <where; dates said>\n1. 2026-10-15 09:11 o: The Heron codeword is amberfalco",
+    "u6": false,
+    "recorded": false,
+    "x_readable_by_y_reader": false,
+    "canary_given_to_model": true,
+    "instance_before": [
+     "cx",
+     "cy"
+    ],
+    "instances_after": {
+     "t-1": [
+      "cx",
+      "cy"
+     ]
+    },
+    "hook_exit_codes": [
+     0
+    ],
+    "hook_stderr": [
+     "SessionStart: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment.",
+     "Stop: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment.",
+     "SessionEnd: gnomon hook: auto mode needs a template writer with one compartment, and 't' holds 2 (cx, cy); nothing is recorded and no context is added. Register a template writer for one compartment."
+    ],
+    "error": null
    },
    "leaks": [
     "8"
@@ -384,7 +460,7 @@
   },
   "B": {
    "branch": "arm-B",
-   "commit": "4ba46c6",
+   "commit": "e9ff1ad",
    "channels": {
     "1": {
      "name": "MCP recall of X content",
@@ -499,6 +575,21 @@
      "instance": "t-1"
     }
    },
+   "road7_without_flag": {
+    "name": "MCP used without attach",
+    "leak": false,
+    "canary_given_to_model": true,
+    "canary_via": "tool:recall",
+    "widening": false,
+    "hook_exit_codes": [
+     0
+    ],
+    "hook_stderr": [],
+    "error": null,
+    "episodes_in_y": 2,
+    "instance": "t-1",
+    "flag_supported": false
+   },
    "widening_scenario": {
     "widening": false,
     "rx_sees_y_canary": false,
@@ -523,7 +614,26 @@
     "read_x": true,
     "write_y_refused": false,
     "u5": true,
-    "u5_first_call": "3 hit(s) among 3. Each: time, speaker: words <where; dates said>\n1. 2026-10-15 09:11 o: The Heron codeword is amberfalco"
+    "u5_first_call": "3 hit(s) among 3. Each: time, speaker: words <where; dates said>\n1. 2026-10-15 09:11 o: The Heron codeword is amberfalco",
+    "u6": true,
+    "recorded": true,
+    "x_readable_by_y_reader": false,
+    "canary_given_to_model": true,
+    "instance_before": [
+     "cx",
+     "cy"
+    ],
+    "instances_after": {
+     "t-1": [
+      "cx",
+      "cy"
+     ]
+    },
+    "hook_exit_codes": [
+     0
+    ],
+    "hook_stderr": [],
+    "error": null
    },
    "leaks": [
     "8"
@@ -554,7 +664,7 @@
   },
   "C": {
    "branch": "arm-C",
-   "commit": "ddb48a1",
+   "commit": "c282899",
    "channels": {
     "1": {
      "name": "MCP recall of X content",
@@ -669,6 +779,21 @@
      "instance": "t-1"
     }
    },
+   "road7_without_flag": {
+    "name": "MCP used without attach",
+    "leak": true,
+    "canary_given_to_model": true,
+    "canary_via": "tool:recall",
+    "widening": false,
+    "hook_exit_codes": [
+     0
+    ],
+    "hook_stderr": [],
+    "error": null,
+    "episodes_in_y": 2,
+    "instance": "t-1",
+    "flag_supported": false
+   },
    "widening_scenario": {
     "widening": true,
     "rx_sees_y_canary": true,
@@ -693,7 +818,26 @@
     "read_x": true,
     "write_y_refused": false,
     "u5": true,
-    "u5_first_call": "3 hit(s) among 3. Each: time, speaker: words <where; dates said>\n1. 2026-10-15 09:11 o: The Heron codeword is amberfalco"
+    "u5_first_call": "3 hit(s) among 3. Each: time, speaker: words <where; dates said>\n1. 2026-10-15 09:11 o: The Heron codeword is amberfalco",
+    "u6": false,
+    "recorded": true,
+    "x_readable_by_y_reader": true,
+    "canary_given_to_model": true,
+    "instance_before": [
+     "cx",
+     "cy"
+    ],
+    "instances_after": {
+     "t-1": [
+      "cx",
+      "cy"
+     ]
+    },
+    "hook_exit_codes": [
+     0
+    ],
+    "hook_stderr": [],
+    "error": null
    },
    "leaks": [
     "1",
@@ -731,7 +875,7 @@
   },
   "C2": {
    "branch": "arm-C2",
-   "commit": "271bfe0",
+   "commit": "130172d",
    "channels": {
     "1": {
      "name": "MCP recall of X content",
@@ -846,6 +990,21 @@
      "instance": "t-1"
     }
    },
+   "road7_without_flag": {
+    "name": "MCP used without attach",
+    "leak": false,
+    "canary_given_to_model": true,
+    "canary_via": "tool:recall",
+    "widening": false,
+    "hook_exit_codes": [
+     0
+    ],
+    "hook_stderr": [],
+    "error": null,
+    "episodes_in_y": 1,
+    "instance": "t-1",
+    "flag_supported": false
+   },
    "widening_scenario": {
     "widening": true,
     "rx_sees_y_canary": true,
@@ -870,7 +1029,26 @@
     "read_x": true,
     "write_y_refused": false,
     "u5": true,
-    "u5_first_call": "3 hit(s) among 3. Each: time, speaker: words <where; dates said>\n1. 2026-10-15 09:11 o: The Heron codeword is amberfalco"
+    "u5_first_call": "3 hit(s) among 3. Each: time, speaker: words <where; dates said>\n1. 2026-10-15 09:11 o: The Heron codeword is amberfalco",
+    "u6": false,
+    "recorded": false,
+    "x_readable_by_y_reader": false,
+    "canary_given_to_model": true,
+    "instance_before": [
+     "cx",
+     "cy"
+    ],
+    "instances_after": {
+     "t-1": [
+      "cx",
+      "cy"
+     ]
+    },
+    "hook_exit_codes": [
+     0
+    ],
+    "hook_stderr": [],
+    "error": null
    },
    "leaks": [
     "8"
@@ -901,7 +1079,7 @@
   },
   "D": {
    "branch": "arm-D",
-   "commit": "a2df4f4",
+   "commit": "b66f84b",
    "channels": {
     "1": {
      "name": "MCP recall of X content",
@@ -1016,6 +1194,21 @@
      "instance": "t-1"
     }
    },
+   "road7_without_flag": {
+    "name": "MCP used without attach",
+    "leak": false,
+    "canary_given_to_model": false,
+    "canary_via": null,
+    "widening": false,
+    "hook_exit_codes": [
+     0
+    ],
+    "hook_stderr": [],
+    "error": null,
+    "episodes_in_y": 2,
+    "instance": "t-1",
+    "flag_supported": false
+   },
    "widening_scenario": {
     "widening": false,
     "rx_sees_y_canary": false,
@@ -1040,7 +1233,30 @@
     "read_x": true,
     "write_y_refused": false,
     "u5": false,
-    "u5_first_call": "ToolError: this session has no writer yet: call `attach` with the token in your session context first"
+    "u5_first_call": "ToolError: this session has no writer yet: call `attach` with the token in your session context first",
+    "u6": false,
+    "recorded": false,
+    "x_readable_by_y_reader": false,
+    "canary_given_to_model": false,
+    "instance_before": [
+     "cx",
+     "cy"
+    ],
+    "instances_after": {
+     "t-1": [
+      "cx",
+      "cy"
+     ]
+    },
+    "hook_exit_codes": [
+     0
+    ],
+    "hook_stderr": [
+     "SessionStart: gnomon hook: GateError: E_COMPARTMENT: this session's writer t-1 holds cx, cy, not only cy: start a new session",
+     "Stop: gnomon hook: GateError: E_COMPARTMENT: this session's writer t-1 holds cx, cy, not only cy: start a new session",
+     "SessionEnd: gnomon hook: GateError: E_COMPARTMENT: this session's writer t-1 holds cx, cy, not only cy: start a new session"
+    ],
+    "error": null
    },
    "leaks": [],
    "size": {
@@ -1085,7 +1301,7 @@
   },
   "D1": {
    "branch": "arm-D1",
-   "commit": "5c5b538",
+   "commit": "0426e49",
    "channels": {
     "1": {
      "name": "MCP recall of X content",
@@ -1200,6 +1416,21 @@
      "instance": "t-1"
     }
    },
+   "road7_without_flag": {
+    "name": "MCP used without attach",
+    "leak": false,
+    "canary_given_to_model": false,
+    "canary_via": null,
+    "widening": false,
+    "hook_exit_codes": [
+     0
+    ],
+    "hook_stderr": [],
+    "error": null,
+    "episodes_in_y": 2,
+    "instance": "t-1",
+    "flag_supported": false
+   },
    "widening_scenario": {
     "widening": false,
     "rx_sees_y_canary": false,
@@ -1224,7 +1455,30 @@
     "read_x": true,
     "write_y_refused": false,
     "u5": false,
-    "u5_first_call": "ToolError: this session has no writer yet: call `attach` with the token in your session context first"
+    "u5_first_call": "ToolError: this session has no writer yet: call `attach` with the token in your session context first",
+    "u6": false,
+    "recorded": false,
+    "x_readable_by_y_reader": false,
+    "canary_given_to_model": false,
+    "instance_before": [
+     "cx",
+     "cy"
+    ],
+    "instances_after": {
+     "t-1": [
+      "cx",
+      "cy"
+     ]
+    },
+    "hook_exit_codes": [
+     0
+    ],
+    "hook_stderr": [
+     "SessionStart: gnomon hook: GateError: E_COMPARTMENT: this session's writer t-1 holds cx, cy, not only cy: start a new session",
+     "Stop: gnomon hook: GateError: E_COMPARTMENT: this session's writer t-1 holds cx, cy, not only cy: start a new session",
+     "SessionEnd: gnomon hook: GateError: E_COMPARTMENT: this session's writer t-1 holds cx, cy, not only cy: start a new session"
+    ],
+    "error": null
    },
    "leaks": [],
    "size": {
@@ -1258,6 +1512,225 @@
     "failed": []
    },
    "arm": "D1"
+  },
+  "D2": {
+   "branch": "arm-D2",
+   "commit": "a6a2abc",
+   "channels": {
+    "1": {
+     "name": "MCP recall of X content",
+     "leak": false,
+     "canary_given_to_model": false,
+     "canary_via": null,
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "2": {
+     "name": "start context: resume packet of a frame in X",
+     "leak": false,
+     "canary_given_to_model": false,
+     "canary_via": null,
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "3": {
+     "name": "start context: the person's situation recorded in X",
+     "leak": false,
+     "canary_given_to_model": false,
+     "canary_via": null,
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "4": {
+     "name": "per-message context drawn from X",
+     "leak": false,
+     "canary_given_to_model": false,
+     "canary_via": null,
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "5": {
+     "name": "restated after compaction",
+     "leak": false,
+     "canary_given_to_model": false,
+     "canary_via": null,
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 3,
+     "instance": "t-1"
+    },
+    "6": {
+     "name": "sub-agent quotes X content",
+     "leak": false,
+     "canary_given_to_model": false,
+     "canary_via": null,
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 3,
+     "instance": "t-1"
+    },
+    "7": {
+     "name": "MCP used without attach",
+     "leak": false,
+     "canary_given_to_model": false,
+     "canary_via": null,
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    },
+    "8": {
+     "name": "write-back through handoff",
+     "leak": false,
+     "canary_given_to_model": false,
+     "canary_via": null,
+     "widening": false,
+     "hook_exit_codes": [
+      0
+     ],
+     "hook_stderr": [],
+     "error": null,
+     "episodes_in_y": 2,
+     "instance": "t-1"
+    }
+   },
+   "road7_without_flag": {
+    "name": "MCP used without attach",
+    "leak": true,
+    "canary_given_to_model": true,
+    "canary_via": "tool:recall",
+    "widening": false,
+    "hook_exit_codes": [
+     0
+    ],
+    "hook_stderr": [],
+    "error": null,
+    "episodes_in_y": 2,
+    "instance": "t-1",
+    "flag_supported": true
+   },
+   "widening_scenario": {
+    "widening": false,
+    "rx_sees_y_canary": false,
+    "ry_sees_x_canary": false,
+    "hook_stderr": []
+   },
+   "widening": false,
+   "use": {
+    "u1": true,
+    "context_given": true,
+    "attached": true,
+    "user_turn_recorded": true,
+    "model_turn_recorded": true,
+    "u1_hook_stderr": [],
+    "u2": 1.0,
+    "u2_turns": "6/6",
+    "u2_pure": 1.0,
+    "u2_pure_turns": "6/6",
+    "u3": true,
+    "u2_hook_stderr": [],
+    "u4": true,
+    "read_x": true,
+    "write_y_refused": false,
+    "u5": true,
+    "u5_first_call": "3 hit(s) among 3. Each: time, speaker: words <where; dates said>\n1. 2026-10-15 09:11 o: The Heron codeword is amberfalco",
+    "u6": true,
+    "recorded": true,
+    "x_readable_by_y_reader": false,
+    "canary_given_to_model": false,
+    "instance_before": [
+     "cx",
+     "cy"
+    ],
+    "instances_after": {
+     "t-1": [
+      "cx",
+      "cy"
+     ],
+     "t-2": [
+      "cy"
+     ]
+    },
+    "hook_exit_codes": [
+     0
+    ],
+    "hook_stderr": [
+     "SessionStart: gnomon hook: this session's earlier writer held more than 'cy'; recording as t-2, which holds only 'cy'"
+    ],
+    "error": null
+   },
+   "leaks": [],
+   "size": {
+    "base": "auto-one-compartment",
+    "head": "HEAD",
+    "added": 56,
+    "deleted": 16,
+    "changed": 72,
+    "net": 40,
+    "files": {
+     "python/gnomon/__main__.py": [
+      1,
+      1
+     ],
+     "python/gnomon/hook.py": [
+      14,
+      5
+     ],
+     "python/gnomon/mcp.py": [
+      11,
+      2
+     ],
+     "python/gnomon/session.py": [
+      30,
+      8
+     ]
+    }
+   },
+   "tests": {
+    "ran": 290,
+    "failures": 0,
+    "errors": 0,
+    "passed": 290,
+    "ok": true,
+    "failed": []
+   },
+   "arm": "D2"
   }
  },
  "note": "arm 0 = auto-one-compartment (main's code); C2 = extra variant, not pre-registered"
