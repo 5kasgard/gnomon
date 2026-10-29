@@ -101,3 +101,9 @@ crosses after it becomes a stated limit in the spec, and the PR goes up.
   skips the writer_seq check and drops events that cannot apply); snapshot magic `GNSNAP5`.
   **One existing test changed** (`test_identity.ReviewM6.setUp` pinned to v6, as rule 1 refuses
   its owner-registered writer's spawn at v7). Scored as a side effect.
+- 2026-10-30: build SO delivered (fresh Claude Sonnet, `spec_SO_rules.md` and main only), branch
+  `arm48-SO`: generic `E_REGISTER` for non-owner duplicates; seq dropped from non-owner
+  receipts; hidden leases neither block nor fence; clock a stated limit, no code. **One
+  existing test changed** (`test_identity.ReviewM6` fixture pinned to v6). **Independence
+  slip, self-reported:** a `ps` listing showed another arm's test text; the builder says it was
+  not used. Recorded; not tested.
