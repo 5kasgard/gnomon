@@ -62,7 +62,11 @@ def instance_for(memory: Memory, parent: str, session: Optional[str] = None,
                 key = derived
     session = session or uuid.uuid4().hex[:16]
     key = key or session
-    for n in range(1, 1_000_000):
+    # The gate (protocol version 7) assigns the id: one more than the
+    # instances this parent has started. Older logs allowed any free id, so
+    # if that one is taken (a gap in an old log) take the first free one.
+    first = 1 + sum(1 for w in writers.values() if w.get("instance_of") == parent)
+    for n in [first, *range(1, 1_000_000)]:
         wid = f"{parent}-{n}"
         if wid not in writers:
             break
