@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import argparse
 import contextlib
+import inspect
 import io
 import json
 import os
@@ -54,6 +55,15 @@ from gnomon.ingest import record_messages  # noqa: E402
 from gnomon.mcp import Server  # noqa: E402
 
 X, Y = "cx", "cy"
+
+# Whether this arm's server has `--require-attach` (arm D2): then it is the arm's intended
+# configuration and every session below runs with it, except road 7 reported without it.
+HAS_FLAG = "require_attach" in inspect.signature(Server).parameters
+
+
+def make_server(log: str, template: str, flag: bool = True) -> Server:
+    kw = {"require_attach": True} if (HAS_FLAG and flag) else {}
+    return Server(log, template, per_session=True, **kw)
 
 # Canaries: (token, sentence). The token is what the readers search for; the
 # sentence is what the model restates.
@@ -188,13 +198,13 @@ class Model:
 
 class Session:
     def __init__(self, tmp: Path, log: str, sid: str, template: str = "t", hook_args: tuple = (),
-                 compartment: str = Y):
+                 compartment: str = Y, flag: bool = True):
         self.log, self.sid, self.tmp = log, sid, tmp
         self.transcript = tmp / f"{sid}.jsonl"
         self.transcript.write_text("")
         self.args = ["--log", log, "--writer", template, "--compartment", compartment, *hook_args]
         self.model = Model()
-        self.server = Server(log, template, per_session=True)
+        self.server = make_server(log, template, flag)
         self.server.handle({"jsonrpc": "2.0", "id": 0, "method": "initialize",
                             "params": {"protocolVersion": "2025-11-25"}})
         self.n = 0
@@ -298,10 +308,10 @@ class Session:
 
 
 def instance_of(m: Memory, sid: str, parent: str = "t") -> str:
-    for wid, w in m.writers().items():
-        if w.get("instance_of") == parent and w.get("session") == sid:
-            return wid
-    return ""
+    """The session's instance (the narrowest one, if it has more than one)."""
+    found = [(len(w["compartments"]), wid) for wid, w in m.writers().items()
+             if w.get("instance_of") == parent and str(w.get("session")).split("~")[0] == sid]
+    return min(found)[1] if found else ""
 
 
 # ---------------------------------------------------------------- the channels
@@ -392,12 +402,12 @@ CHANNELS = {
 }
 
 
-def run_channel(n: int) -> dict:
+def run_channel(n: int, flag: bool = True) -> dict:
     name, fn, plant, key, extra = CHANNELS[n]
     with tempfile.TemporaryDirectory() as d:
         tmp = Path(d)
         log, m = build(tmp, plant=plant)
-        s = Session(tmp, log, f"s-{n}", hook_args=extra)
+        s = Session(tmp, log, f"s-{n}", hook_args=extra, flag=flag)
         err = None
         try:
             fn(s)
@@ -534,12 +544,43 @@ def run_u5() -> dict:
         log, m = build(tmp)
         s = Session(tmp, log, "s-u5-auto")
         s.start()  # the hook runs for template `t`
-        srv = Server(log, "t", per_session=True)   # another process, no token
+        srv = Server(log, "t", per_session=True)   # another process, no token, no flag
         srv.handle({"jsonrpc": "2.0", "id": 0, "method": "initialize", "params": {"protocolVersion": "2025-11-25"}})
         r = srv.handle({"jsonrpc": "2.0", "id": 1, "method": "tools/call",
                         "params": {"name": "recall", "arguments": {"query": "Heron codeword"}}})["result"]
         text = "\n".join(b["text"] for b in r["content"] if b.get("type") == "text")
         return {"u5": not r.get("isError"), "u5_first_call": text[:120]}
+
+
+def run_u6() -> dict:
+    """A session begun before the upgrade: its instance holds X and Y (made the
+    old way). It is resumed under this arm's code, with the hook's compartment Y,
+    and its model looks up an X canary. Recorded: the session's new turns are in
+    Y. Leak: the Y-only reader can find the X canary."""
+    from gnomon.session import instance_for
+    with tempfile.TemporaryDirectory() as d:
+        tmp = Path(d)
+        log, m = build(tmp, plant=("x1",))
+        old = instance_for(m, "t", "s-u6", surface="claude-code")   # no compartments given: the old behaviour
+        held_before = sorted(m.writers()[old]["compartments"])
+        s = Session(tmp, log, "s-u6")
+        q = "U6 question: what is the Orchid vault code?"
+        err = None
+        try:
+            s.start("resume"); s.attach()
+            s.user(q)
+            s.call("recall", {"query": "Orchid vault code"})
+            s.say(); s.stop(); s.end()
+        except Exception as e:
+            err = f"{type(e).__name__}: {e}"
+        recorded = recorded_in_y(m, q)
+        leak = findable(m, "ry", TOKEN["x1"])
+        insts = {wid: w["compartments"] for wid, w in m.writers().items()
+                 if w.get("instance_of") == "t" and str(w.get("session")).split("~")[0] == "s-u6"}
+        return {"u6": bool(recorded and not leak), "recorded": recorded, "x_readable_by_y_reader": leak,
+                "canary_given_to_model": "x1" in s.model.known, "instance_before": held_before,
+                "instances_after": insts, "hook_exit_codes": sorted(set(s.exit_codes)), "hook_stderr": s.stderr[:3],
+                "error": err}
 
 
 # ------------------------------------------------------------------ size, tests
@@ -592,10 +633,15 @@ def main() -> int:
     out: dict = {"branch": git("rev-parse", "--abbrev-ref", "HEAD").stdout.strip(),
                  "commit": git("rev-parse", "--short", "HEAD").stdout.strip()}
     out["channels"] = {str(n): run_channel(n) for n in CHANNELS}
+    # Road 7 again without --require-attach (the misconfiguration case). An arm without the flag
+    # has no other configuration: its road 7 above is already that case.
+    r7 = run_channel(7, flag=False) if HAS_FLAG else dict(out["channels"]["7"])
+    r7["flag_supported"] = HAS_FLAG
+    out["road7_without_flag"] = r7
     out["widening_scenario"] = run_widening()
     out["widening"] = bool(out["widening_scenario"]["widening"] or any(c["widening"] for c in out["channels"].values()))
     use = {}
-    use.update(run_u1()); use.update(run_u2_u3()); use.update(run_u4()); use.update(run_u5())
+    use.update(run_u1()); use.update(run_u2_u3()); use.update(run_u4()); use.update(run_u5()); use.update(run_u6())
     out["use"] = use
     out["leaks"] = [n for n, c in out["channels"].items() if c["leak"]]
     if not a.no_size:
