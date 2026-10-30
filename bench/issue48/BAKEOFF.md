@@ -187,3 +187,9 @@ Decision: SZ2 goes to red team 2 (the last) if the property test passes, every r
 1-5 and Argon 1, 2, 4 is closed, and nothing else gets worse. **Fallback:** if the property test
 fails, or F1 adds more than 150 net lines, the clock goes back to the global one (channel C a
 stated limit, as SC and combo3 have) and the bake-off is re-scored on that basis.
+- `as_of` property test written by a fresh Claude Sonnet (main's API only; the fixer never sees
+  it), `asof_prop.py`, sha256 bd198718a52c, frozen before SZ2 exists. Validated: **main** 2,000 logs,
+  88,249 checks, **0 failures** (the global clock refuses every out-of-order write); **SZ**
+  2,000 logs, **44 failures in 5 logs**, every one a release that depends on a later-dated
+  lease or registration (rebuild refused: E_CLOCK 34, others 10). It compares the whole
+  `["state"]`, removing nothing.
