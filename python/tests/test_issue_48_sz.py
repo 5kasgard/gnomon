@@ -262,5 +262,18 @@ class LeaseScope(unittest.TestCase):
         self.assertEqual(m.recall("ra", "mine")["through"]["event"], "s/1")
 
 
+class RevokeThrough(unittest.TestCase):
+    def test_a_revoke_is_seen_by_those_in_the_compartments_it_takes_away(self):
+        m = world()
+        reg(m, "x", ["a", "b"])
+        reg(m, "ra", ["a"], n=3)
+        reg(m, "rb", ["b"], n=4)
+        m.episode("ra", "mine", compartment="a", record_time=t(5))
+        m.episode("rb", "mine", compartment="b", record_time=t(6))
+        m.revoke("own", "x", ["a"], "test", record_time=t(7))
+        self.assertEqual(m.recall("ra", "mine")["through"]["event"], "own/5")
+        self.assertEqual(m.recall("rb", "mine")["through"]["event"], "rb/1")
+
+
 if __name__ == "__main__":
     unittest.main()

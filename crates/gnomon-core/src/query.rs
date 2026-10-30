@@ -677,7 +677,13 @@ pub fn event_visible(ledger: &Ledger, visible: &[String], e: &Value) -> bool {
             let writers: Vec<&str> = match k {
                 "lease" => st.leases.get(id).map(|l| vec![l.writer.as_str()]).unwrap_or_default(),
                 "release" => st.leases.get(field("lease")).map(|l| vec![l.writer.as_str()]).unwrap_or_default(),
-                _ => vec![field("writer")],
+                // The compartments revoked, not the writer's remaining ones.
+                _ => {
+                    return body
+                        .and_then(|b| b.get("compartments"))
+                        .and_then(|v| v.as_array())
+                        .is_some_and(|cs| cs.iter().any(|c| c.as_str().is_some_and(|c| sees(c))))
+                }
             };
             writers.iter().any(|x| {
                 st.writers
