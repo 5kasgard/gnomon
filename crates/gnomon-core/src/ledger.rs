@@ -406,7 +406,11 @@ impl Ledger {
         // too (issue #54): a holder cannot date its write back to before
         // expiry to slip in after it.
         if let Some(id) = draft.body.get("lease").and_then(|v| v.as_str()) {
-            if let Some(l) = self.state.leases.get(id) {
+            let seen = |l: &LeaseInfo| {
+                self.state.schema_version < 7
+                    || self.state.writers.get(&draft.writer).zip(self.state.writers.get(&l.writer)).is_some_and(|(w, h)| shares(h, w))
+            };
+            if let Some(l) = self.state.leases.get(id).filter(|l| seen(l)) {
                 if l.expires.as_str() <= timestamp_after_now(0).as_str() {
                     return Err(err("E_LEASE", format!("lease '{id}' has expired by the gate's clock")));
                 }
@@ -808,7 +812,12 @@ fn lease_gate(
         None => None,
     };
     if let Some(id) = named {
-        let l = st.leases.get(id).ok_or_else(|| not_found("lease", id))?;
+        // From version 7 a lease whose holder the writer cannot see is as good as none.
+        let l = st
+            .leases
+            .get(id)
+            .filter(|l| st.schema_version < 7 || st.writers.get(&l.writer).is_some_and(|h| shares(h, w)))
+            .ok_or_else(|| not_found("lease", id))?;
         if Some(l.frame.as_str()) != frame {
             return Err(err("E_LEASE", format!("lease '{id}' is for frame '{}'", l.frame)));
         }

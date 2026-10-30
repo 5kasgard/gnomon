@@ -228,5 +228,25 @@ class ClockScope(unittest.TestCase):
         self.assertEqual(got, ["B", "C"])
 
 
+class LeaseScope(unittest.TestCase):
+    def setUp(self):
+        self.m = m = world()
+        reg(m, "s", ["a", "b"], caps=("schedule",))
+        reg(m, "sb", ["b"], caps=("schedule",), n=3)
+        reg(m, "ra", ["a"], n=4)
+        reg(m, "rb", ["b"], n=5)
+        self.la = m.lease("s", "ra", "f", FAR, record_time=t(6))
+
+    def test_a_hidden_lease_answers_as_one_that_does_not_exist(self):
+        m = self.m
+        def named(lease):
+            try:
+                m.handoff("rb", frame="f", summary="x", compartment="b", lease=lease, record_time=t(7))
+            except g.GateError as e:
+                return e.code, e.message.replace(lease, "L")
+        self.assertEqual(named(self.la), named("s/99"))
+        self.assertEqual(named(self.la)[0], "E_REF")
+
+
 if __name__ == "__main__":
     unittest.main()
