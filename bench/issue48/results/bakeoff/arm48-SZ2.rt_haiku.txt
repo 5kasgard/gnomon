@@ -1,0 +1,19 @@
+p_clock_shared_writer: differ=False
+  hidden:  c:6e957c7c853f61fa03b26e9021064e313e6508c8d2b933434a88b39204cbeee8
+  without: c:6e957c7c853f61fa03b26e9021064e313e6508c8d2b933434a88b39204cbeee8
+p_lease_write_names_holder: differ=False
+  hidden:  c:f4e3c82458d0649c1a389b567212b0a7f610a08b2c58798af38fbc8590008338
+  without: c:f4e3c82458d0649c1a389b567212b0a7f610a08b2c58798af38fbc8590008338
+p_named_lease_probe: differ=False
+  hidden:  ('E_REF', "E_REF: lease 'owner/4' does not exist or is not accessible")
+  without: ('E_REF', "E_REF: lease 'owner/4' does not exist or is not accessible")
+p_revoke_moves_through: differ=False
+  hidden:  {'event': 'w/1', 'kind': 'claim', 'time': '2026-01-01T10:10:00Z'}
+  without: {'event': 'w/1', 'kind': 'claim', 'time': '2026-01-01T10:10:00Z'}
+p_owner_a_clock_blocks_b: differ=False
+  hidden:  c:6e957c7c853f61fa03b26e9021064e313e6508c8d2b933434a88b39204cbeee8
+  without: c:6e957c7c853f61fa03b26e9021064e313e6508c8d2b933434a88b39204cbeee8
+p_as_of_drops_early_write: ERROR GateError: E_CLOCK: record_time is earlier than the previous event in its compartment or by its writer
+p_session_disjoint: differ=False
+  hidden:  registered
+  without: registered

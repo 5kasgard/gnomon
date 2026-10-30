@@ -1,0 +1,13 @@
+a1_clock: differ=False
+  hidden:  ('ok', '')
+  without: ('ok', '')
+a2_lease_grantor: differ=False
+  hidden:  ('ok', '')
+  without: ('ok', '')
+a3_revoke_through: differ=False
+  hidden:  {'event': 'o/3', 'hash': '40820084682e16088cde98cd3d79d14b188ab93e490b7a9e4d24ba4c732f57e8', 'kind': 'register', 'time': '2026-01-01T00:00:00Z'}
+  without: {'event': 'o/3', 'hash': '40820084682e16088cde98cd3d79d14b188ab93e490b7a9e4d24ba4c732f57e8', 'kind': 'register', 'time': '2026-01-01T00:00:00Z'}
+a4_as_of_drop: differ=True
+  hidden:  {'write': 'E_CLOCK', 'as_of_9_b': []}
+  without: {'write': 'ok', 'as_of_9_b': ['x']}
+a3b_revoke_hides_history: {'b readers see writers before': ['o', 'r-b', 'w-b'], "after revoking w_b's only compartment": ['o', 'r-b']}

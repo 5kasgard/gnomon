@@ -1,0 +1,3 @@
+   Compiling gnomon-core v0.1.0 (/tmp/claude-0/wt/s-arm48-SZ2/crates/gnomon-core)
+    Finished `release` profile [optimized] target(s) in 19.12s
+built python/gnomon/libgnomon_core.so

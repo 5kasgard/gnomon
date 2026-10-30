@@ -1,0 +1,45 @@
+probes_SC.py  operator_view  crosses
+probes_SC.py  operator_datalog  crosses
+probes_SC.py  session_duplicate  crosses
+probes_SC.py  session_instance_for  crosses
+probes_SC.py  writer_id_child  crosses
+probes_SC.py  writer_id_reverse  crosses
+probes_SC.py  writer_id_parent_asks  crosses
+probes_SC.py  counts  crosses
+probes_SC.py  limit_writer_seq_gap  crosses
+probes_SC.py  lease_hidden_target  crosses
+probes_SC.py  lease_frame_blocked  crosses
+probes_SC.py  lease_release_guess  crosses
+probes_SC.py  through_lease_release_revoke  same
+probes_SC.py  clock_far_future  same
+probes_SC.py  limit_clock_within_skew  same
+probes_SC.py  lease_advances_clock  same
+probes_SZ.py  operator_view  crosses
+probes_SZ.py  operator_query  crosses
+probes_SZ.py  session  same
+probes_SZ.py  writer_ids  crosses
+probes_SZ.py  counts_write_seq  same
+probes_SZ.py  counts_view_seq  crosses
+probes_SZ.py  counts_writer_seq  crosses
+probes_SZ.py  lease_unknown_writer  same
+probes_SZ.py  lease_leased  same
+probes_SZ.py  through_lease  same
+probes_SZ.py  clock  same
+probes_SZ.py  as_of  same
+probes_SZ.py  name  same
+probes_SZ.py  lease_cross_sides  same
+probes_SO.py  operator  same
+probes_SO.py  operator_datalog  same
+probes_SO.py  session_collision  crosses
+probes_SO.py  duplicate_id  crosses
+probes_SO.py  parent_namespace  crosses
+probes_SO.py  global_event_count  crosses
+probes_SO.py  through  same
+probes_SO.py  hidden_lease_target  same
+probes_SO.py  hidden_lease_holder  same
+probes_SO.py  global_clock  crosses
+probes_SO.py  failed_write_side_effect  same
+probes_SC.py: 16 probes, 12 cross, 4 same, 0 error
+probes_SZ.py: 14 probes, 5 cross, 9 same, 0 error
+probes_SO.py: 11 probes, 5 cross, 6 same, 0 error
+wrote /tmp/claude-0/score/arm48-SZ2.heldout.json

@@ -193,3 +193,19 @@ stated limit, as SC and combo3 have) and the bake-off is re-scored on that basis
   2,000 logs, **44 failures in 5 logs**, every one a release that depends on a later-dated
   lease or registration (rebuild refused: E_CLOCK 34, others 10). It compares the whole
   `["state"]`, removing nothing.
+
+## Fix round results (`arm48-SZ2`; four commits by a fresh Claude Sonnet)
+
+- **`as_of` property test: passes** (2,000 logs, 91,650 checks, 0 failures; 854 out-of-order
+  events accepted, so per-compartment time is exercised, not avoided).
+- **Red-team probes:** Haiku 1-5 closed; Argon 1, 2, 3 closed. Argon 4 still differs, but the
+  write is now refused because it is dated before its writer's own registration, a time B can
+  see; nothing is dropped. Not a leak; the correctness bug is gone.
+- **Held-out probes:** 18 of 35 cross, as SZ. **run.py:** V and C now closed (P12, P12r, P14, R
+  cross: writer ids and counts, both declared limits). Suites pass; old logs replay identically;
+  main's unchanged tests: the same 3 identity errors as SZ (its operator rule).
+- **One check crosses that did not on SZ:** G3a (an A scheduler's lease to a writer in A and B
+  advances B's clock). Under F3 that lease belongs to its lessee's compartments, so B can see it
+  (G4: it appears in B's `through`); B learns nothing hidden. Recorded for red team 2 to judge.
+- F1 added 69 net core lines (under the 150 fallback). Lines vs main: Rust 223, spec 40.
+- **By the rule, SZ2 goes to red team 2, the last.**

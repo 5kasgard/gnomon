@@ -11,7 +11,7 @@ import re
 import sys
 from pathlib import Path
 
-ARMS = ["arm48-combo3", "arm48-SC", "arm48-SO", "arm48-SZ"]
+ARMS = ["arm48-combo3", "arm48-SC", "arm48-SO", "arm48-SZ", "arm48-SZ2"]
 UNSCORED = {("probes_SC.py", "clock_far_future"), ("probes_SZ.py", "through_lease"),
             ("probes_SO.py", "operator"), ("probes_SO.py", "operator_datalog"),
             ("probes_SO.py", "through"), ("probes_SO.py", "failed_write_side_effect")}

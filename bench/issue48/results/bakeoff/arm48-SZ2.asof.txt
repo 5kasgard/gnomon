@@ -1,0 +1,3 @@
+operations (after the genesis): accepted 16937 (of which out of order 854), refused 29915 {'E_CLOCK': 22710, 'E_REF': 1559, 'E_LEASE': 1500, 'E_COMPARTMENT': 1293, 'E_CAPABILITY': 1239, 'E_UNKNOWN_WRITER': 470, 'E_LEASED': 439, 'E_EVIDENCE': 305, 'E_REVOKE': 215, 'E_NO_RESOLVER': 71, 'E_FINAL': 50, 'E_OPEN_DISPUTE': 35, 'E_DUPLICATE': 29}
+events by kind: {'claim': 5646, 'episode': 1687, 'lease': 1301, 'register': 7733, 'release': 208, 'revoke': 803, 'supersede': 120, 'verdict': 1439}
+logs: 2000  events accepted: 18937  checks: 91650  failures: 0 (in 0 logs)
