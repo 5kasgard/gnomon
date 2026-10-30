@@ -675,16 +675,8 @@ pub fn event_visible(ledger: &Ledger, visible: &[String], e: &Value) -> bool {
         // of the writers it names; before, everyone saw it.
         k @ ("lease" | "release" | "revoke") if st.schema_version >= 7 => {
             let writers: Vec<&str> = match k {
-                "lease" => st
-                    .leases
-                    .get(id)
-                    .map(|l| vec![l.writer.as_str(), l.by.as_str()])
-                    .unwrap_or_default(),
-                "release" => st
-                    .leases
-                    .get(field("lease"))
-                    .map(|l| vec![l.writer.as_str(), l.by.as_str()])
-                    .unwrap_or_default(),
+                "lease" => st.leases.get(id).map(|l| vec![l.writer.as_str()]).unwrap_or_default(),
+                "release" => st.leases.get(field("lease")).map(|l| vec![l.writer.as_str()]).unwrap_or_default(),
                 _ => vec![field("writer")],
             };
             writers.iter().any(|x| {

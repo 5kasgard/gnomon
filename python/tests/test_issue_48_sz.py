@@ -247,6 +247,20 @@ class LeaseScope(unittest.TestCase):
         self.assertEqual(named(self.la), named("s/99"))
         self.assertEqual(named(self.la)[0], "E_REF")
 
+    def test_a_lease_of_another_compartment_does_not_fence_a_write(self):
+        m = self.m
+        m.handoff("rb", frame="f", summary="x", compartment="b", record_time=t(7))
+
+    def test_the_grantor_does_not_make_a_lease_count(self):
+        m = self.m
+        self.assertEqual(code(lambda: m.lease("sb", "rb", "f", FAR, record_time=t(7))), "OK")
+
+    def test_through_follows_the_lessee_not_the_grantor(self):
+        m = self.m
+        m.episode("rb", "mine", compartment="b", record_time=t(7))
+        self.assertEqual(m.recall("rb", "mine")["through"]["event"], "rb/1")
+        self.assertEqual(m.recall("ra", "mine")["through"]["event"], "s/1")
+
 
 if __name__ == "__main__":
     unittest.main()

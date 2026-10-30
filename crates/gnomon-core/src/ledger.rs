@@ -750,7 +750,7 @@ fn frame_gate(st: &State, writer: &str, w: &WriterInfo, frame: Option<&str>) -> 
 /// The live lease on `frame` at `at`, if any: not released, not yet expired.
 ///
 /// From version 7, with `scope` (the one who would lease or write), only a
-/// lease whose holder or grantor shares a compartment with it counts.
+/// lease whose holder shares a compartment with it counts.
 fn live_lease<'a>(
     st: &'a State,
     frame: &str,
@@ -763,9 +763,7 @@ fn live_lease<'a>(
             && l.expires.as_str() > at
             && scope.is_none_or(|w| {
                 st.schema_version < 7
-                    || [&l.writer, &l.by]
-                        .iter()
-                        .any(|x| st.writers.get(*x).is_some_and(|x| shares(x, w)))
+                    || st.writers.get(&l.writer).is_some_and(|x| shares(x, w))
             })
     })
 }
