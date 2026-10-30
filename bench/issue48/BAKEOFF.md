@@ -145,3 +145,45 @@ findings, each **reproduced by the planner** (`redteam_haiku.py`, output `redtea
 5. **Correctness:** a write dated before its writer's registration is accepted; `as_of` then
    drops it (the full view has it).
 Verdict: do not merge as is. Gemini Argon's red team is pending.
+
+**Gemini Argon (given only SZ's spec and diff; verbatim in `REVIEWS.md`):** four findings, each
+**reproduced by the planner** (`redteam_argon.py`, written from Argon's exact steps; ids changed
+from `_` to `-`, which the gate requires; output `redteam_argon_SZ.txt`):
+1. Clock: the same as Haiku's 1 (`commit` advances every compartment of the writer).
+2. Leases: an owner (in A and B) leasing in A blocks a B lease on the same frame name
+   (`E_LEASED`), because the conflict scope counts the grantor; the lease also moves `through`.
+3. Revoke: the same as Haiku's 4. Its second part (revoking a writer's only compartment hides it
+   from that compartment's readers) **behaves the same on main**: existing behaviour from #49,
+   out of scope here, filed separately.
+4. `as_of`: a write dated before its writer's registration is accepted and then dropped (on
+   main the global clock refuses it). The same root as Haiku's 5.
+Verdict: do not merge, or merge with changes.
+
+## Fix round (registered before any fix is built)
+
+Three attempts at per-compartment clocks (T1, then SZ twice) each produced a correctness bug.
+So the fix round adds an exact guard and a fallback.
+
+Fixes on SZ (branch `arm48-SZ2` from `arm48-SZ`):
+- **F1, clock:** an event advances only the compartments it touches (its own compartment; a
+  registration, the new writer's; a lease, release or revoke, the lessee's or target's). The
+  floor for a write is the maximum over the compartments it touches **and** the writer's own last
+  event, its registration included (a write may not be dated before its writer exists).
+  `as_of` must never drop an event silently: an event that cannot apply is an error.
+- **F2, lease messages:** `E_LEASE` names a holder only if visible to the writer; a named lease
+  the writer cannot see answers as a missing one (`E_REF`).
+- **F3, lease scope:** a live lease is "visible" to a writer iff its **lessee** shares a
+  compartment with it (the grantor no longer counts), for conflicts, fencing and `through`.
+- **F4, revoke `through`:** a revoke counts for a reader iff its revoked compartments meet the
+  reader's.
+
+Measures: everything in the bake-off (held-out probes, earlier checks, suites, main's tests,
+replay), both red teams' probes, and **an `as_of` property test**: 2,000 random valid logs
+(seeded; 2-4 compartments, 3-6 writers, mixed kinds and out-of-order times), checking for every t
+that `as_of(t)` equals the state built from exactly the events dated at or before t, in log
+order, with no error.
+
+Decision: SZ2 goes to red team 2 (the last) if the property test passes, every red-team probe
+1-5 and Argon 1, 2, 4 is closed, and nothing else gets worse. **Fallback:** if the property test
+fails, or F1 adds more than 150 net lines, the clock goes back to the global one (channel C a
+stated limit, as SC and combo3 have) and the bake-off is re-scored on that basis.

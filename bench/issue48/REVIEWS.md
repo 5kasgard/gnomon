@@ -100,3 +100,28 @@ outputs `gemini_checks_main.txt`, `gemini_checks_combo2.txt`):
 - **Count family (P14, R, seq) as a limit: disputed, recorded.** Counts carry no content; Q1
   does not cover seq, and hiding seq means changing every restricted view. Kept as a limit,
   open to the owner.
+
+## Bake-off red team 1 on arm48-SZ, Gemini (Argon; non-Claude, via the owner's chat), 2026-10-30, verbatim
+
+* Clock leak via multi-compartment writers (commit updates all writer compartments, not touched compartments)
+   * Setup: Register humans w_ab (party "p", compartments ["a", "b"], capabilities ["write"]) and w_b (party "p", compartments ["b"], capabilities ["write"]) at 2026-01-01T00:00:00Z.
+   * Hidden A action: m.remember("w_ab", claim("s", "w_ab", "f", "a"), record_time="2026-01-01T02:00:00Z").
+   * B call: m.remember("w_b", claim("s2", "w_b", "f2", "b"), record_time="2026-01-01T01:00:00Z").
+   * Result: World 1 advances compartment_clocks["b"] to 02:00 (because w_ab is in "b") and fails with E_CLOCK; World 2 succeeds.
+ * Lease and through leak via multi-compartment grantor (live_lease and event_visible check l.by)
+   * Setup: owner (human, party "p", compartments ["a", "b"]) registers humans w_a (party "pa", compartments ["a"]), w_b (party "pb", compartments ["b"], capabilities ["schedule"]), and w_b2 (party "pb", compartments ["b"]) at 2026-01-01T00:00:00Z.
+   * Hidden A action: m.lease("owner", "w_a", "f", "2026-01-02T00:00:00Z", record_time="2026-01-01T01:00:00Z").
+   * B call: m.lease("w_b", "w_b2", "f", "2026-01-02T00:00:00Z", record_time="2026-01-01T01:00:00Z") and m.query("w_b", "...").
+   * Result: Because l.by (owner) is in "b", World 1 refuses m.lease with E_LEASED and advances query.through to the A-lease event; World 2 succeeds and keeps through at w_b2's registration.
+ * revoke leak and correctness bug (event_visible checks current st.writers compartments)
+   * Setup: owner (compartments ["a", "b"]) registers humans w_ab (party "p", compartments ["a", "b"]) and w_b (party "pb", compartments ["b"]) at 2026-01-01T00:00:00Z.
+   * Hidden A action: m.revoke("owner", "w_ab", ["a"], "secret").
+   * B call: m.query("w_b", "...") and m.state(compartments=["b"]).
+   * Result: Because w_ab remains in "b", World 1 advances through to the A-revoke and exposes it in state; World 2 does not.
+   * Correctness bug: Revoking ["b"] from "b"-only w_b empties w_b.compartments, making event_visible hide w_b's register and revoke events from "b" readers.
+ * as_of / apply_subset silently drops valid events (Correctness bug and leak)
+   * Setup: owner (human, party "p", compartments ["a"]) at 2026-01-01T00:00:00Z.
+   * Hidden A action: owner writes in "a" at 2026-01-01T10:00:00Z, then registers human w_b (party "pb", compartments ["b"], capabilities ["write"]) at 2026-01-01T10:00:00Z (World 2 registers w_b at 2026-01-01T01:00:00Z). compartment_clocks["b"] stays unset because owner is only in "a".
+   * B call: m.remember("w_b", claim("x", "w_b", "f", "b"), record_time="2026-01-01T08:00:00Z"), then m.state(as_of="2026-01-01T09:00:00Z", compartments=["b"]).
+   * Result: World 1 skips w_b's 10:00 registration during as_of, so apply_subset fails check() (E_UNKNOWN_WRITER) and drops the 08:00 claim; World 2 returns it.
+do not merge (or merge with changes: track/check clocks per event-affected compartments including newly registered writers, check revoke event compartments rather than post-state writer compartments, and avoid scoping leases to multi-compartment grantors when the lessee is disjoint).
