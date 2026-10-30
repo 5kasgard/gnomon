@@ -177,5 +177,56 @@ class Clock(unittest.TestCase):
         self.assertEqual(len(m.state(as_of=t(40))["state"]["episodes"]), 2)
 
 
+FAR = "2099-01-01T00:00:00Z"
+
+
+class ClockScope(unittest.TestCase):
+    def test_a_writer_is_never_dated_before_its_own_last_event(self):
+        m = world()
+        reg(m, "w", ["a", "b"])
+        m.episode("w", "in A", compartment="a", record_time=t(30))
+        self.assertEqual(code(lambda: m.episode("w", "in B", compartment="b", record_time=t(10))), "E_CLOCK")
+
+    def test_nor_before_its_registration(self):
+        m = world()
+        reg(m, "w", ["b"], n=20)
+        self.assertEqual(code(lambda: m.episode("w", "early", compartment="b", record_time=t(10))), "E_CLOCK")
+
+    def test_a_revoke_advances_only_the_revoked_compartments(self):
+        m = world()
+        reg(m, "wa", ["a"])
+        reg(m, "x", ["b"], n=3)
+        m.revoke("own", "x", ["b"], "test", record_time=t(40))
+        self.assertEqual(code(lambda: m.episode("wa", "in A", compartment="a", record_time=t(35))), "OK")
+
+    def test_a_lease_advances_only_its_lessee_compartments(self):
+        m = world()
+        reg(m, "s", ["a", "b"], caps=("schedule",))
+        reg(m, "ra", ["a"], n=3)
+        reg(m, "rb", ["b"], n=4)
+        m.lease("s", "ra", "f", FAR, record_time=t(40))
+        self.assertEqual(code(lambda: m.episode("rb", "in B", compartment="b", record_time=t(35))), "OK")
+        self.assertEqual(code(lambda: m.episode("ra", "in A", compartment="a", record_time=t(35))), "E_CLOCK")
+
+    def test_a_write_on_a_lease_is_not_dated_before_it(self):
+        m = world()
+        reg(m, "s", ["a"], caps=("schedule",))
+        reg(m, "ra", ["a"], n=3)
+        lease = m.lease("s", "ra", "f", FAR, record_time=t(40))
+        self.assertEqual(code(lambda: m.handoff("ra", frame="f", summary="x", compartment="a", lease=lease,
+                                               record_time=t(30))), "E_CLOCK")
+
+    def test_as_of_keeps_every_event_dated_up_to_t(self):
+        m = world()
+        reg(m, "wa", ["a"])
+        reg(m, "wb", ["b"], n=3)
+        m.episode("wa", "A", compartment="a", record_time=t(30))
+        m.episode("wb", "B", compartment="b", record_time=t(10))
+        reg(m, "wc", ["b"], n=12)
+        m.episode("wc", "C", compartment="b", record_time=t(13))
+        got = sorted(e["body"]["content"] for e in m.state(as_of=t(20))["state"]["episodes"].values())
+        self.assertEqual(got, ["B", "C"])
+
+
 if __name__ == "__main__":
     unittest.main()

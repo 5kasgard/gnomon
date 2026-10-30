@@ -641,7 +641,7 @@ fn queries_see_only_the_readers_compartments() {
 #[test]
 fn as_of_answers_what_was_known_then() {
     let (l, _, _, t, _) = memory();
-    let before = l.as_of(&common::t(14));
+    let before = l.as_of(&common::t(14)).unwrap();
     let v = ask(&before, &lab_only(), &format!("?- believed(\"{t}\")."));
     assert_eq!(v.get("answers").unwrap().as_array().unwrap().len(), 1);
     let v = ask(&l, &lab_only(), &format!("?- believed(\"{t}\")."));

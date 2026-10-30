@@ -314,6 +314,9 @@ pub struct State {
     /// Latest record time per compartment (protocol version 7; derived on
     /// replay, not part of the state digest).
     pub compartment_clocks: BTreeMap<String, String>,
+    /// Latest record time per writer, counting its registration (version 7;
+    /// derived on replay).
+    pub writer_clocks: BTreeMap<String, String>,
     pub schema_version: i64,
 }
 
@@ -467,19 +470,19 @@ impl Ledger {
 
     /// Apply an already verified event to a ledger that holds only some of
     /// the log (`as_of`, version 7): chain links and writer_seq are the
-    /// full log's, not this one's. An event that cannot apply is left out.
-    fn apply_subset(&mut self, env: &Value) {
+    /// full log's, not this one's. An event that cannot apply is an error.
+    fn apply_subset(&mut self, env: &Value) -> GateResult<()> {
         let (Some(seq), Some(prev), Some(hash)) = (
             env.get("seq").and_then(|v| v.as_int()),
             env.get("prev").and_then(|v| v.as_str()),
             env.get("hash").and_then(|v| v.as_str()),
         ) else {
-            return;
+            return Err(err("E_SHAPE", "event has no seq, prev or hash"));
         };
-        if let Ok(c) = check(&self.state, env, seq as usize, prev, None, Some(hash.to_string()), true) {
-            commit(&mut self.state, c, self.events.len());
-            self.events.push(env.clone());
-        }
+        let c = check(&self.state, env, seq as usize, prev, None, Some(hash.to_string()), true)?;
+        commit(&mut self.state, c, self.events.len());
+        self.events.push(env.clone());
+        Ok(())
     }
 
     /// Replay `events` from empty, checking every rule. A budget smaller than
@@ -513,7 +516,7 @@ impl Ledger {
     }
 
     /// Ledger rebuilt from events recorded at or before `t`.
-    pub fn as_of(&self, t: &str) -> Ledger {
+    pub fn as_of(&self, t: &str) -> GateResult<Ledger> {
         let mut l = Ledger::new();
         for env in &self.events {
             let rt = env
@@ -523,7 +526,7 @@ impl Ledger {
             if self.state.schema_version >= 7 {
                 // Record time is monotonic per compartment only: not a prefix.
                 if rt <= t {
-                    l.apply_subset(env);
+                    l.apply_subset(env)?;
                 }
                 continue;
             }
@@ -532,7 +535,7 @@ impl Ledger {
             }
             l.apply(env.clone()).expect("events already verified");
         }
-        l
+        Ok(l)
     }
 }
 
@@ -865,7 +868,39 @@ fn visible_item_compartment<'a>(st: &'a State, w: &WriterInfo, id: &str) -> Gate
         .ok_or_else(|| not_found("evidence", id))
 }
 
+/// The compartments an event advances (version 7): the one it is in; a
+/// registration's are the new writer's; a lease or release, the lessee's; a
+/// revoke, the revoked ones.
+fn touched(st: &State, writer: &str, change: &Change) -> Vec<String> {
+    let of = |w: &str| st.writers.get(w).map(|x| x.compartments.clone()).unwrap_or_default();
+    let one = |c: Option<&String>| c.cloned().into_iter().collect();
+    match change {
+        Change::Register { info, .. } => info.compartments.clone(),
+        Change::Episode { info, .. } => vec![info.compartment.clone()],
+        Change::NewClaim { info, .. } => vec![info.compartment.clone()],
+        Change::Corroborate { id, .. } => one(st.claims.get(id).map(|c| &c.compartment)),
+        Change::Verdict { info, .. } => one(st.claims.get(&info.claim).map(|c| &c.compartment)),
+        Change::Supersede { info, .. } => vec![info.compartment.clone()],
+        Change::Resolve { supersession, .. } => one(st.supersessions.get(supersession).map(|x| &x.compartment)),
+        Change::Appeal { info, .. } => vec![info.compartment.clone()],
+        Change::Handoff { info, .. } => vec![info.compartment.clone()],
+        Change::Position { info } => vec![info.compartment.clone()],
+        Change::Appoint { info, .. } => vec![info.compartment.clone()],
+        Change::Dismiss { appointment, .. } => one(st.appointments.get(appointment).map(|x| &x.compartment)),
+        Change::ResolveAppeal { appeal, .. } => one(st.appeals.get(appeal).map(|x| &x.compartment)),
+        Change::SchemaVersion(_) => of(writer),
+        Change::Lease { info, .. } => of(&info.writer),
+        Change::Release { lease, .. } => st.leases.get(lease).map(|l| of(&l.writer)).unwrap_or_default(),
+        Change::Revoke { compartments, .. } => compartments.clone(),
+    }
+}
+
 fn commit(st: &mut State, checked: Checked, seq: usize) {
+    let advanced = touched(st, &checked.writer, &checked.change);
+    let registered = match &checked.change {
+        Change::Register { writer, .. } => Some(writer.clone()),
+        _ => None,
+    };
     match checked.change {
         Change::Register {
             writer,
@@ -1034,9 +1069,12 @@ fn commit(st: &mut State, checked: Checked, seq: usize) {
         .expect("writer registered")
         .last_seq = checked.writer_seq;
     if st.schema_version >= 7 {
-        for c in &st.writers[&checked.writer].compartments {
-            st.compartment_clocks
-                .insert(c.clone(), checked.record_time.clone());
+        let rt = checked.record_time;
+        for c in advanced {
+            st.compartment_clocks.insert(c, rt.clone());
+        }
+        for w in [Some(checked.writer), registered].into_iter().flatten() {
+            st.writer_clocks.insert(w, rt.clone());
         }
     }
 }
@@ -1267,6 +1305,42 @@ fn check(
     computed: Option<String>,
     subset: bool,
 ) -> GateResult<Checked> {
+    let c = check_event(st, env, expected_seq, expected_prev, last, computed, subset)?;
+    if st.schema_version >= 7 {
+        // Version 7: record time never runs backwards in a compartment the
+        // event advances, past its writer's own last event (registration
+        // included) or before the lease it relies on.
+        let lease = env
+            .get("body")
+            .and_then(|b| b.get("lease"))
+            .and_then(|v| v.as_str())
+            .and_then(|id| st.leases.get(id))
+            .map(|l| &l.record_time);
+        let floor = touched(st, &c.writer, &c.change)
+            .iter()
+            .filter_map(|x| st.compartment_clocks.get(x))
+            .chain(st.writer_clocks.get(&c.writer))
+            .chain(lease)
+            .max();
+        if floor.is_some_and(|t| c.record_time < *t) {
+            return Err(err(
+                "E_CLOCK",
+                "record_time is earlier than the previous event in its compartment or by its writer",
+            ));
+        }
+    }
+    Ok(c)
+}
+
+fn check_event(
+    st: &State,
+    env: &Value,
+    expected_seq: usize,
+    expected_prev: &str,
+    last: Option<&Value>,
+    computed: Option<String>,
+    subset: bool,
+) -> GateResult<Checked> {
     check_envelope_shape(env)?;
 
     // --- chain integrity
@@ -1290,25 +1364,7 @@ fn check(
         ));
     }
     if st.schema_version >= 7 {
-        // Version 7: each compartment has its own clock, so a writer in one
-        // is not held back by another's.
-        let behind = env
-            .get("writer")
-            .and_then(|v| v.as_str())
-            .and_then(|id| st.writers.get(id))
-            .is_some_and(|w| {
-                w.compartments.iter().any(|c| {
-                    st.compartment_clocks
-                        .get(c)
-                        .is_some_and(|t| record_time < t.as_str())
-                })
-            });
-        if behind {
-            return Err(err(
-                "E_CLOCK",
-                "record_time is earlier than the previous event in its compartment",
-            ));
-        }
+        // Checked per compartment in `check`.
     } else if let Some(prev_rt) = last
         .and_then(|e| e.get("record_time"))
         .and_then(|v| v.as_str())

@@ -163,13 +163,13 @@ fn checkpoint_detects_truncation_and_rewrite() {
 fn as_of_returns_exactly_what_was_known_then() {
     let path = tmp("asof");
     let l = write_lab_log(&path);
-    let before_b = l.as_of(&t(10));
+    let before_b = l.as_of(&t(10)).unwrap();
     assert_eq!(before_b.state.claims.len(), 1);
-    let at_b = l.as_of(&t(11));
+    let at_b = l.as_of(&t(11)).unwrap();
     assert_eq!(at_b.state.claims.len(), 2);
-    let all = l.as_of("2099-01-01T00:00:00Z");
+    let all = l.as_of("2099-01-01T00:00:00Z").unwrap();
     assert_eq!(all.state.digest(), l.state.digest());
-    let none = l.as_of("2000-01-01T00:00:00Z");
+    let none = l.as_of("2000-01-01T00:00:00Z").unwrap();
     assert_eq!(none.events.len(), 0);
 }
 
