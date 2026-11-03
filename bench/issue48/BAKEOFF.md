@@ -226,3 +226,31 @@ The session hit the plan's weekly limit (reset 2026-11-03 21:00); the Haiku half
 4. **A lease from the future blocks a past write: reproduces (correctness).** `live_lease` checks
    expiry but not the lease's own time, so a lease granted at t5 refuses a write dated t2. It
    reaches only writers who already hold the lease's compartment, so it is not a leak.
+
+**Claude Haiku** (resumed after the limit; ran its probes, `redteam2_haiku.py`, output
+`redteam2_haiku_SZ2.txt`), each **reproduced by the planner**:
+1. Release leaks whether a hidden lease exists (as Argon 1), including an already-ended one.
+2. A write's return carries `prev` and `hash`, the global chain head, which change with any
+   hidden event (`seq` is already dropped).
+3. `through.hash` changes with any hidden event before a visible one: the count family is wider
+   than the spec's limit text says.
+4-7 (lease target, frame conflict, clock, `as_of`): not reproduced; the fixes hold.
+8-9: the spec text is stale (it still says the grantor counts; the operator check names the
+   registrar). No leak.
+
+## Final fixes (registered before they are built; no further red team, per the stopping rule)
+
+On `arm48-SZ3` from `arm48-SZ2`:
+- **F5:** a release, or naming a lease, whose lessee shares no compartment with the writer
+  answers exactly as a missing lease (`E_REF`, same message), ended or not. (Argon 1, Haiku 1)
+- **F6:** a lease counts at time t only if it was granted at or before t (`live_lease` checks the
+  lease's own time as well as its expiry). (Argon 4)
+- **F7:** a non-owner's write return drops `prev` and `hash` (it keeps `event_id`). (Haiku 2)
+- **Spec:** rules 5 and 6 and pitfall 8 say the lessee decides (as F3 built); the operator check
+  names the registering writer; the count-family limit names `event_id`, view sequences and
+  `through.hash` (any hidden event changes it; it reveals that something changed, not what).
+
+Checks, all exact: every red-team probe (both rounds, both reviewers), the 35 held-out probes,
+run.py, the earlier checks, both suites, main's unchanged tests, old-log replay, and the `as_of`
+property test (2,000 logs). Decision: SZ3 becomes the PR if F5-F7 close their probes and nothing
+else gets worse; any probe still crossing is written into the spec as a limit.

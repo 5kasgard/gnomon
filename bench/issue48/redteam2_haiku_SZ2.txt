@@ -1,0 +1,24 @@
+probe_release_hidden_lease: worlds differ = True
+   hidden:  ('E_CAPABILITY', 'E_CAPABILITY: a lease is released by its holder, whoever granted it, or the owner')
+   without: ('E_REF', "E_REF: lease 'gr/1' does not exist or is not accessible")
+probe_release_hidden_ended: worlds differ = True
+   hidden:  ('E_CAPABILITY', 'E_CAPABILITY: a lease is released by its holder, whoever granted it, or the owner')
+   without: ('E_REF', "E_REF: lease 'gr/1' does not exist or is not accessible")
+probe_write_return_prev: worlds differ = True
+   hidden:  {'prev': 'df84dda0fa777795d40c3f5d6c422cd7f9719a92a9844be8d92f4bfe87f55ce8', 'has_seq': False, 'event_id': 'bee/1'}
+   without: {'prev': '5938ba4d3230ea634e645ecd87fba2f8583f16ddeb0c82470a1739d1797feeb3', 'has_seq': False, 'event_id': 'bee/1'}
+probe_through_hash: worlds differ = True
+   hidden:  {'event': 'bee/1', 'hash': '281188cb879b5a4cd53fe9a017dbd6be69aa1a74c9ed1d5733de02fa5b969f6c', 'kind': 'claim', 'time': '2026-10-03T00:00:00Z'}
+   without: {'event': 'bee/1', 'hash': '31ca544dd324d6cfa53d69a929a2eecc5659f8b861a35daf2ce01f2085989114', 'kind': 'claim', 'time': '2026-10-03T00:00:00Z'}
+probe_lease_target: worlds differ = False
+   hidden:  ('E_UNKNOWN_WRITER', "E_UNKNOWN_WRITER: writer 'ann' is not registered")
+   without: ('E_UNKNOWN_WRITER', "E_UNKNOWN_WRITER: writer 'ann' is not registered")
+probe_frame_conflict: worlds differ = False
+   hidden:  ('ok', 'bee/1')
+   without: ('ok', 'bee/1')
+probe_clock: worlds differ = False
+   hidden:  ('ok', 'c:0f4ba3203a11e8ad2c1d5171159ea0e81ceff16efe07322c8173e28c9fde54a4')
+   without: ('ok', 'c:0f4ba3203a11e8ad2c1d5171159ea0e81ceff16efe07322c8173e28c9fde54a4')
+probe_as_of: worlds differ = True
+   hidden:  {'full_count': 1, 'b_count': 1}
+   without: {'expected_full': 1, 'expected_b': 1}
