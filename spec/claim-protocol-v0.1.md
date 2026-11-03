@@ -485,6 +485,10 @@ the compartments it shares:
   views never show `seq`; claims, episodes and handoffs carry `order`, a rank
   among the visible ones.
 
+A revoke advances every compartment's clock (and is dated no earlier than
+any of them), so a writer can learn that a revoke happened later than its own
+write's time; revokes are owner-only.
+
 Limits, accepted: writer ids stay one global namespace (`E_DUPLICATE` is
 checked over the whole log), because leases, releases, revokes and instance
 parentage address writers by id; a probing writer learns one bit per logged

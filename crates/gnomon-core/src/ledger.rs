@@ -878,7 +878,8 @@ fn visible_item_compartment<'a>(st: &'a State, w: &WriterInfo, id: &str) -> Gate
 
 /// The compartments an event advances (version 7): the one it is in; a
 /// registration's are the new writer's; a lease or release, the lessee's; a
-/// revoke, the revoked ones.
+/// revoke, every compartment there is (it changes writers' compartments after
+/// the fact, so nothing may be dated before it).
 fn touched(st: &State, writer: &str, change: &Change) -> Vec<String> {
     let of = |w: &str| st.writers.get(w).map(|x| x.compartments.clone()).unwrap_or_default();
     let one = |c: Option<&String>| c.cloned().into_iter().collect();
@@ -899,7 +900,12 @@ fn touched(st: &State, writer: &str, change: &Change) -> Vec<String> {
         Change::SchemaVersion(_) => of(writer),
         Change::Lease { info, .. } => of(&info.writer),
         Change::Release { lease, .. } => st.leases.get(lease).map(|l| of(&l.writer)).unwrap_or_default(),
-        Change::Revoke { compartments, .. } => compartments.clone(),
+        Change::Revoke { compartments, .. } => {
+            let mut all: std::collections::BTreeSet<String> = st.compartment_clocks.keys().cloned().collect();
+            all.extend(st.writers.values().flat_map(|w| w.compartments.iter().cloned()));
+            all.extend(compartments.iter().cloned());
+            all.into_iter().collect()
+        }
     }
 }
 

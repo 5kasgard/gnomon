@@ -192,12 +192,14 @@ class ClockScope(unittest.TestCase):
         reg(m, "w", ["b"], n=20)
         self.assertEqual(code(lambda: m.episode("w", "early", compartment="b", record_time=t(10))), "E_CLOCK")
 
-    def test_a_revoke_advances_only_the_revoked_compartments(self):
+    def test_a_revoke_advances_every_compartment(self):
         m = world()
         reg(m, "wa", ["a"])
         reg(m, "x", ["b"], n=3)
         m.revoke("own", "x", ["b"], "test", record_time=t(40))
-        self.assertEqual(code(lambda: m.episode("wa", "in A", compartment="a", record_time=t(35))), "OK")
+        self.assertEqual(code(lambda: m.episode("wa", "in A", compartment="a", record_time=t(35))), "E_CLOCK")
+        self.assertEqual(code(lambda: m.episode("own", "in B", compartment="b", record_time=t(36))), "E_CLOCK")
+        self.assertEqual(code(lambda: m.episode("wa", "in A", compartment="a", record_time=t(45))), "OK")
 
     def test_a_lease_advances_only_its_lessee_compartments(self):
         m = world()
