@@ -2537,7 +2537,13 @@ fn check_event(
                 return Err(err("E_SCHEMA_VERSION", "release needs protocol version 6"));
             }
             let id = schema::release(body)?;
-            let l = st.leases.get(id).ok_or_else(|| not_found("lease", id))?;
+            // From version 7 a lease whose lessee shares no compartment with
+            // the writer is answered as none, before any other check.
+            let l = st
+                .leases
+                .get(id)
+                .filter(|l| st.schema_version < 7 || st.writers.get(&l.writer).is_some_and(|h| shares(h, w)))
+                .ok_or_else(|| not_found("lease", id))?;
             let owner = w.capabilities.iter().any(|c| c == "owner");
             if !(owner || l.by == writer || acts_for(st, writer, &l.writer)) {
                 return Err(err("E_CAPABILITY", "a lease is released by its holder, whoever granted it, or the owner"));

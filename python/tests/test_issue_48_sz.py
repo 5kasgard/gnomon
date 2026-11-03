@@ -261,6 +261,20 @@ class LeaseScope(unittest.TestCase):
         self.assertEqual(m.recall("rb", "mine")["through"]["event"], "rb/1")
         self.assertEqual(m.recall("ra", "mine")["through"]["event"], "s/1")
 
+    def test_releasing_a_hidden_lease_answers_as_one_that_does_not_exist(self):
+        m = self.m
+        def release(lease):
+            try:
+                m.release("rb", lease, record_time=t(7))
+            except g.GateError as e:
+                return e.code, e.message.replace(lease, "L")
+        gone = release("s/99")
+        self.assertEqual(release(self.la), gone)
+        self.assertEqual(gone[0], "E_REF")
+        m.release("ra", self.la, record_time=t(8))
+        self.assertEqual(release(self.la), gone)
+
+
 
 class RevokeThrough(unittest.TestCase):
     def test_a_revoke_is_seen_by_those_in_the_compartments_it_takes_away(self):
