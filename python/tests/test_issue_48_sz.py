@@ -274,6 +274,12 @@ class LeaseScope(unittest.TestCase):
         m.release("ra", self.la, record_time=t(8))
         self.assertEqual(release(self.la), gone)
 
+    def test_a_lease_counts_only_from_when_it_was_granted(self):
+        m = self.m
+        reg(m, "s2", ["a", "b"], caps=("schedule",), n=8)
+        m.lease("s", "ra", "g", FAR, record_time=t(30))
+        self.assertEqual(code(lambda: m.lease("s2", "rb", "g", FAR, record_time=t(10))), "OK")
+        self.assertEqual(code(lambda: m.lease("s2", "ra", "g", FAR, record_time=t(31))), "E_LEASED")
 
 
 class RevokeThrough(unittest.TestCase):

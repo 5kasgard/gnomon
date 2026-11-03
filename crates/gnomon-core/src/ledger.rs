@@ -761,6 +761,7 @@ fn live_lease<'a>(
         l.frame == frame
             && l.ended.is_none()
             && l.expires.as_str() > at
+            && (st.schema_version < 7 || l.record_time.as_str() <= at)
             && scope.is_none_or(|w| {
                 st.schema_version < 7
                     || st.writers.get(&l.writer).is_some_and(|x| shares(x, w))
