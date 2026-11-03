@@ -1,0 +1,13 @@
+r1_release_unscoped: differ=True
+  hidden:  ('E_REF', "E_REF: lease 'wa/1' does not exist or is not accessible")
+  without: ('E_REF', "E_REF: lease 'o/5' does not exist or is not accessible")
+r2_lease_touches_all_lessee: differ=True
+  hidden:  ('E_CLOCK', 'E_CLOCK: record_time is earlier than the previous event in its compartment or by its writer')
+  without: ('ok', 'c:b43977509b0bd342412678ac627a8f419f7230bca02d817466864d8ea316941d')
+r3_as_of_operator: differ=True
+  hidden:  {'reg': 'ok', 'as_of_3_b': ['o']}
+  without: {'reg': 'ok', 'as_of_3_b': ['botb', 'o']}
+r4_live_lease_from_future: differ=False
+  hidden:  ('ok', 'c:4bade5c927928193e2d187bdbe7408d345798834169443c35d11678325784f43')
+  without: ('ok', 'c:4bade5c927928193e2d187bdbe7408d345798834169443c35d11678325784f43')
+r3b_as_of_operator_backdated: {'botb registration at t2': ('E_CLOCK', 'E_CLOCK: record_time is earlier than the previous event in its compartment or by its writer'), 'as_of(t3) full': ['o']}

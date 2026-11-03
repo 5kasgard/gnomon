@@ -1,0 +1,4 @@
+operations (after the genesis): accepted 16927 (of which out of order 855), refused 29934 {'E_CLOCK': 23113, 'E_REF': 1605, 'E_LEASE': 1309, 'E_COMPARTMENT': 1297, 'E_CAPABILITY': 1239, 'E_UNKNOWN_WRITER': 473, 'E_EVIDENCE': 303, 'E_REVOKE': 215, 'E_LEASED': 195, 'E_NO_RESOLVER': 71, 'E_FINAL': 50, 'E_OPEN_DISPUTE': 35, 'E_DUPLICATE': 29}
+events by kind: {'claim': 5651, 'episode': 1685, 'lease': 1302, 'register': 7732, 'release': 194, 'revoke': 804, 'supersede': 120, 'verdict': 1439}
+logs: 2000  events accepted: 18927  checks: 91615  failures: 1 (in 1 logs)
+  seed=1001868 t=2026-11-01T11:56:33Z compartment=* first diff: REBUILD REFUSED at w9/2 (claim by w9 @ 2026-11-01T11:56:33Z): E_LEASE: frame 'f0' is leased to 'w7' until 2026-11-03T18:20:27Z

@@ -254,3 +254,25 @@ Checks, all exact: every red-team probe (both rounds, both reviewers), the 35 he
 run.py, the earlier checks, both suites, main's unchanged tests, old-log replay, and the `as_of`
 property test (2,000 logs). Decision: SZ3 becomes the PR if F5-F7 close their probes and nothing
 else gets worse; any probe still crossing is written into the spec as a limit.
+
+## Final fixes: results (`arm48-SZ3`) and one more correctness fix
+
+- Held-out probes crossing: **13 of 35** (SZ2: 18). F5 and F7 close Haiku 1-2 and Argon 1 (the
+  planner's `r1` probe used different lease ids in its two worlds; both answer the same `E_REF`).
+  F6 closes Argon 4. Every round-1 probe stays closed. Suites pass; old logs replay identically.
+  Main's unchanged tests: 4 errors (the 3 identity tests, and `test_query`, which read the `hash`
+  that F7 now hides from non-owners).
+- **The `as_of` property test fails once in 2,000 logs** (seed 1001868), which the decision rule
+  does not allow. Cause, found by replaying it: a revoke takes a writer out of a compartment, and
+  lease scoping reads the writer's compartments as they are now. So a revoke dated 11:59 made a
+  write dated 11:57 acceptable after the fact (the lease no longer counted); rebuilding the
+  history up to 11:57 leaves the revoke out and refuses the write. It is not new in SZ3 (a
+  revoke is the only event that changes compartments after the fact); seeds draw different logs
+  as behaviour changes.
+
+**F8 (registered before it is built):** a revoke's clock floor is the latest time in every
+compartment, and it advances every compartment, so no event can be dated before an existing
+revoke. Revokes are owner-only, so the only new timing signal is one the trusted owner controls,
+not one a non-owner can modulate; stated in the spec as a limit. Checks: the `as_of` property
+test (2,000 logs, plus seed 1001868 by name) and every exact check above. If it passes, the PR
+goes up from `arm48-SZ4`; if not, the bake-off stops and the owner decides.
