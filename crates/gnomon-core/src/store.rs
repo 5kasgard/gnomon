@@ -484,6 +484,7 @@ pub fn with_ledger<T>(path: &Path, f: impl FnOnce(&Ledger) -> T) -> Result<T, St
 /// file is exactly what was verified (or verify it fully), run the gate,
 /// write, fsync. An empty or missing file starts a new log.
 pub fn append(path: &Path, draft: Draft) -> Result<Value, StoreError> {
+    let author = draft.writer.clone();
     let mut f = OpenOptions::new()
         .create(true)
         .truncate(false)
@@ -511,8 +512,19 @@ pub fn append(path: &Path, draft: Draft) -> Result<Value, StoreError> {
     f.write_all(line.as_bytes())?;
     f.sync_data()?;
     c.bytes.extend_from_slice(line.as_bytes());
-    // From version 7 a write's return does not tell the global position.
-    let hide_seq = c.ledger.state.schema_version >= 7;
+    // From version 7 a write's return does not tell the global position, and
+    // a non-owner's does not carry the chain's prev and hash either.
+    let v7 = c.ledger.state.schema_version >= 7;
+    let owner = c
+        .ledger
+        .state
+        .writers
+        .get(&author)
+        .is_some_and(|w| w.capabilities.iter().any(|x| x == "owner"));
     put_cache(key, c);
-    Ok(if hide_seq { env.without("seq") } else { env })
+    Ok(match (v7, owner) {
+        (true, true) => env.without("seq"),
+        (true, false) => env.without("seq").without("prev").without("hash"),
+        _ => env,
+    })
 }

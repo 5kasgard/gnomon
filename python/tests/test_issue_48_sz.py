@@ -282,6 +282,20 @@ class LeaseScope(unittest.TestCase):
         self.assertEqual(code(lambda: m.lease("s2", "ra", "g", FAR, record_time=t(31))), "E_LEASED")
 
 
+class WriteReturn(unittest.TestCase):
+    def test_a_non_owner_sees_no_prev_or_hash_but_the_owner_does(self):
+        m = world()
+        reg(m, "w", ["a"])
+        mine = m.episode("w", "x", compartment="a", record_time=t(3))
+        self.assertIn("event_id", mine)
+        self.assertFalse({"seq", "prev", "hash"} & set(mine))
+        own = m.episode("own", "y", compartment="a", record_time=t(4))
+        self.assertTrue({"prev", "hash", "event_id"} <= set(own))
+        old = world(6)
+        reg(old, "w", ["a"])
+        self.assertIn("hash", old.episode("w", "x", compartment="a", record_time=t(3)))
+
+
 class RevokeThrough(unittest.TestCase):
     def test_a_revoke_is_seen_by_those_in_the_compartments_it_takes_away(self):
         m = world()
