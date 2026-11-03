@@ -430,6 +430,13 @@ class Disputes(unittest.TestCase):
                      ("resolution", ct, "both", rf)]:
             self.assertTrue(proofs.check(self.forge(r, fake), prog, gnomon.VIEWS, self.log), fake)
 
+    def hash_of(self, event_id):
+        # a non-owner's write return no longer carries the hash (version 7)
+        for line in self.log.read_text().splitlines():
+            e = json.loads(line)
+            if f"{e['writer']}/{e['writer_seq']}" == event_id:
+                return e["hash"]
+
     def test_forged_truth_citing_an_unrelated_ruling_is_caught(self):
         x, y = self.c("w1", "X holds", 2), self.c("w2", "Y holds", 3)
         v = self.m.verdict("w3", x, "refutes", "computed", record_time=t(4))
@@ -442,7 +449,7 @@ class Disputes(unittest.TestCase):
         bad = self.forge(r, ("truth", y, "false"))
         for n in bad["nodes"].values():
             if n["fact"][0] == "truth":
-                n["sources"] = [{"event": ruling["event_id"], "kind": "resolve", "hash": ruling["hash"]}]
+                n["sources"] = [{"event": ruling["event_id"], "kind": "resolve", "hash": self.hash_of(ruling["event_id"])}]
         self.assertTrue(proofs.check(bad, prog, gnomon.VIEWS, self.log))
 
     def ref(self, eid):

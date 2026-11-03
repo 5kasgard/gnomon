@@ -311,6 +311,12 @@ pub struct State {
     pub successors: BTreeMap<String, String>,
     /// Leases by event id (protocol version 6).
     pub leases: BTreeMap<String, LeaseInfo>,
+    /// Latest record time per compartment (protocol version 7; derived on
+    /// replay, not part of the state digest).
+    pub compartment_clocks: BTreeMap<String, String>,
+    /// Latest record time per writer, counting its registration (version 7;
+    /// derived on replay).
+    pub writer_clocks: BTreeMap<String, String>,
     pub schema_version: i64,
 }
 
@@ -400,7 +406,11 @@ impl Ledger {
         // too (issue #54): a holder cannot date its write back to before
         // expiry to slip in after it.
         if let Some(id) = draft.body.get("lease").and_then(|v| v.as_str()) {
-            if let Some(l) = self.state.leases.get(id) {
+            let seen = |l: &LeaseInfo| {
+                self.state.schema_version < 7
+                    || self.state.writers.get(&draft.writer).zip(self.state.writers.get(&l.writer)).is_some_and(|(w, h)| shares(h, w))
+            };
+            if let Some(l) = self.state.leases.get(id).filter(|l| seen(l)) {
                 if l.expires.as_str() <= timestamp_after_now(0).as_str() {
                     return Err(err("E_LEASE", format!("lease '{id}' has expired by the gate's clock")));
                 }
@@ -455,9 +465,27 @@ impl Ledger {
             &self.head(),
             self.events.last(),
             computed,
+            false,
         )?;
         commit(&mut self.state, checked, self.events.len());
         self.events.push(env);
+        Ok(())
+    }
+
+    /// Apply an already verified event to a ledger that holds only some of
+    /// the log (`as_of`, version 7): chain links and writer_seq are the
+    /// full log's, not this one's. An event that cannot apply is an error.
+    fn apply_subset(&mut self, env: &Value) -> GateResult<()> {
+        let (Some(seq), Some(prev), Some(hash)) = (
+            env.get("seq").and_then(|v| v.as_int()),
+            env.get("prev").and_then(|v| v.as_str()),
+            env.get("hash").and_then(|v| v.as_str()),
+        ) else {
+            return Err(err("E_SHAPE", "event has no seq, prev or hash"));
+        };
+        let c = check(&self.state, env, seq as usize, prev, None, Some(hash.to_string()), true)?;
+        commit(&mut self.state, c, self.events.len());
+        self.events.push(env.clone());
         Ok(())
     }
 
@@ -492,19 +520,26 @@ impl Ledger {
     }
 
     /// Ledger rebuilt from events recorded at or before `t`.
-    pub fn as_of(&self, t: &str) -> Ledger {
+    pub fn as_of(&self, t: &str) -> GateResult<Ledger> {
         let mut l = Ledger::new();
         for env in &self.events {
             let rt = env
                 .get("record_time")
                 .and_then(|v| v.as_str())
                 .unwrap_or("");
+            if self.state.schema_version >= 7 {
+                // Record time is monotonic per compartment only: not a prefix.
+                if rt <= t {
+                    l.apply_subset(env)?;
+                }
+                continue;
+            }
             if rt > t {
                 break; // record_time is monotonic, so this is a prefix
             }
             l.apply(env.clone()).expect("events already verified");
         }
-        l
+        Ok(l)
     }
 }
 
@@ -596,6 +631,7 @@ pub enum Change {
 pub struct Checked {
     writer: String,
     writer_seq: i64,
+    record_time: String,
     change: Change,
 }
 
@@ -712,10 +748,30 @@ fn frame_gate(st: &State, writer: &str, w: &WriterInfo, frame: Option<&str>) -> 
 }
 
 /// The live lease on `frame` at `at`, if any: not released, not yet expired.
-fn live_lease<'a>(st: &'a State, frame: &str, at: &str) -> Option<(&'a String, &'a LeaseInfo)> {
-    st.leases
-        .iter()
-        .find(|(_, l)| l.frame == frame && l.ended.is_none() && l.expires.as_str() > at)
+///
+/// From version 7, with `scope` (the one who would lease or write), only a
+/// lease whose holder shares a compartment with it counts.
+fn live_lease<'a>(
+    st: &'a State,
+    frame: &str,
+    at: &str,
+    scope: Option<&WriterInfo>,
+) -> Option<(&'a String, &'a LeaseInfo)> {
+    st.leases.iter().find(|(_, l)| {
+        l.frame == frame
+            && l.ended.is_none()
+            && l.expires.as_str() > at
+            && (st.schema_version < 7 || l.record_time.as_str() <= at)
+            && scope.is_none_or(|w| {
+                st.schema_version < 7
+                    || st.writers.get(&l.writer).is_some_and(|x| shares(x, w))
+            })
+    })
+}
+
+/// Do two writers have a compartment in common?
+pub fn shares(a: &WriterInfo, b: &WriterInfo) -> bool {
+    a.compartments.iter().any(|c| b.in_compartment(c))
 }
 
 /// Whether `writer` is `holder` or an instance started from it, at any depth.
@@ -755,7 +811,12 @@ fn lease_gate(
         None => None,
     };
     if let Some(id) = named {
-        let l = st.leases.get(id).ok_or_else(|| not_found("lease", id))?;
+        // From version 7 a lease whose holder the writer cannot see is as good as none.
+        let l = st
+            .leases
+            .get(id)
+            .filter(|l| st.schema_version < 7 || st.writers.get(&l.writer).is_some_and(|h| shares(h, w)))
+            .ok_or_else(|| not_found("lease", id))?;
         if Some(l.frame.as_str()) != frame {
             return Err(err("E_LEASE", format!("lease '{id}' is for frame '{}'", l.frame)));
         }
@@ -767,7 +828,7 @@ fn lease_gate(
         }
     }
     let Some(f) = frame else { return Ok(()) };
-    if let Some((id, l)) = live_lease(st, f, record_time) {
+    if let Some((id, l)) = live_lease(st, f, record_time, Some(w)) {
         if w.capabilities.iter().any(|c| c == "owner") {
             return Ok(());
         }
@@ -815,7 +876,45 @@ fn visible_item_compartment<'a>(st: &'a State, w: &WriterInfo, id: &str) -> Gate
         .ok_or_else(|| not_found("evidence", id))
 }
 
+/// The compartments an event advances (version 7): the one it is in; a
+/// registration's are the new writer's; a lease or release, the lessee's; a
+/// revoke, every compartment there is (it changes writers' compartments after
+/// the fact, so nothing may be dated before it).
+fn touched(st: &State, writer: &str, change: &Change) -> Vec<String> {
+    let of = |w: &str| st.writers.get(w).map(|x| x.compartments.clone()).unwrap_or_default();
+    let one = |c: Option<&String>| c.cloned().into_iter().collect();
+    match change {
+        Change::Register { info, .. } => info.compartments.clone(),
+        Change::Episode { info, .. } => vec![info.compartment.clone()],
+        Change::NewClaim { info, .. } => vec![info.compartment.clone()],
+        Change::Corroborate { id, .. } => one(st.claims.get(id).map(|c| &c.compartment)),
+        Change::Verdict { info, .. } => one(st.claims.get(&info.claim).map(|c| &c.compartment)),
+        Change::Supersede { info, .. } => vec![info.compartment.clone()],
+        Change::Resolve { supersession, .. } => one(st.supersessions.get(supersession).map(|x| &x.compartment)),
+        Change::Appeal { info, .. } => vec![info.compartment.clone()],
+        Change::Handoff { info, .. } => vec![info.compartment.clone()],
+        Change::Position { info } => vec![info.compartment.clone()],
+        Change::Appoint { info, .. } => vec![info.compartment.clone()],
+        Change::Dismiss { appointment, .. } => one(st.appointments.get(appointment).map(|x| &x.compartment)),
+        Change::ResolveAppeal { appeal, .. } => one(st.appeals.get(appeal).map(|x| &x.compartment)),
+        Change::SchemaVersion(_) => of(writer),
+        Change::Lease { info, .. } => of(&info.writer),
+        Change::Release { lease, .. } => st.leases.get(lease).map(|l| of(&l.writer)).unwrap_or_default(),
+        Change::Revoke { compartments, .. } => {
+            let mut all: std::collections::BTreeSet<String> = st.compartment_clocks.keys().cloned().collect();
+            all.extend(st.writers.values().flat_map(|w| w.compartments.iter().cloned()));
+            all.extend(compartments.iter().cloned());
+            all.into_iter().collect()
+        }
+    }
+}
+
 fn commit(st: &mut State, checked: Checked, seq: usize) {
+    let advanced = touched(st, &checked.writer, &checked.change);
+    let registered = match &checked.change {
+        Change::Register { writer, .. } => Some(writer.clone()),
+        _ => None,
+    };
     match checked.change {
         Change::Register {
             writer,
@@ -983,6 +1082,15 @@ fn commit(st: &mut State, checked: Checked, seq: usize) {
         .get_mut(&checked.writer)
         .expect("writer registered")
         .last_seq = checked.writer_seq;
+    if st.schema_version >= 7 {
+        let rt = checked.record_time;
+        for c in advanced {
+            st.compartment_clocks.insert(c, rt.clone());
+        }
+        for w in [Some(checked.writer), registered].into_iter().flatten() {
+            st.writer_clocks.insert(w, rt.clone());
+        }
+    }
 }
 
 /// Parties interested in `claim` through any ruled dispute involving it.
@@ -1209,6 +1317,43 @@ fn check(
     expected_prev: &str,
     last: Option<&Value>,
     computed: Option<String>,
+    subset: bool,
+) -> GateResult<Checked> {
+    let c = check_event(st, env, expected_seq, expected_prev, last, computed, subset)?;
+    if st.schema_version >= 7 {
+        // Version 7: record time never runs backwards in a compartment the
+        // event advances, past its writer's own last event (registration
+        // included) or before the lease it relies on.
+        let lease = env
+            .get("body")
+            .and_then(|b| b.get("lease"))
+            .and_then(|v| v.as_str())
+            .and_then(|id| st.leases.get(id))
+            .map(|l| &l.record_time);
+        let floor = touched(st, &c.writer, &c.change)
+            .iter()
+            .filter_map(|x| st.compartment_clocks.get(x))
+            .chain(st.writer_clocks.get(&c.writer))
+            .chain(lease)
+            .max();
+        if floor.is_some_and(|t| c.record_time < *t) {
+            return Err(err(
+                "E_CLOCK",
+                "record_time is earlier than the previous event in its compartment or by its writer",
+            ));
+        }
+    }
+    Ok(c)
+}
+
+fn check_event(
+    st: &State,
+    env: &Value,
+    expected_seq: usize,
+    expected_prev: &str,
+    last: Option<&Value>,
+    computed: Option<String>,
+    subset: bool,
 ) -> GateResult<Checked> {
     check_envelope_shape(env)?;
 
@@ -1232,7 +1377,9 @@ fn check(
             "record_time must be a real YYYY-MM-DDTHH:MM:SSZ time",
         ));
     }
-    if let Some(prev_rt) = last
+    if st.schema_version >= 7 {
+        // Checked per compartment in `check`.
+    } else if let Some(prev_rt) = last
         .and_then(|e| e.get("record_time"))
         .and_then(|v| v.as_str())
     {
@@ -1266,6 +1413,7 @@ fn check(
         Ok(Checked {
             writer: writer.to_string(),
             writer_seq,
+            record_time: record_time.to_string(),
             change,
         })
     };
@@ -1301,7 +1449,7 @@ fn check(
             format!("writer '{writer}' is not registered"),
         )
     })?;
-    if writer_seq != w.last_seq + 1 {
+    if !subset && writer_seq != w.last_seq + 1 {
         return Err(err(
             "E_WRITER_SEQ",
             format!(
@@ -1372,8 +1520,20 @@ fn check(
                 ));
             }
             // An instance acts for a person who is already on record.
+            // From version 7 a non-owner finds an operator in a compartment
+            // it does not share exactly as it finds none.
+            let v7 = st.schema_version >= 7;
+            let overlaps = |x: &WriterInfo| {
+                x.compartments
+                    .iter()
+                    .any(|c| r.compartments.contains(&c.as_str()))
+            };
             if let Some(op) = r.operator {
-                match st.writers.get(op) {
+                let found = st
+                    .writers
+                    .get(op)
+                    .filter(|o| by_owner || !v7 || o.compartments.iter().any(|c| w.in_compartment(c)));
+                match found {
                     Some(o) if o.kind == "human" => {}
                     Some(_) => {
                         return Err(err("E_IDENTITY", format!("operator '{op}' is not a human")))
@@ -1394,6 +1554,7 @@ fn check(
                     x.party == r.party
                         && x.session.as_deref() == Some(sess)
                         && x.surface.as_deref() == r.surface
+                        && (!v7 || overlaps(x))
                 }) {
                     return Err(err(
                         "E_IDENTITY",
@@ -1407,7 +1568,9 @@ fn check(
                 if st
                     .writers
                     .values()
-                    .any(|x| x.name.as_deref() == Some(n) && x.party != r.party)
+                    .any(|x| {
+                        x.name.as_deref() == Some(n) && x.party != r.party && (!v7 || overlaps(x))
+                    })
                 {
                     return Err(err(
                         "E_IDENTITY",
@@ -2335,9 +2498,12 @@ fn check(
             }
             need(w, "schedule")?;
             let l = schema::lease(body)?;
+            // From version 7 a target in no compartment of the lessor's is
+            // "not registered".
             let target = st
                 .writers
                 .get(l.writer)
+                .filter(|t| st.schema_version < 7 || shares(t, w))
                 .ok_or_else(|| err("E_UNKNOWN_WRITER", format!("writer '{}' is not registered", l.writer)))?;
             if acts_for(st, writer, l.writer) {
                 return Err(err("E_LEASE", "a writer never leases to itself"));
@@ -2348,10 +2514,16 @@ fn check(
             if l.expires <= record_time {
                 return Err(err("E_LEASE", "a lease must expire after it is granted"));
             }
-            if let Some((id, held)) = live_lease(st, l.frame, record_time) {
+            if let Some((id, held)) = live_lease(st, l.frame, record_time, Some(w)) {
+                let seen = st.schema_version < 7
+                    || st.writers.get(&held.writer).is_some_and(|h| shares(h, w));
                 return Err(err(
                     "E_LEASED",
-                    format!("frame '{}' is already leased ('{id}', to '{}' until {})", l.frame, held.writer, held.expires),
+                    if seen {
+                        format!("frame '{}' is already leased ('{id}', to '{}' until {})", l.frame, held.writer, held.expires)
+                    } else {
+                        format!("frame '{}' is already leased", l.frame)
+                    },
                 ));
             }
             done(Change::Lease {
@@ -2372,7 +2544,13 @@ fn check(
                 return Err(err("E_SCHEMA_VERSION", "release needs protocol version 6"));
             }
             let id = schema::release(body)?;
-            let l = st.leases.get(id).ok_or_else(|| not_found("lease", id))?;
+            // From version 7 a lease whose lessee shares no compartment with
+            // the writer is answered as none, before any other check.
+            let l = st
+                .leases
+                .get(id)
+                .filter(|l| st.schema_version < 7 || st.writers.get(&l.writer).is_some_and(|h| shares(h, w)))
+                .ok_or_else(|| not_found("lease", id))?;
             let owner = w.capabilities.iter().any(|c| c == "owner");
             if !(owner || l.by == writer || acts_for(st, writer, &l.writer)) {
                 return Err(err("E_CAPABILITY", "a lease is released by its holder, whoever granted it, or the owner"));
@@ -3050,6 +3228,18 @@ impl State {
                     ("instance_of", &w.instance_of),
                 ] {
                     if let Some(v) = v {
+                        // Version 7: a restricted view names an operator
+                        // only if the reader can see the operator too.
+                        if k == "operator"
+                            && compartments.is_some()
+                            && self.schema_version >= 7
+                            && !self
+                                .writers
+                                .get(v)
+                                .is_some_and(|o| o.compartments.iter().any(|c| visible(c)))
+                        {
+                            continue;
+                        }
                         fields.push((k, Value::str(v.clone())));
                     }
                 }

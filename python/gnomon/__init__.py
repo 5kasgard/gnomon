@@ -591,7 +591,7 @@ class Memory:
 
 
 #: The protocol version new memories start at (see the spec, section 2a).
-SCHEMA_VERSION = 6
+SCHEMA_VERSION = 7
 
 
 def _cut(text: str, n: int) -> str:

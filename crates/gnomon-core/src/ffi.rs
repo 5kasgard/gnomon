@@ -246,7 +246,10 @@ pub unsafe extern "C" fn gn_state(
             let view;
             let ledger = match &as_of {
                 Some(t) => {
-                    view = full.as_of(t);
+                    view = match full.as_of(t) {
+                        Ok(v) => v,
+                        Err(e) => return fail(e.code, e.message),
+                    };
                     &view
                 }
                 None => full,
@@ -443,7 +446,10 @@ pub unsafe extern "C" fn gn_query_opts(
             let view;
             let ledger = match &as_of {
                 Some(t) => {
-                    view = full.as_of(t);
+                    view = match full.as_of(t) {
+                        Ok(v) => v,
+                        Err(e) => return fail(e.code, e.message),
+                    };
                     &view
                 }
                 None => full,
@@ -518,7 +524,10 @@ pub unsafe extern "C" fn gn_recall(
             let view;
             let ledger = match &as_of {
                 Some(t) => {
-                    view = full.as_of(t);
+                    view = match full.as_of(t) {
+                        Ok(v) => v,
+                        Err(e) => return fail(e.code, e.message),
+                    };
                     &view
                 }
                 None => full,
@@ -622,7 +631,10 @@ fn reader_view<T>(
         let view;
         let ledger = match &as_of {
             Some(t) => {
-                view = full.as_of(t);
+                view = match full.as_of(t) {
+                    Ok(v) => v,
+                    Err(e) => return Err(fail(e.code, e.message)),
+                };
                 &view
             }
             None => full,
