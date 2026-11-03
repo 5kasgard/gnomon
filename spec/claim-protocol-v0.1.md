@@ -456,8 +456,8 @@ the compartments it shares:
 - *Operator.* A restricted writer view and the `identity(w, "operator", h)`
   fact show a visible writer's operator only if the reader can see the
   operator too; otherwise the field is left out. A non-owner registering an
-  operator needs the operator to share a compartment with it, else
-  `E_IDENTITY`, the same code as "not registered". Owners keep the global check.
+  operator needs the operator to share a compartment with that registering
+  writer (not with the new writer), else `E_IDENTITY`, the same code as "not registered". Owners keep the global check.
 - *Session ids and names.* The duplicate-session and other-party-name checks
   (`E_IDENTITY`) count only writers sharing a compartment with the new one.
   Disjoint writers may repeat a session id or a name; a reader in both sees
@@ -466,7 +466,11 @@ the compartments it shares:
   `E_UNKNOWN_WRITER`. A live lease blocks a new lease or a write on its frame
   only if its holder or its grantor shares a compartment with the lessor or
   writer, so disjoint leases may use one frame name. `E_LEASED` names the
-  holder and expiry only if the holder is visible to the lessor.
+  holder and expiry only if the holder is visible to the lessor. A lease counts
+  for conflicts, fencing and `through` by its lessee's compartments, not the
+  grantor's, and only from the time it was granted. Naming or releasing a lease
+  whose lessee shares no compartment with the writer answers `E_REF` exactly as
+  for a lease that does not exist, before any other check.
 - *`through`.* `lease` is visible to a reader sharing a compartment with its
   lessee or grantor, `release` likewise through its lease, `revoke` through
   the revoked writer's current compartments. Before version 7 all three were
@@ -476,7 +480,8 @@ the compartments it shares:
   with the previous event of the log, so record time is monotonic per
   compartment only. `as_of` therefore scans the whole log and applies every
   event dated at or before the time, instead of stopping at the first later one.
-- *Counts.* The return of a write leaves out the log's global `seq`. Restricted
+- *Counts.* The return of a write leaves out the log's global `seq`, and for a
+  non-owner also `prev` and `hash` (the owner keeps them). Restricted
   views never show `seq`; claims, episodes and handoffs carry `order`, a rank
   among the visible ones.
 
@@ -484,7 +489,9 @@ Limits, accepted: writer ids stay one global namespace (`E_DUPLICATE` is
 checked over the whole log), because leases, releases, revokes and instance
 parentage address writers by id; a probing writer learns one bit per logged
 attempt. `event_id`, and `through` (the last visible event's id and hash),
-stay raw, so a gap in a visible writer's `writer_seq` still shows that it
+stay raw: they reveal that hidden events exist (any hidden event before a
+visible one changes `through.hash`; it shows that something changed, not what),
+and a gap in a visible writer's `writer_seq` still shows that it
 wrote something hidden; closing that needs a `writer_seq` per compartment,
 which breaks "ids are never reused or skipped". `as_of` is O(n) from version 7.
 
