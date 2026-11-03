@@ -125,3 +125,37 @@ outputs `gemini_checks_main.txt`, `gemini_checks_combo2.txt`):
    * B call: m.remember("w_b", claim("x", "w_b", "f", "b"), record_time="2026-01-01T08:00:00Z"), then m.state(as_of="2026-01-01T09:00:00Z", compartments=["b"]).
    * Result: World 1 skips w_b's 10:00 registration during as_of, so apply_subset fails check() (E_UNKNOWN_WRITER) and drops the 08:00 claim; World 2 returns it.
 do not merge (or merge with changes: track/check clocks per event-affected compartments including newly registered writers, check revoke event compartments rather than post-state writer compartments, and avoid scoping leases to multi-compartment grantors when the lessee is disjoint).
+
+## Bake-off red team 2 on arm48-SZ2, Gemini (Argon, medium thinking; via the owner's chat), 2026-11-03, verbatim answer
+
+~310 words total. Well under the 400-word limit. Everything is concrete, direct, and adheres to all instructions.1. Leak: release does not scope lease lookup (ledger.rs)
+check_event's "release" branch still looks up st.leases.get(id) globally without checking shares(holder, w).
+ * Setup: Owner o (["a", "b"]) registers human wa (["a"], party pa, capabilities ["schedule"]) and human wb (["b"], party pb, capabilities ["schedule"]) at t1.
+ * Hidden action (World 1): m.lease("wa", "wa", "f1", expires=t9, record_time=t2) (creates lease "wa/1").
+ * B call: m.release("wb", "wa/1").
+ * Result: World 0 returns E_NOT_FOUND (lease 'wa/1' is not found); World 1 returns E_LEASE / permission refusal because "wa/1" exists.
+ * Leak: Lease and Release advance all lessee compartments (ledger.rs:899)
+   touched() for Change::Lease and Change::Release returns of(&info.writer)—all compartments of the lessee, including ones the lessor does not hold.
+ * Setup: Owner o registers humans wa (["a"], party pa, capabilities ["schedule"]), wb (["b"], party pb, capabilities ["claim"]), and wab (["a", "b"], party pab) at t1.
+ * Hidden action (World 1): m.lease("wa", "wab", "f1", expires=t9, record_time=t5). (Advances compartment_clocks["b"] to t5).
+ * B call: m.remember("wb", claim("s", "wb", "f2", "b"), record_time=t3).
+ * Result: World 0 succeeds (Ok); World 1 fails with E_CLOCK.
+ * Correctness Bug & Leak: as_of fails when an owner at t2 names an operator registered at t5 (ledger.rs:530, 1525)
+   Owner registrations allow cross-compartment operators without checking the operator's writer_clock. When as_of(t) filters out the later-dated operator registration (t5 > t), apply_subset rejects the earlier-dated model registration (t2 <= t).
+ * Setup: Owner o (["a", "b"], registered at t1) registers wa (["a"], party pa, capabilities ["register"]) and wb (["b"], party pb) at t1.
+ * Hidden action (World 1): m.register("wa", "opa", party="pa", kind="human", compartments=["a"], record_time=t5), then m.register("o", "botb", party="pb", kind="model", model="m", operator="opa", compartments=["b"], record_time=t2). (In World 0, "opa" is registered at t1 instead of t5).
+ * B call: m.state(as_of=t3, compartments=["b"]).
+ * Result: World 0 returns Ok with botb; World 1 errors with E_IDENTITY (operator 'opa' is not registered) for all callers (correctness bug + leak).
+ * Correctness Bug & Leak: live_lease ignores l.record_time <= at (ledger.rs:760)
+   A lease granted at t5 in "a" is treated as active at t2 (expires > t2), blocking a backdated write in "b" by a shared writer and diverging under as_of(t3).
+ * Setup: Owner o registers wa (["a"], party pa, capabilities ["schedule"]), wa2 (["a"], party pa2), and wab (["a", "b"], party pab, capabilities ["claim"]) at t1.
+ * Hidden action (World 1): m.lease("wa", "wa2", "f1", expires=t9, record_time=t5).
+ * B call: m.remember("wab", claim("s", "wab", "f1", "b"), record_time=t2).
+ * Result: World 0 succeeds; World 1 fails with E_LEASED.
+Verdict: Merge with changes:
+ * Filter st.leases.get(id) by shares(holder, w) in check_event's "release" arm (and in check()'s lease floor).
+ * In touched(), intersect Lease/Release lessee compartments with the actor's (writer's) compartments.
+ * Add st.writer_clocks.get(op) to the floor in check() when registering an operator.
+ * Check l.record_time.as_str() <= at in live_lease.
+
+(The answer arrived with about 195 lines of Argon's visible working before it; kept out of the record, as reasoning, not findings.)

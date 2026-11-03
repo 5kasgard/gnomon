@@ -209,3 +209,20 @@ stated limit, as SC and combo3 have) and the bake-off is re-scored on that basis
   (G4: it appears in B's `through`); B learns nothing hidden. Recorded for red team 2 to judge.
 - F1 added 69 net core lines (under the 150 fallback). Lines vs main: Rust 223, spec 40.
 - **By the rule, SZ2 goes to red team 2, the last.**
+
+## Red team 2 on SZ2 (the last)
+
+The session hit the plan's weekly limit (reset 2026-11-03 21:00); the Haiku half was resumed then.
+
+**Gemini Argon** (verbatim in `REVIEWS.md`), each claim run two-world by the planner
+(`redteam2_argon.py`, output `redteam2_argon_SZ2.txt`):
+1. **Release is not scoped: reproduces (leak).** Releasing a lease whose holder the releaser
+   cannot see answers `E_CAPABILITY`; a missing lease answers `E_REF`.
+2. **A lease advances every compartment of its lessee: reproduces, not a leak.** Under F3 that
+   lease is visible to B (it appears in B's `through`), so B's `E_CLOCK` reflects an event B sees.
+3. **`as_of` broken by a backdated operator: does not reproduce.** Only owners register other
+   parties; a person cannot have instances; the owner's own clock refuses the backdated
+   registration (`E_CLOCK`).
+4. **A lease from the future blocks a past write: reproduces (correctness).** `live_lease` checks
+   expiry but not the lease's own time, so a lease granted at t5 refuses a write dated t2. It
+   reaches only writers who already hold the lease's compartment, so it is not a leak.
