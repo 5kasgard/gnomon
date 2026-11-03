@@ -276,3 +276,23 @@ revoke. Revokes are owner-only, so the only new timing signal is one the trusted
 not one a non-owner can modulate; stated in the spec as a limit. Checks: the `as_of` property
 test (2,000 logs, plus seed 1001868 by name) and every exact check above. If it passes, the PR
 goes up from `arm48-SZ4`; if not, the bake-off stops and the owner decides.
+
+## F8 results (`arm48-SZ4`): the PR
+
+- **`as_of` property test: 0 failures** in 2,000 logs (91,103 checks); seed 1001868 by name passes.
+- Every red-team probe from both rounds is closed, except the known non-findings (Argon r2: the
+  lease is visible to B by design; r3: does not reproduce, and the planner's probe varies two
+  things; a4: refused for a reason B can see; the planner's r1 used different lease ids) and the
+  stated `through.hash` limit. Haiku's `probe_as_of` differs by its result's shape (Haiku's note).
+- Held-out probes crossing: 13 of 35. **Read case by case:** the two SZ operator probes are
+  probe-repair artifacts (the repair gave the "without" world `operator="owner"`, so the worlds
+  differ in more than the hidden action; SZ4 hides the hidden operator); the SC operator probe
+  differs only in proof hashes (the hash limit). The other 10 are writer ids and counts, both
+  stated limits.
+- Suites pass; old logs replay identically. **Main's unchanged tests: 4 errors**, from two
+  existing tests the builds changed: `test_identity.ReviewM6` now starts at protocol 6 (its
+  owner-registered writer names an operator in a compartment it does not hold, which rule 1
+  refuses at 7), and `test_query` reads a hash from the log instead of from a non-owner's write
+  return (F7). Both are in the PR for the owner to judge.
+- Size vs main: Rust +248, spec +51, tests +324.
+- **Decision: PR from `arm48-SZ4`.**

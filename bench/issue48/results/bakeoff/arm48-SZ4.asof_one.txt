@@ -1,0 +1,3 @@
+operations (after the genesis): accepted 7 (of which out of order 1), refused 15 {'E_CLOCK': 12, 'E_REF': 1, 'E_LEASED': 1, 'E_COMPARTMENT': 1}
+events by kind: {'claim': 1, 'lease': 2, 'register': 3, 'revoke': 1, 'verdict': 1}
+logs: 1  events accepted: 8  checks: 40  failures: 0 (in 0 logs)
